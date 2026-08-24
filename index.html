@@ -1,0 +1,5002 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Controle de Estoque Inteligente</title>
+
+<style>
+
+:root {
+    --bg: #0a0f1c;
+    --bg-painel: #111a2e;
+    --bg-painel-2: #16213a;
+    --bg-input: #0d1626;
+    --borda: #1e2b45;
+    --borda-forte: #2c3e63;
+    --texto: #dbe6f5;
+    --texto-fraco: #7f93b8;
+    --azul: #56d2ff;
+    --azul-forte: #2fb6ec;
+    --azul-fraco: rgba(86,210,255,.12);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    margin: 20px;
+    background:
+        radial-gradient(circle at 15% 0%, rgba(86,210,255,.06), transparent 45%),
+        var(--bg);
+    background-attachment: fixed;
+    color: var(--texto);
+}
+
+h1 {
+    color: var(--texto);
+    letter-spacing: .5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--borda);
+    margin-bottom: 22px;
+}
+
+h1::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--azul), transparent);
+    opacity: .5;
+}
+
+h2 {
+    color: var(--azul);
+    font-size: 16px;
+    letter-spacing: .3px;
+}
+
+.painel {
+    background: var(--bg-painel);
+    padding: 25px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    border: 1px solid var(--borda);
+    box-shadow: 0 4px 14px rgba(0,0,0,.35);
+}
+
+.painel-busca {
+    background: var(--bg-painel);
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    border: 1px solid var(--azul-forte);
+    box-shadow: 0 0 0 3px var(--azul-fraco);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.painel-busca strong {
+    color: var(--azul);
+}
+
+.input-busca {
+    flex-grow: 1;
+    padding: 12px;
+    font-size: 15px;
+    border: 1px solid var(--borda-forte);
+    border-radius: 8px;
+    outline: none;
+    margin: 0;
+}
+
+input, textarea {
+    padding: 5px 8px;
+    margin: 3px 0 6px;
+    font-size: 12px;
+    border-radius: 5px;
+    border: 1px solid var(--borda-forte);
+    width: 100%;
+    outline: none;
+    background: var(--bg-input);
+    color: var(--texto);
+}
+
+input::placeholder, textarea::placeholder {
+    color: var(--texto-fraco);
+}
+
+.linha-form {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.linha-form .campo {
+    flex: 1;
+    min-width: 130px;
+}
+
+.linha-form .campo input {
+    margin-bottom: 0;
+}
+
+@media(max-width:700px) {
+    .linha-form {
+        flex-direction: column;
+    }
+}
+
+input:focus, textarea:focus {
+    border-color: var(--azul);
+    background: var(--bg-painel-2);
+    box-shadow: 0 0 0 3px var(--azul-fraco);
+}
+
+.btn-produto {
+    background: #7c5cff;
+    color: white;
+    margin-top: 4px;
+}
+
+.produto-cadastro {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.produto-cadastro input {
+    margin-bottom: 0;
+}
+
+@media(max-width:700px) {
+    .produto-cadastro {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+.sugestoes-produto {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg-painel-2);
+    border: 1px solid var(--borda-forte);
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    max-height: 180px;
+    overflow-y: auto;
+    z-index: 30;
+    display: none;
+    box-shadow: 0 8px 16px rgba(0,0,0,.4);
+}
+
+.sugestao-item {
+    padding: 6px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--borda);
+    color: var(--texto);
+}
+
+.sugestao-item:hover {
+    background: var(--azul-fraco);
+}
+
+.sugestao-item:last-child {
+    border-bottom: none;
+}
+
+label {
+    font-weight: 600;
+    font-size: 12.5px;
+    color: var(--texto-fraco);
+}
+
+.container-botoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+button {
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: .2s;
+}
+
+button:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.1);
+}
+
+button:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-salvar {
+    background: #10b981;
+    color: white;
+}
+
+.btn-limpar {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-excel {
+    background: #15803d;
+    color: white;
+}
+
+.btn-cancelar {
+    background: #3b4a68;
+    color: var(--texto);
+}
+
+.btn-historico {
+    background: var(--azul-forte);
+    color: #041521;
+}
+
+.btn-apagar-historico {
+    background: #b91c1c;
+    color: white;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.box {
+    padding: 18px;
+    background: var(--bg-painel);
+    border: 1px solid var(--borda);
+    border-radius: 12px;
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+}
+
+.box.ocupado {
+    background: linear-gradient(180deg, var(--azul-fraco), var(--bg-painel) 40%);
+    border-color: var(--azul-forte);
+    box-shadow: 0 0 0 1px var(--azul-fraco);
+}
+
+.box.escondido {
+    display: none !important;
+}
+
+.titulo {
+    font-weight: 700;
+    border-bottom: 2px solid var(--borda);
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    color: var(--texto);
+}
+
+.lista-produtos {
+    font-size: 12px;
+}
+
+.produto-item {
+    padding: 10px 45px 10px 0;
+    border-bottom: 1px dashed var(--borda);
+    position: relative;
+}
+
+.acoes-item {
+    position: absolute;
+    right: 0;
+    top: 10px;
+    display: flex;
+    gap: 4px;
+}
+
+.btn-acao {
+    background: none;
+    border: none;
+    padding: 2px;
+    font-size: 15px;
+}
+
+.vazio {
+    color: var(--texto-fraco);
+    text-align: center;
+    margin-top: 20px;
+}
+
+.contador {
+    background: var(--bg-painel-2);
+    color: var(--azul);
+    border: 1px solid var(--borda-forte);
+    padding: 10px 15px;
+    border-radius: 8px;
+    display: inline-block;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.contador-produtos {
+    background: var(--bg-painel-2);
+    color: var(--azul);
+    border: 1px solid var(--borda-forte);
+    padding: 8px 14px;
+    border-radius: 8px;
+    display: inline-block;
+    margin-bottom: 12px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.aviso-armazenamento {
+    background: var(--azul-fraco);
+    border: 1px solid var(--azul-forte);
+    color: var(--azul);
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    margin-bottom: 15px;
+}
+
+.movimento {
+    background: var(--bg-painel-2);
+    border: 1px solid var(--borda);
+    border-left: 5px solid var(--azul-forte);
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 10px;
+    color: var(--texto);
+}
+
+.movimento.entrada {
+    border-left-color: #10b981;
+}
+
+.movimento.alteracao {
+    border-left-color: #f59e0b;
+}
+
+.movimento.exclusao {
+    border-left-color: #ef4444;
+}
+
+.movimento.zerado {
+    border-left-color: #a78bfa;
+}
+
+.tipo {
+    display: inline-block;
+    padding: 5px 9px;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 12px;
+    margin-bottom: 8px;
+}
+
+.tipo-entrada {
+    background: rgba(16,185,129,.15);
+    color: #34d399;
+}
+
+.tipo-alteracao {
+    background: rgba(245,158,11,.15);
+    color: #fbbf24;
+}
+
+.tipo-exclusao {
+    background: rgba(239,68,68,.15);
+    color: #f87171;
+}
+
+.tipo-zerado {
+    background: rgba(167,139,250,.15);
+    color: #c4b5fd;
+}
+
+.sem-historico {
+    text-align: center;
+    color: var(--texto-fraco);
+    padding: 20px;
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-painel);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--borda-forte);
+    border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--azul-forte);
+}
+
+@media(max-width:700px) {
+
+    body {
+        margin: 10px;
+    }
+
+    .painel-busca {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .grid {
+        grid-template-columns: 1fr;
+    }
+
+    button {
+        width: 100%;
+    }
+
+}
+
+.tela-login {
+    position: fixed;
+    inset: 0;
+    background:
+        radial-gradient(circle at 20% 10%, rgba(86,210,255,.08), transparent 45%),
+        var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+}
+
+.cartao-login {
+    background: var(--bg-painel);
+    border: 1px solid var(--borda);
+    border-radius: 12px;
+    padding: 22px 24px;
+    width: 100%;
+    max-width: 300px;
+    box-shadow: 0 12px 30px rgba(0,0,0,.5);
+}
+
+.cartao-login h1 {
+    border: none;
+    margin: 0 0 4px 0;
+    padding: 0;
+    font-size: 17px;
+    justify-content: center;
+}
+
+.cartao-login h1::after {
+    display: none;
+}
+
+.subtitulo-login {
+    text-align: center;
+    color: var(--texto-fraco);
+    font-size: 11.5px;
+    margin-bottom: 16px;
+}
+
+.campo-login {
+    margin-bottom: 8px;
+}
+
+.campo-login label {
+    display: block;
+    margin-bottom: 3px;
+    font-size: 11.5px;
+}
+
+.campo-login input {
+    padding: 7px 8px;
+    font-size: 13px;
+}
+
+.erro-login {
+    background: rgba(239,68,68,.12);
+    border: 1px solid #ef4444;
+    color: #f87171;
+    padding: 6px 9px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    margin-bottom: 10px;
+    display: none;
+}
+
+.btn-login {
+    background: var(--azul-forte);
+    color: #041521;
+    width: 100%;
+    padding: 9px;
+    font-size: 13px;
+    margin-top: 4px;
+}
+
+.alternar-login {
+    text-align: center;
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--texto-fraco);
+}
+
+.alternar-login a {
+    color: var(--azul);
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.barra-usuario {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: -6px;
+}
+
+.barra-usuario span {
+    font-size: 12.5px;
+    color: var(--texto-fraco);
+}
+
+.btn-sair {
+    background: var(--bg-painel-2);
+    color: var(--texto);
+    border: 1px solid var(--borda-forte);
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+
+<!-- TELA DE LOGIN -->
+
+<div class="tela-login" id="tela-login">
+
+<div class="cartao-login">
+
+<h1>📦 Controle de Estoque</h1>
+
+<div class="subtitulo-login" id="subtitulo-login">
+Entre com seu usuário e senha
+</div>
+
+<div class="erro-login" id="erro-login"></div>
+
+<div id="bloco-login-normal">
+
+<div class="campo-login">
+<label>👤 Usuário:</label>
+<input type="text" id="login-usuario" autocomplete="off" placeholder="Digite seu usuário">
+</div>
+
+<div class="campo-login">
+<label>🔒 Senha:</label>
+<input type="password" id="login-senha" autocomplete="off" placeholder="Digite sua senha">
+</div>
+
+<div class="campo-login" id="campo-confirmar-senha" style="display:none;">
+<label>🔒 Confirmar Senha:</label>
+<input type="password" id="login-confirmar-senha" autocomplete="off" placeholder="Repita a senha">
+</div>
+
+<div class="campo-login" id="campo-senha-alternativa-cadastro" style="display:none;">
+<label>🔑 Senha alternativa (use se esquecer a principal):</label>
+<input type="password" id="login-senha-alternativa" autocomplete="off" placeholder="Crie uma senha alternativa">
+</div>
+
+<button type="button" class="btn-login" id="btn-acao-login" onclick="tratarEnvioLogin()">
+Entrar
+</button>
+
+<div class="alternar-login" id="alternar-login" style="display:none;">
+</div>
+
+</div>
+
+
+<!-- PAINEL DE REDEFINIR SENHA COM SENHA ALTERNATIVA -->
+
+<div id="painel-recuperar-senha" style="display:none;">
+
+<div class="erro-login" id="erro-recuperar"></div>
+
+<div class="campo-login">
+<label>👤 Usuário:</label>
+<input type="text" id="recuperar-usuario" autocomplete="off" placeholder="Digite seu usuário">
+</div>
+
+<div class="campo-login">
+<label>🔑 Senha alternativa:</label>
+<input type="password" id="recuperar-senha-alternativa" autocomplete="off" placeholder="Digite a senha alternativa cadastrada">
+</div>
+
+<div class="campo-login">
+<label>🔒 Nova senha:</label>
+<input type="password" id="recuperar-nova-senha" autocomplete="off" placeholder="Digite a nova senha">
+</div>
+
+<div class="campo-login">
+<label>🔒 Confirmar nova senha:</label>
+<input type="password" id="recuperar-confirmar-senha" autocomplete="off" placeholder="Repita a nova senha">
+</div>
+
+<button type="button" class="btn-login" onclick="confirmarRecuperacaoSenha()">
+✅ Redefinir senha
+</button>
+
+
+<div class="alternar-login" style="display:block;">
+<a onclick="esconderRecuperarSenha()">← Voltar para o login</a>
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+
+<!-- APLICATIVO -->
+
+<div id="app-principal" style="display:none;">
+
+<div class="barra-usuario">
+<span id="texto-usuario-logado"></span>
+<button type="button" class="btn-historico" id="btn-abrir-painel-admin" onclick="toggleAdminUsuarios()" style="display:none;">
+👑 Usuários Cadastrados
+</button>
+<button type="button" class="btn-sair" onclick="sair()">🚪 Sair</button>
+</div>
+
+<h1>📦 Controle de Estoque Inteligente</h1>
+
+
+<!-- PAINEL ADMIN: USUÁRIOS CADASTRADOS -->
+
+<div class="painel" id="painel-admin-usuarios" style="display:none;">
+
+<h2>👑 Usuários Cadastrados</h2>
+
+<div class="erro-login" id="erro-admin-usuarios" style="display:none;"></div>
+
+<div class="linha-form">
+
+<div class="campo">
+<label>👤 Novo usuário:</label>
+<input type="text" id="admin-novo-usuario" placeholder="Nome de usuário" autocomplete="off">
+</div>
+
+<div class="campo">
+<label>🔒 Senha:</label>
+<input type="password" id="admin-nova-senha" placeholder="Senha (mín. 4 caracteres)" autocomplete="off">
+</div>
+
+<div class="campo">
+<label>🔑 Senha alternativa:</label>
+<input type="password" id="admin-nova-senha-alternativa" placeholder="Senha alternativa" autocomplete="off">
+</div>
+
+<div class="campo">
+<label>🏷️ Tipo de acesso:</label>
+<select id="admin-novo-tipo">
+<option value="usuario">Usuário comum</option>
+<option value="admin">Administrador</option>
+</select>
+</div>
+
+</div>
+
+<div class="container-botoes">
+<button type="button" class="btn-produto" onclick="cadastrarUsuarioAdmin()">
+➕ Cadastrar Usuário
+</button>
+</div>
+
+<div id="lista-usuarios-cadastrados" style="margin-top:20px;">
+</div>
+
+<div class="container-botoes" style="margin-top:20px;padding-top:15px;border-top:1px dashed #cbd5e1;">
+
+<button
+type="button"
+class="btn-produto"
+onclick="fazerBackup()"
+>
+💾 Fazer Backup
+</button>
+
+<button
+type="button"
+class="btn-historico"
+onclick="abrirRestauracaoBackup()"
+>
+♻️ Restaurar Backup
+</button>
+
+<button
+type="button"
+class="btn-produto"
+onclick="abrirConfiguracaoPastaBackup()"
+>
+📁 Configurar Pasta de Backup
+</button>
+
+<input
+type="file"
+id="arquivo-backup"
+accept=".json,application/json"
+style="display:none;"
+onchange="restaurarBackup(this)"
+>
+
+</div>
+
+<div style="margin-top:10px;font-size:12px;color:#64748b;">
+💡 Na primeira vez, escolha a pasta <strong>backup containers</strong> da sua Área de Trabalho. Depois disso, os backups serão salvos automaticamente nela.
+</div>
+
+</div>
+
+
+
+<!-- FORMULÁRIO -->
+
+<div class="painel">
+
+<h2 id="titulo-form">
+📥 Entrada de Mercadoria
+</h2>
+
+<input type="hidden" id="edit-index">
+
+<div class="linha-form">
+
+<div class="campo">
+<label>📅 Data de Entrada:</label>
+<input type="date" id="data">
+</div>
+
+<div class="campo">
+<label>📦 Nº Container (1-60):</label>
+<input
+type="number"
+id="num"
+min="1"
+max="60"
+placeholder="Ex: 01"
+>
+</div>
+
+</div>
+
+
+<div class="linha-form">
+
+<div class="campo">
+<label>🏢 Fornecedor:</label>
+<input
+type="text"
+id="fornecedor"
+placeholder="Nome do fornecedor"
+>
+</div>
+
+<div class="campo">
+<label>🧾 Nº Nota Fiscal:</label>
+<input
+type="text"
+id="nf"
+placeholder="Número da NF-e"
+>
+</div>
+
+</div>
+
+
+<div class="linha-form">
+
+<div class="campo" style="flex:1;">
+<label>🔢 Código:</label>
+<input
+type="text"
+id="codigo"
+placeholder="Código"
+>
+</div>
+
+<div class="campo" style="flex:2;position:relative;">
+<label>📋 Produto:</label>
+<input
+type="text"
+id="prod"
+placeholder="Digite a primeira letra para pesquisar..."
+autocomplete="off"
+oninput="mostrarSugestoesProduto()"
+onfocus="mostrarSugestoesProduto()"
+onblur="esconderSugestoesProduto()"
+>
+<div id="sugestoes-produto" class="sugestoes-produto"></div>
+</div>
+
+</div>
+
+
+<div class="linha-form">
+
+<div class="campo">
+<label>🏷️ Lote:</label>
+<input
+type="text"
+id="lote"
+placeholder="Número do lote"
+>
+</div>
+
+<div class="campo">
+<label>🔢 Quantidade:</label>
+<input
+type="number"
+id="qtd"
+min="0"
+placeholder="Quantidade de volumes"
+>
+</div>
+
+<div class="campo">
+<label>⚖️ Peso (KG):</label>
+<input
+type="number"
+id="peso"
+min="0"
+step="0.01"
+placeholder="Peso líquido total"
+>
+</div>
+
+</div>
+
+
+<div class="container-botoes">
+
+<button
+id="btn-principal"
+onclick="adicionarItem()"
+class="btn-salvar"
+>
+💾 Registrar Entrada
+</button>
+
+
+<button
+id="btn-cancelar"
+onclick="cancelarEdicao()"
+class="btn-cancelar"
+style="display:none;"
+>
+❌ Cancelar Alteração
+</button>
+
+
+<button
+onclick="esvaziarContainer()"
+class="btn-limpar"
+>
+🗑️ Zerar Container
+</button>
+
+
+<button
+onclick="exportarParaExcel()"
+class="btn-excel"
+>
+📊 Exportar Excel
+</button>
+
+</div>
+
+</div>
+
+
+<!-- PESQUISA DOS CONTAINERS -->
+
+<div class="painel-busca">
+
+<strong style="color:#3b82f6;">
+🔎 Pesquisar Containers:
+</strong>
+
+<input
+type="text"
+id="campo-busca"
+class="input-busca"
+placeholder="Produto, lote, container, NF ou fornecedor..."
+oninput="filtrarEstoque()"
+>
+
+</div>
+
+<!-- CONTAINERS -->
+
+<h2>Status dos 60 Containers</h2>
+
+<div id="contador" class="contador">
+Containers ocupados: 0 / 60
+</div>
+
+<div
+class="grid"
+id="grade"
+>
+</div>
+
+
+<!-- CADASTRO DE PRODUTOS (SEÇÃO PRÓPRIA, ABAIXO DA MOVIMENTAÇÃO DOS CONTAINERS) -->
+
+<div class="painel">
+
+<h2>🏷️ Cadastro de Produtos</h2>
+
+<div class="aviso-armazenamento" id="aviso-armazenamento" style="display:none;">
+⏳ Carregando lista de produtos...
+</div>
+
+<label>🔢 Código do Produto:</label>
+
+<input
+type="text"
+id="novo-codigo"
+placeholder="Ex: 0001"
+autocomplete="off"
+style="max-width:200px;"
+>
+
+<label>📋 Novo Produto:</label>
+
+<div class="produto-cadastro">
+
+<input
+type="text"
+id="novo-produto"
+placeholder="Digite o nome do novo produto"
+autocomplete="off"
+style="flex:2;"
+>
+
+<button
+type="button"
+onclick="cadastrarProduto()"
+class="btn-produto"
+>
+➕ Cadastrar Produto
+</button>
+
+</div>
+
+<div class="container-botoes">
+
+<button
+type="button"
+onclick="toggleImportarProdutos()"
+class="btn-historico"
+id="btn-toggle-importar"
+>
+📥 Importar Lista de Produtos
+</button>
+
+</div>
+
+<div
+id="painel-importar-produtos"
+style="display:none;margin-top:15px;padding-top:15px;border-top:1px dashed #cbd5e1;"
+>
+
+<label>📋 Cole a lista de produtos (um por linha, no formato "código;nome"):</label>
+
+<textarea
+id="texto-importar-produtos"
+rows="6"
+placeholder="0001;Produto A
+0002;Produto B
+0003;Produto C"
+style="width:100%;padding:10px;border-radius:8px;border:1px solid #cbd5e1;font-family:monospace;font-size:13px;background:#f8fafc;"
+></textarea>
+
+<div class="container-botoes">
+
+<button
+type="button"
+onclick="importarProdutos()"
+class="btn-salvar"
+id="btn-confirmar-importar"
+>
+✅ Confirmar Importação
+</button>
+
+<button
+type="button"
+onclick="toggleImportarProdutos()"
+class="btn-cancelar"
+>
+❌ Cancelar
+</button>
+
+</div>
+
+</div>
+
+<div class="container-botoes" style="margin-top:20px;">
+
+<button
+type="button"
+onclick="toggleListaProdutosCadastrados()"
+class="btn-historico"
+id="btn-toggle-lista-produtos"
+>
+👁️ Mostrar Produtos Cadastrados
+</button>
+
+<button
+type="button"
+onclick="apagarTodosProdutos()"
+class="btn-apagar-historico"
+id="btn-apagar-produtos"
+>
+🗑️ Apagar Todos os Produtos
+</button>
+
+</div>
+
+<h2 style="margin-top:20px;font-size:16px;display:none;" id="titulo-lista-produtos">Produtos Cadastrados</h2>
+
+<div
+id="contador-produtos"
+class="contador-produtos"
+style="display:none;"
+>
+</div>
+
+<div
+id="lista-produtos-cadastrados"
+class="lista-produtos"
+style="display:none;"
+>
+</div>
+
+</div>
+
+
+<!-- HISTÓRICO -->
+
+<div class="painel">
+
+<h2>📋 Histórico de Movimentações</h2>
+
+<div class="container-botoes">
+
+<button
+type="button"
+onclick="toggleHistorico()"
+class="btn-historico"
+id="btn-toggle-historico"
+>
+👁️ Mostrar Histórico
+</button>
+
+</div>
+
+<div id="conteudo-historico" style="display:none;margin-top:15px;">
+
+<div class="painel-busca"
+style="border-color:#64748b;">
+
+<strong>
+🔎 Pesquisar Histórico:
+</strong>
+
+<input
+type="text"
+id="busca-historico"
+class="input-busca"
+placeholder="Produto, container, NF, lote, fornecedor ou tipo..."
+oninput="filtrarHistorico()"
+>
+
+</div>
+
+
+<div class="container-botoes">
+
+<button
+onclick="mostrarHistorico()"
+class="btn-historico"
+>
+🔄 Atualizar Histórico
+</button>
+
+<button
+onclick="limparHistorico()"
+class="btn-apagar-historico"
+>
+🗑️ Limpar Histórico
+</button>
+
+</div>
+
+
+<div
+id="historico"
+style="margin-top:20px;"
+>
+</div>
+
+</div>
+
+</div>
+
+</div>
+<!-- fim de #app-principal -->
+
+
+<script>
+
+
+// ======================================================
+// BANCO DE DADOS - ESTOQUE E HISTÓRICO (localStorage)
+// ======================================================
+// Estoque e histórico continuam em localStorage: são
+// coleções pequenas (no máximo 60 containers e um
+// histórico de movimentações) e não é aí que mora o
+// limite de itens.
+
+let estoque =
+JSON.parse(
+localStorage.getItem("estoqueContainers")
+) || [];
+
+
+let historico =
+JSON.parse(
+localStorage.getItem("historicoMovimentacoes")
+) || [];
+
+
+// ======================================================
+// BANCO DE DADOS - PRODUTOS CADASTRADOS (IndexedDB)
+// ======================================================
+// A lista de produtos cadastrados foi movida para o
+// IndexedDB porque o localStorage tem um limite pequeno
+// (cerca de 5 MB, compartilhado entre estoque, histórico
+// e produtos) e é isso que causava a falha silenciosa ao
+// tentar cadastrar/importar acima de ~800 produtos.
+// O IndexedDB suporta um volume MUITO maior de dados,
+// então na prática a lista deixa de ter esse limite.
+
+const NOME_BANCO_PRODUTOS = "controleEstoqueDB";
+
+const NOME_ARMAZEM_PRODUTOS = "produtos";
+
+let produtosCadastrados = [];
+
+
+function abrirBancoProdutos(){
+
+return new Promise(function(resolve,reject){
+
+const requisicao =
+indexedDB.open(NOME_BANCO_PRODUTOS,1);
+
+requisicao.onupgradeneeded =
+function(evento){
+
+const db = evento.target.result;
+
+if(!db.objectStoreNames.contains(NOME_ARMAZEM_PRODUTOS)){
+
+db.createObjectStore(NOME_ARMAZEM_PRODUTOS);
+
+}
+
+};
+
+requisicao.onsuccess =
+function(evento){
+
+resolve(evento.target.result);
+
+};
+
+requisicao.onerror =
+function(evento){
+
+reject(evento.target.error);
+
+};
+
+});
+
+}
+
+
+function salvarProdutosIndexedDB(lista){
+
+return abrirBancoProdutos().then(function(db){
+
+return new Promise(function(resolve,reject){
+
+const transacao =
+db.transaction(NOME_ARMAZEM_PRODUTOS,"readwrite");
+
+transacao.objectStore(NOME_ARMAZEM_PRODUTOS)
+.put(lista,"lista");
+
+transacao.oncomplete =
+function(){
+
+resolve();
+
+};
+
+transacao.onerror =
+function(evento){
+
+reject(evento.target.error);
+
+};
+
+});
+
+});
+
+}
+
+
+function carregarProdutosIndexedDB(){
+
+return abrirBancoProdutos().then(function(db){
+
+return new Promise(function(resolve,reject){
+
+const transacao =
+db.transaction(NOME_ARMAZEM_PRODUTOS,"readonly");
+
+const requisicao =
+transacao.objectStore(NOME_ARMAZEM_PRODUTOS)
+.get("lista");
+
+requisicao.onsuccess =
+function(){
+
+resolve(requisicao.result || []);
+
+};
+
+requisicao.onerror =
+function(evento){
+
+reject(evento.target.error);
+
+};
+
+});
+
+});
+
+}
+
+
+// ======================================================
+// SALVAR DADOS
+// ======================================================
+
+function salvarDados(){
+
+try{
+
+localStorage.setItem(
+"estoqueContainers",
+JSON.stringify(estoque)
+);
+
+localStorage.setItem(
+"historicoMovimentacoes",
+JSON.stringify(historico)
+);
+
+}catch(erro){
+
+alert(
+"Não foi possível salvar o estoque/histórico: o armazenamento do navegador está cheio. "+
+"Considere exportar e limpar o histórico antigo."
+);
+
+console.error(erro);
+
+}
+
+
+// Produtos ficam no IndexedDB, que suporta um volume de
+// dados muito maior — aqui apenas persistimos a lista
+// atual de forma assíncrona.
+
+salvarProdutosIndexedDB(produtosCadastrados)
+.catch(function(erro){
+
+alert(
+"Não foi possível salvar a lista de produtos. Detalhe: "+erro
+);
+
+console.error(erro);
+
+});
+
+}
+
+
+// ======================================================
+// DATA E HORA
+// ======================================================
+
+function preencherDataHora(){
+
+const agora =
+new Date();
+
+const ano =
+agora.getFullYear();
+
+const mes =
+String(agora.getMonth()+1)
+.padStart(2,"0");
+
+const dia =
+String(agora.getDate())
+.padStart(2,"0");
+
+
+document.getElementById("data").value =
+`${ano}-${mes}-${dia}`;
+
+}
+
+
+// ======================================================
+// CRIAR CONTAINERS
+// ======================================================
+
+function criarContainers(){
+
+const grade =
+document.getElementById("grade");
+
+grade.innerHTML="";
+
+for(let i=1;i<=60;i++){
+
+const numero =
+String(i).padStart(2,"0");
+
+const box =
+document.createElement("div");
+
+box.className="box";
+
+box.id="c-"+i;
+
+box.innerHTML=`
+
+<div class="titulo">
+📦 Container ${numero}
+</div>
+
+<div
+id="dados-${i}"
+class="lista-produtos"
+>
+</div>
+
+`;
+
+grade.appendChild(box);
+
+}
+
+}
+
+
+// ======================================================
+// REGISTRAR MOVIMENTAÇÃO
+// ======================================================
+
+function registrarMovimentacao(
+tipo,
+item,
+detalhes=""
+){
+
+const movimento={
+
+id:Date.now(),
+
+data:item.data,
+
+hora:item.hora,
+
+tipo:tipo,
+
+num:item.num,
+
+fornecedor:item.fornecedor,
+
+nf:item.nf,
+
+prod:item.prod,
+
+lote:item.lote,
+
+qtd:item.qtd,
+
+peso:item.peso,
+
+detalhes:detalhes
+
+};
+
+
+historico.push(movimento);
+
+salvarDados();
+
+}
+
+
+// ======================================================
+// PRODUTOS CADASTRADOS (DATALIST DO FORMULÁRIO)
+// ======================================================
+
+function atualizarListaProdutos(){
+
+const lista =
+document.getElementById("lista-produtos");
+
+if(!lista)return;
+
+lista.innerHTML="";
+
+produtosCadastrados
+.slice()
+.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"))
+.forEach(function(produto){
+
+const option =
+document.createElement("option");
+
+option.value=produto.nome;
+
+lista.appendChild(option);
+
+});
+
+}
+
+
+function atualizarContadorProdutos(){
+
+const contador =
+document.getElementById("contador-produtos");
+
+if(!contador)return;
+
+contador.innerText=
+"Produtos cadastrados: "+
+produtosCadastrados.length;
+
+}
+
+
+// ======================================================
+// PREENCHER CÓDIGO AUTOMATICAMENTE (FORMULÁRIO DE ENTRADA)
+// ======================================================
+
+function preencherCodigoProduto(){
+
+const campoProd =
+document.getElementById("prod");
+
+const campoCodigo =
+document.getElementById("codigo");
+
+if(!campoProd || !campoCodigo)return;
+
+const nome =
+campoProd.value.trim();
+
+const encontrado =
+produtosCadastrados.find(
+function(item){
+
+return item.nome.toLowerCase() ===
+nome.toLowerCase();
+
+}
+);
+
+if(encontrado){
+
+campoCodigo.value =
+encontrado.codigo || "";
+
+}
+
+}
+
+
+// ======================================================
+// SUGESTÕES DE PRODUTOS AO DIGITAR (FORMULÁRIO DE ENTRADA)
+// ======================================================
+
+function mostrarSugestoesProduto(){
+
+const campo =
+document.getElementById("prod");
+
+const caixa =
+document.getElementById("sugestoes-produto");
+
+if(!campo || !caixa)return;
+
+const texto =
+campo.value.toLowerCase().trim();
+
+let lista =
+produtosCadastrados
+.slice()
+.sort(function(a,b){
+return a.nome.localeCompare(b.nome,"pt-BR");
+});
+
+if(texto !== ""){
+
+lista =
+lista.filter(function(item){
+
+return item.nome.toLowerCase().includes(texto);
+
+});
+
+}
+
+
+// Limita a exibição a 50 sugestões por vez para manter a
+// lista rápida mesmo com centenas/milhares de produtos.
+
+const totalEncontrado =
+lista.length;
+
+lista =
+lista.slice(0,50);
+
+
+caixa.innerHTML="";
+
+
+if(lista.length===0){
+
+const vazio =
+document.createElement("div");
+
+vazio.className=
+"sugestao-item";
+
+vazio.style.color=
+"#94a3b8";
+
+vazio.style.cursor=
+"default";
+
+vazio.innerText=
+"Nenhum produto encontrado.";
+
+caixa.appendChild(vazio);
+
+caixa.style.display=
+"block";
+
+return;
+
+}
+
+
+lista.forEach(function(item){
+
+const div =
+document.createElement("div");
+
+div.className=
+"sugestao-item";
+
+div.innerText=
+(item.codigo ? "["+item.codigo+"] " : "")+
+item.nome;
+
+div.onmousedown=
+function(){
+
+selecionarProdutoSugestao(item.nome,item.codigo);
+
+};
+
+caixa.appendChild(div);
+
+});
+
+
+if(totalEncontrado > 50){
+
+const aviso =
+document.createElement("div");
+
+aviso.className=
+"sugestao-item";
+
+aviso.style.color=
+"#94a3b8";
+
+aviso.style.cursor=
+"default";
+
+aviso.innerText=
+"+ "+(totalEncontrado-50)+" produto(s). Continue digitando para refinar.";
+
+caixa.appendChild(aviso);
+
+}
+
+
+caixa.style.display=
+"block";
+
+}
+
+
+function esconderSugestoesProduto(){
+
+setTimeout(function(){
+
+const caixa =
+document.getElementById("sugestoes-produto");
+
+if(caixa){
+
+caixa.style.display=
+"none";
+
+}
+
+},150);
+
+}
+
+
+function selecionarProdutoSugestao(nome,codigo){
+
+document.getElementById("prod").value=
+nome;
+
+document.getElementById("codigo").value=
+codigo || "";
+
+const caixa =
+document.getElementById("sugestoes-produto");
+
+if(caixa){
+
+caixa.style.display=
+"none";
+
+}
+
+}
+
+
+// ======================================================
+// PRODUTOS CADASTRADOS (LISTA NA SEÇÃO DE CADASTRO)
+// ======================================================
+
+function toggleListaProdutosCadastrados(){
+
+const lista =
+document.getElementById(
+"lista-produtos-cadastrados"
+);
+
+const titulo =
+document.getElementById(
+"titulo-lista-produtos"
+);
+
+const contador =
+document.getElementById(
+"contador-produtos"
+);
+
+const botao =
+document.getElementById(
+"btn-toggle-lista-produtos"
+);
+
+if(!lista || !titulo || !botao)return;
+
+const oculto =
+lista.style.display === "none";
+
+lista.style.display =
+oculto ? "block" : "none";
+
+titulo.style.display =
+oculto ? "block" : "none";
+
+if(contador){
+
+contador.style.display =
+oculto ? "inline-block" : "none";
+
+}
+
+botao.innerText =
+oculto
+?
+"🙈 Ocultar Produtos Cadastrados"
+:
+"👁️ Mostrar Produtos Cadastrados";
+
+}
+
+
+function renderizarProdutosCadastrados(){
+
+const area =
+document.getElementById(
+"lista-produtos-cadastrados"
+);
+
+if(!area)return;
+
+atualizarContadorProdutos();
+
+if(produtosCadastrados.length===0){
+
+area.innerHTML=
+`
+<div class="vazio">
+Nenhum produto cadastrado.
+</div>
+`;
+
+return;
+
+}
+
+
+const ordenados =
+produtosCadastrados
+.map(function(item,indiceOriginal){
+return {
+codigo:item.codigo,
+nome:item.nome,
+indiceOriginal:indiceOriginal
+};
+})
+.sort(function(a,b){
+return a.nome.localeCompare(b.nome,"pt-BR");
+});
+
+
+area.innerHTML=
+ordenados.map(function(item){
+
+return `
+<div class="produto-item">
+<strong>${item.codigo ? item.codigo : "sem código"}</strong>
+—
+${item.nome}
+<div class="acoes-item">
+<button
+class="btn-acao"
+onclick="removerProdutoCadastrado(${item.indiceOriginal})"
+title="Remover produto"
+>
+🗑️
+</button>
+</div>
+</div>
+`;
+
+}).join("");
+
+}
+
+
+function cadastrarProduto(){
+
+const campoCodigo =
+document.getElementById("novo-codigo");
+
+const campoNome =
+document.getElementById("novo-produto");
+
+const codigo =
+campoCodigo.value.trim();
+
+const nome =
+campoNome.value.trim();
+
+if(!nome){
+
+alert("Digite o nome do produto.");
+
+return;
+
+}
+
+const existe =
+produtosCadastrados.some(
+function(item){
+
+if(codigo){
+
+return (item.codigo || "").toLowerCase() ===
+codigo.toLowerCase();
+
+}
+
+return item.nome.toLowerCase() ===
+nome.toLowerCase();
+
+}
+);
+
+if(existe){
+
+alert("Já existe um produto cadastrado com esse código."+(codigo?"":" (produto sem código já cadastrado com esse nome)"));
+
+campoNome.value="";
+
+return;
+
+}
+
+produtosCadastrados.push({
+codigo:codigo,
+nome:nome
+});
+
+salvarDados();
+
+atualizarListaProdutos();
+
+renderizarProdutosCadastrados();
+
+campoCodigo.value="";
+
+campoNome.value="";
+
+alert("Produto cadastrado com sucesso!");
+
+}
+
+
+function removerProdutoCadastrado(index){
+
+if(
+!confirm(
+"Remover este produto da lista de cadastro?\n\n"+
+"Isso não altera entradas já registradas no estoque."
+)
+){
+return;
+}
+
+produtosCadastrados.splice(index,1);
+
+salvarDados();
+
+atualizarListaProdutos();
+
+renderizarProdutosCadastrados();
+
+}
+
+
+// ======================================================
+// APAGAR TODOS OS PRODUTOS CADASTRADOS
+// ======================================================
+
+function apagarTodosProdutos(){
+
+if(produtosCadastrados.length===0){
+
+alert(
+"A lista de produtos já está vazia."
+);
+
+return;
+
+}
+
+
+const confirmar =
+confirm(
+"Tem certeza que deseja apagar TODOS os "+
+produtosCadastrados.length+
+" produtos cadastrados?\n\n"+
+"Isso NÃO altera o estoque nem o histórico — apenas a "+
+"lista de produtos usada para cadastro/sugestões.\n\n"+
+"Essa ação não pode ser desfeita."
+);
+
+if(!confirmar)return;
+
+
+// Segunda confirmação para uma ação tão destrutiva.
+
+const confirmarNovamente =
+confirm(
+"Confirma mesmo? Todos os produtos cadastrados serão apagados."
+);
+
+if(!confirmarNovamente)return;
+
+
+const botao =
+document.getElementById("btn-apagar-produtos");
+
+if(botao){
+
+botao.disabled = true;
+
+botao.innerText = "⏳ Apagando...";
+
+}
+
+
+produtosCadastrados = [];
+
+
+salvarProdutosIndexedDB(produtosCadastrados)
+.then(function(){
+
+// Garante que nenhuma cópia antiga da lista (de uma versão
+// anterior do app, guardada no localStorage) sobreviva para
+// "ressuscitar" os produtos apagados numa próxima migração.
+
+localStorage.removeItem("produtosCadastrados");
+
+localStorage.setItem("produtosMigradosParaIndexedDB","true");
+
+atualizarListaProdutos();
+
+renderizarProdutosCadastrados();
+
+alert(
+"Todos os produtos cadastrados foram apagados."
+);
+
+})
+.catch(function(erro){
+
+alert(
+"Não foi possível apagar a lista de produtos. Detalhe: "+erro
+);
+
+console.error(erro);
+
+})
+.finally(function(){
+
+if(botao){
+
+botao.disabled = false;
+
+botao.innerText = "🗑️ Apagar Todos os Produtos";
+
+}
+
+});
+
+}
+
+
+// ======================================================
+// IMPORTAR LISTA PRONTA DE PRODUTOS (EM LOTE)
+// ======================================================
+
+function toggleImportarProdutos(){
+
+const painel =
+document.getElementById(
+"painel-importar-produtos"
+);
+
+if(!painel)return;
+
+painel.style.display =
+(painel.style.display === "none" || painel.style.display === "")
+? "block"
+: "none";
+
+}
+
+
+function importarProdutos(){
+
+const campoTexto =
+document.getElementById(
+"texto-importar-produtos"
+);
+
+const botaoConfirmar =
+document.getElementById(
+"btn-confirmar-importar"
+);
+
+const texto =
+campoTexto.value;
+
+const linhas =
+texto
+.split("\n")
+.map(function(linha){return linha.trim();})
+.filter(function(linha){return linha !== "";});
+
+if(linhas.length===0){
+
+alert(
+"Cole ao menos uma linha no formato \"código;nome\" (ou apenas o nome, um produto por linha)."
+);
+
+return;
+
+}
+
+let adicionados = 0;
+
+let ignorados = 0;
+
+
+// Usamos um Set com os códigos/nomes já existentes para a
+// verificação de duplicados ficar rápida mesmo com listas
+// muito grandes (milhares de produtos).
+
+const codigosExistentes =
+new Set(
+produtosCadastrados
+.filter(function(item){return item.codigo;})
+.map(function(item){return item.codigo.toLowerCase();})
+);
+
+const nomesExistentes =
+new Set(
+produtosCadastrados
+.map(function(item){return item.nome.toLowerCase();})
+);
+
+
+linhas.forEach(function(linha){
+
+const partes =
+linha
+.split(/;|,|\t/)
+.map(function(p){return p.trim();})
+.filter(function(p){return p !== "";});
+
+let codigo = "";
+
+let nome = "";
+
+if(partes.length >= 2){
+
+codigo = partes[0];
+
+nome = partes.slice(1).join(" ");
+
+}
+
+else if(partes.length === 1){
+
+nome = partes[0];
+
+}
+
+if(!nome){
+
+ignorados++;
+
+return;
+
+}
+
+const existe =
+codigo
+?
+codigosExistentes.has(codigo.toLowerCase())
+:
+nomesExistentes.has(nome.toLowerCase());
+
+if(existe){
+
+ignorados++;
+
+return;
+
+}
+
+produtosCadastrados.push({
+codigo:codigo,
+nome:nome
+});
+
+if(codigo){
+
+codigosExistentes.add(codigo.toLowerCase());
+
+}
+
+nomesExistentes.add(nome.toLowerCase());
+
+adicionados++;
+
+});
+
+
+if(botaoConfirmar){
+
+botaoConfirmar.disabled = true;
+
+botaoConfirmar.innerText = "⏳ Salvando...";
+
+}
+
+
+salvarProdutosIndexedDB(produtosCadastrados)
+.then(function(){
+
+// Mantém estoque/histórico também persistidos, sem
+// depender do IndexedDB para eles.
+
+try{
+
+localStorage.setItem(
+"estoqueContainers",
+JSON.stringify(estoque)
+);
+
+localStorage.setItem(
+"historicoMovimentacoes",
+JSON.stringify(historico)
+);
+
+}catch(erro){
+
+console.error(erro);
+
+}
+
+
+// Marca a migração como concluída e limpa a chave antiga,
+// para que a lista salva no IndexedDB seja sempre a única
+// fonte de verdade a partir de agora.
+
+localStorage.setItem("produtosMigradosParaIndexedDB","true");
+
+localStorage.removeItem("produtosCadastrados");
+
+
+atualizarListaProdutos();
+
+renderizarProdutosCadastrados();
+
+campoTexto.value="";
+
+toggleImportarProdutos();
+
+alert(
+adicionados+" produto(s) importado(s) com sucesso."+
+(ignorados>0
+?
+" "+ignorados+" linha(s) ignorada(s) (vazia ou já cadastrada)."
+:
+""
+)
+);
+
+})
+.catch(function(erro){
+
+alert(
+"Não foi possível salvar os produtos importados. Detalhe: "+erro
+);
+
+console.error(erro);
+
+})
+.finally(function(){
+
+if(botaoConfirmar){
+
+botaoConfirmar.disabled = false;
+
+botaoConfirmar.innerText = "✅ Confirmar Importação";
+
+}
+
+});
+
+}
+
+
+// ======================================================
+// ENTRADA
+// ======================================================
+
+function adicionarItem(){
+
+const data =
+document.getElementById("data").value;
+
+const num =
+document.getElementById("num").value;
+
+const fornecedor =
+document.getElementById("fornecedor").value.trim();
+
+const nf =
+document.getElementById("nf").value.trim();
+
+const prod =
+document.getElementById("prod").value.trim();
+
+const codigo =
+document.getElementById("codigo").value.trim();
+
+const lote =
+document.getElementById("lote").value.trim();
+
+const qtd =
+document.getElementById("qtd").value;
+
+const peso =
+document.getElementById("peso").value;
+
+const editIndex =
+document.getElementById("edit-index").value;
+
+
+if(!data){
+alert("Informe a data.");
+return;
+}
+
+if(!num){
+alert("Informe o container.");
+return;
+}
+
+if(num < 1 || num > 60){
+alert("O container deve estar entre 1 e 60.");
+return;
+}
+
+if(!fornecedor){
+alert("Informe o fornecedor.");
+return;
+}
+
+if(!nf){
+alert("Informe a Nota Fiscal.");
+return;
+}
+
+if(!prod){
+alert("Informe o produto.");
+return;
+}
+
+if(!lote){
+alert("Informe o lote.");
+return;
+}
+
+if(!qtd){
+alert("Informe a quantidade.");
+return;
+}
+
+if(!peso){
+alert("Informe o peso.");
+return;
+}
+
+
+// Se o produto foi digitado manualmente, cadastra automaticamente
+// na lista para aparecer nas próximas pesquisas.
+if(!produtosCadastrados.some(
+function(itemProduto){
+
+if(codigo){
+
+return (itemProduto.codigo || "").toLowerCase() === codigo.toLowerCase();
+
+}
+
+return itemProduto.nome.toLowerCase() === prod.toLowerCase();
+}
+)){
+
+produtosCadastrados.push({
+codigo:codigo,
+nome:prod
+});
+
+salvarDados();
+
+atualizarListaProdutos();
+
+renderizarProdutosCadastrados();
+
+}
+
+
+const item={
+
+data:data,
+
+hora:"",
+
+num:Number(num),
+
+fornecedor:fornecedor,
+
+nf:nf,
+
+prod:prod,
+
+codigo:codigo,
+
+lote:lote,
+
+qtd:Number(qtd),
+
+peso:Number(peso)
+
+};
+
+
+// ==================================================
+// ALTERAÇÃO
+// ==================================================
+
+if(editIndex !== ""){
+
+const antigo =
+estoque[
+Number(editIndex)
+];
+
+
+estoque[
+Number(editIndex)
+]=item;
+
+
+registrarMovimentacao(
+"ALTERAÇÃO",
+item,
+`Registro alterado. Quantidade anterior: ${antigo.qtd}, Peso anterior: ${antigo.peso} KG.`
+);
+
+
+alert(
+"Entrada alterada e movimentação registrada!"
+);
+
+}
+
+
+// ==================================================
+// NOVA ENTRADA
+// ==================================================
+
+else{
+
+estoque.push(item);
+
+
+registrarMovimentacao(
+"ENTRADA",
+item,
+"Nova mercadoria recebida."
+);
+
+
+alert(
+"Mercadoria registrada com sucesso!"
+);
+
+}
+
+
+limparFormulario();
+
+mostrarEstoque();
+
+mostrarHistorico();
+
+}
+
+
+// ======================================================
+// LIMPAR FORMULÁRIO
+// ======================================================
+
+function limparFormulario(){
+
+document.getElementById("num").value="";
+
+document.getElementById("fornecedor").value="";
+
+document.getElementById("nf").value="";
+
+document.getElementById("prod").value="";
+
+document.getElementById("codigo").value="";
+
+document.getElementById("lote").value="";
+
+document.getElementById("qtd").value="";
+
+document.getElementById("peso").value="";
+
+document.getElementById("edit-index").value="";
+
+preencherDataHora();
+
+
+document.getElementById(
+"titulo-form"
+).innerText=
+"📥 Entrada de Mercadoria";
+
+
+document.getElementById(
+"btn-principal"
+).innerText=
+"💾 Registrar Entrada";
+
+
+document.getElementById(
+"btn-cancelar"
+).style.display=
+"none";
+
+}
+
+
+// ======================================================
+// MOSTRAR ESTOQUE
+// ======================================================
+
+function mostrarEstoque(){
+
+for(let i=1;i<=60;i++){
+
+const area =
+document.getElementById(
+"dados-"+i
+);
+
+const container =
+document.getElementById(
+"c-"+i
+);
+
+area.innerHTML="";
+
+container.classList.remove(
+"ocupado"
+);
+
+}
+
+
+estoque.forEach(
+function(item,index){
+
+const area =
+document.getElementById(
+"dados-"+item.num
+);
+
+const container =
+document.getElementById(
+"c-"+item.num
+);
+
+if(!area)return;
+
+
+container.classList.add(
+"ocupado"
+);
+
+
+const div =
+document.createElement("div");
+
+div.className=
+"produto-item";
+
+
+div.innerHTML=`
+
+<strong>
+${item.codigo ? item.codigo+" - " : ""}${item.prod}
+</strong>
+
+<br>
+
+🏢 ${item.fornecedor}
+
+<br>
+
+🧾 NF: ${item.nf}
+
+<br>
+
+🏷️ Lote: ${item.lote}
+
+<br>
+
+🔢 Quantidade: ${item.qtd}
+
+<br>
+
+⚖️ Peso: ${item.peso} KG
+
+<br>
+
+📅 ${formatarData(item.data)}
+
+🕐 ${item.hora}
+
+
+<div class="acoes-item">
+
+<button
+class="btn-acao"
+onclick="editarItem(${index})"
+title="Editar"
+>
+✏️
+</button>
+
+<button
+class="btn-acao"
+onclick="excluirItem(${index})"
+title="Excluir"
+>
+🗑️
+</button>
+
+</div>
+
+`;
+
+
+area.appendChild(div);
+
+}
+);
+
+
+for(let i=1;i<=60;i++){
+
+const area =
+document.getElementById(
+"dados-"+i
+);
+
+if(area.children.length===0){
+
+area.innerHTML=
+`
+<div class="vazio">
+Container vazio
+</div>
+`;
+
+}
+
+}
+
+
+atualizarContador();
+
+filtrarEstoque();
+
+}
+
+
+// ======================================================
+// EDITAR
+// ======================================================
+
+function editarItem(index){
+
+const item =
+estoque[index];
+
+
+document.getElementById("data").value =
+item.data;
+
+document.getElementById("num").value =
+item.num;
+
+document.getElementById("fornecedor").value =
+item.fornecedor;
+
+document.getElementById("nf").value =
+item.nf;
+
+document.getElementById("prod").value =
+item.prod;
+
+document.getElementById("codigo").value =
+item.codigo || "";
+
+document.getElementById("lote").value =
+item.lote;
+
+document.getElementById("qtd").value =
+item.qtd;
+
+document.getElementById("peso").value =
+item.peso;
+
+document.getElementById("edit-index").value =
+index;
+
+
+document.getElementById(
+"titulo-form"
+).innerText=
+"✏️ Alterar Entrada";
+
+
+document.getElementById(
+"btn-principal"
+).innerText=
+"💾 Salvar Alteração";
+
+
+document.getElementById(
+"btn-cancelar"
+).style.display=
+"inline-block";
+
+
+window.scrollTo({
+top:0,
+behavior:"smooth"
+});
+
+}
+
+
+// ======================================================
+// CANCELAR EDIÇÃO
+// ======================================================
+
+function cancelarEdicao(){
+
+limparFormulario();
+
+}
+
+
+// ======================================================
+// EXCLUIR
+// ======================================================
+
+function excluirItem(index){
+
+const item =
+estoque[index];
+
+
+if(
+!confirm(
+"Excluir esta mercadoria do estoque?"
+)
+){
+return;
+}
+
+
+estoque.splice(index,1);
+
+
+registrarMovimentacao(
+"EXCLUSÃO",
+item,
+"Mercadoria excluída do estoque."
+);
+
+
+mostrarEstoque();
+
+mostrarHistorico();
+
+
+alert(
+"Mercadoria excluída. A movimentação foi registrada no histórico."
+);
+
+}
+
+
+// ======================================================
+// ZERAR CONTAINER
+// ======================================================
+
+function esvaziarContainer(){
+
+const num =
+document.getElementById("num").value;
+
+
+if(!num){
+
+alert(
+"Digite o número do container."
+);
+
+return;
+
+}
+
+
+const itens =
+estoque.filter(
+function(item){
+
+return Number(item.num) ===
+Number(num);
+
+}
+);
+
+
+if(itens.length===0){
+
+alert(
+"Esse container já está vazio."
+);
+
+return;
+
+}
+
+
+if(
+!confirm(
+"Tem certeza que deseja zerar o Container "+
+num+"?"
+)
+){
+return;
+}
+
+
+// REGISTAR CADA ITEM NO HISTÓRICO
+
+itens.forEach(
+function(item){
+
+registrarMovimentacao(
+"CONTAINER ZERADO",
+item,
+"Produto removido através da função Zerar Container."
+);
+
+}
+);
+
+
+estoque =
+estoque.filter(
+function(item){
+
+return Number(item.num) !==
+Number(num);
+
+}
+);
+
+
+salvarDados();
+
+mostrarEstoque();
+
+mostrarHistorico();
+
+limparFormulario();
+
+
+alert(
+"Container "+num+
+" zerado. Todas as movimentações foram registradas."
+);
+
+}
+
+
+// ======================================================
+// FILTRO ESTOQUE
+// ======================================================
+
+function filtrarEstoque(){
+
+const texto =
+document.getElementById(
+"campo-busca"
+).value
+.toLowerCase()
+.trim();
+
+
+for(let i=1;i<=60;i++){
+
+const container =
+document.getElementById(
+"c-"+i
+);
+
+const conteudo =
+container.innerText
+.toLowerCase();
+
+
+if(
+texto === "" ||
+conteudo.includes(texto)
+){
+
+container.classList.remove(
+"escondido"
+);
+
+}
+
+else{
+
+container.classList.add(
+"escondido"
+);
+
+}
+
+}
+
+}
+
+
+// ======================================================
+// CONTADOR
+// ======================================================
+
+function atualizarContador(){
+
+const ocupados =
+new Set(
+estoque.map(
+function(item){
+
+return item.num;
+
+}
+)
+).size;
+
+
+document.getElementById(
+"contador"
+).innerText=
+"Containers ocupados: "+
+ocupados+
+" / 60";
+
+}
+
+
+// ======================================================
+// MOSTRAR HISTÓRICO
+// ======================================================
+
+function toggleHistorico(){
+
+const conteudo =
+document.getElementById(
+"conteudo-historico"
+);
+
+const botao =
+document.getElementById(
+"btn-toggle-historico"
+);
+
+if(!conteudo || !botao)return;
+
+const oculto =
+conteudo.style.display === "none";
+
+conteudo.style.display =
+oculto ? "block" : "none";
+
+botao.innerText =
+oculto
+?
+"🙈 Ocultar Histórico"
+:
+"👁️ Mostrar Histórico";
+
+}
+
+
+function mostrarHistorico(){
+
+const area =
+document.getElementById(
+"historico"
+);
+
+
+area.innerHTML="";
+
+
+if(historico.length===0){
+
+area.innerHTML=
+`
+<div class="sem-historico">
+📋 Nenhuma movimentação registrada.
+</div>
+`;
+
+return;
+
+}
+
+
+const lista =
+[...historico].reverse();
+
+
+lista.forEach(
+function(item){
+
+const div =
+document.createElement("div");
+
+
+let classe =
+"movimento";
+
+let classeTipo =
+"tipo-entrada";
+
+
+if(item.tipo==="ALTERAÇÃO"){
+
+classe+=" alteracao";
+
+classeTipo=
+"tipo-alteracao";
+
+}
+
+else if(item.tipo==="EXCLUSÃO"){
+
+classe+=" exclusao";
+
+classeTipo=
+"tipo-exclusao";
+
+}
+
+else if(
+item.tipo==="CONTAINER ZERADO"
+){
+
+classe+=" zerado";
+
+classeTipo=
+"tipo-zerado";
+
+}
+
+else{
+
+classe+=" entrada";
+
+}
+
+
+div.className=
+classe;
+
+
+div.innerHTML=`
+
+<div>
+
+<span class="tipo ${classeTipo}">
+
+${iconeMovimentacao(item.tipo)}
+
+${item.tipo}
+
+</span>
+
+</div>
+
+
+<strong>
+📅 ${formatarData(item.data)}
+</strong>
+
+
+
+<hr>
+
+
+📦 <strong>Container:</strong>
+${String(item.num).padStart(2,"0")}
+
+<br>
+
+📋 <strong>Produto:</strong>
+${item.prod}
+${item.codigo ? " (Cód: "+item.codigo+")" : ""}
+
+<br>
+
+🏷️ <strong>Lote:</strong>
+${item.lote}
+
+<br>
+
+🏢 <strong>Fornecedor:</strong>
+${item.fornecedor}
+
+<br>
+
+🧾 <strong>NF:</strong>
+${item.nf}
+
+<br>
+
+🔢 <strong>Quantidade:</strong>
+${item.qtd}
+
+<br>
+
+⚖️ <strong>Peso:</strong>
+${item.peso} KG
+
+
+${
+item.detalhes
+?
+`
+<hr>
+ℹ️ ${item.detalhes}
+`
+:
+""
+}
+
+`;
+
+
+area.appendChild(div);
+
+}
+);
+
+}
+
+
+// ======================================================
+// ÍCONE DO HISTÓRICO
+// ======================================================
+
+function iconeMovimentacao(tipo){
+
+if(tipo==="ENTRADA")
+return "📥";
+
+if(tipo==="ALTERAÇÃO")
+return "✏️";
+
+if(tipo==="EXCLUSÃO")
+return "🗑️";
+
+if(tipo==="CONTAINER ZERADO")
+return "🧹";
+
+return "📋";
+
+}
+
+
+// ======================================================
+// FILTRO DO HISTÓRICO
+// ======================================================
+
+function filtrarHistorico(){
+
+const busca =
+document.getElementById(
+"busca-historico"
+).value
+.toLowerCase()
+.trim();
+
+
+const movimentos =
+document.querySelectorAll(
+"#historico .movimento"
+);
+
+
+movimentos.forEach(
+function(movimento){
+
+const texto =
+movimento.innerText
+.toLowerCase();
+
+
+if(
+busca === "" ||
+texto.includes(busca)
+){
+
+movimento.style.display=
+"block";
+
+}
+
+else{
+
+movimento.style.display=
+"none";
+
+}
+
+}
+);
+
+}
+
+
+// ======================================================
+// LIMPAR HISTÓRICO
+// ======================================================
+
+function limparHistorico(){
+
+if(historico.length===0){
+
+alert(
+"O histórico já está vazio."
+);
+
+return;
+
+}
+
+
+const confirmar =
+confirm(
+"Tem certeza que deseja apagar todo o histórico de movimentações?\n\n"+
+"O estoque atual NÃO será apagado."
+);
+
+
+if(!confirmar)return;
+
+
+historico=[];
+
+salvarDados();
+
+mostrarHistorico();
+
+
+alert(
+"Histórico apagado com sucesso."
+);
+
+}
+
+
+// ======================================================
+// FORMATAR DATA
+// ======================================================
+
+function formatarData(data){
+
+if(!data)return "";
+
+const partes =
+data.split("-");
+
+
+if(partes.length!==3)
+return data;
+
+
+return partes[2]+"/"+
+partes[1]+"/"+
+partes[0];
+
+}
+
+
+// ======================================================
+// BACKUP E RESTAURAÇÃO COMPLETA
+// ======================================================
+// O navegador não permite que uma página HTML grave diretamente
+// em uma pasta específica do Windows sem autorização do usuário.
+// Por isso, na primeira vez o sistema pede para selecionar a pasta
+// "backup containers". Depois disso, a pasta escolhida fica salva
+// e os próximos backups podem ser gravados automaticamente nela,
+// enquanto a permissão continuar disponível.
+
+const DB_BACKUP_PASTA = "controleEstoqueBackupConfig";
+const STORE_BACKUP_PASTA = "config";
+
+function abrirBancoPastaBackup(){
+
+return new Promise(function(resolve,reject){
+
+const request =
+indexedDB.open(
+DB_BACKUP_PASTA,
+1
+);
+
+request.onupgradeneeded =
+function(event){
+
+const db =
+event.target.result;
+
+if(!db.objectStoreNames.contains(STORE_BACKUP_PASTA)){
+
+db.createObjectStore(
+STORE_BACKUP_PASTA
+);
+
+}
+
+};
+
+request.onsuccess =
+function(event){
+
+resolve(event.target.result);
+
+};
+
+request.onerror =
+function(){
+
+reject(request.error);
+
+};
+
+});
+
+}
+
+
+async function salvarPastaBackup(handle){
+
+const db =
+await abrirBancoPastaBackup();
+
+return new Promise(function(resolve,reject){
+
+const transacao =
+db.transaction(
+STORE_BACKUP_PASTA,
+"readwrite"
+);
+
+transacao.objectStore(
+STORE_BACKUP_PASTA
+).put(
+handle,
+"pastaBackup"
+);
+
+transacao.oncomplete =
+function(){
+
+db.close();
+resolve();
+
+};
+
+transacao.onerror =
+function(){
+
+db.close();
+reject(transacao.error);
+
+};
+
+});
+
+}
+
+
+async function carregarPastaBackup(){
+
+const db =
+await abrirBancoPastaBackup();
+
+return new Promise(function(resolve,reject){
+
+const transacao =
+db.transaction(
+STORE_BACKUP_PASTA,
+"readonly"
+);
+
+const request =
+transacao.objectStore(
+STORE_BACKUP_PASTA
+).get(
+"pastaBackup"
+);
+
+request.onsuccess =
+function(){
+
+db.close();
+resolve(request.result || null);
+
+};
+
+request.onerror =
+function(){
+
+db.close();
+reject(request.error);
+
+};
+
+});
+
+}
+
+
+async function escolherPastaBackup(){
+
+if(!window.showDirectoryPicker){
+
+alert(
+"Seu navegador não permite salvar diretamente em uma pasta escolhida.\n\n"+
+"Use o Google Chrome ou Microsoft Edge atualizado."
+);
+
+return null;
+
+}
+
+try{
+
+const pasta =
+await window.showDirectoryPicker({
+mode:"readwrite"
+});
+
+await salvarPastaBackup(pasta);
+
+alert(
+"✅ Pasta de backup configurada!\n\n"+
+"Agora os próximos backups serão salvos automaticamente nesta pasta."
+);
+
+return pasta;
+
+}catch(erro){
+
+if(erro.name !== "AbortError"){
+
+console.error(erro);
+
+alert(
+"Não foi possível configurar a pasta de backup.\n\n"+
+"Detalhe: "+erro.message
+);
+
+}
+
+return null;
+
+}
+
+}
+
+
+async function verificarPermissaoPastaBackup(pasta){
+
+if(!pasta)return false;
+
+try{
+
+if(
+typeof pasta.queryPermission === "function"
+){
+
+let permissao =
+await pasta.queryPermission({
+mode:"readwrite"
+});
+
+if(permissao === "granted")
+return true;
+
+if(
+typeof pasta.requestPermission === "function"
+){
+
+permissao =
+await pasta.requestPermission({
+mode:"readwrite"
+});
+
+return permissao === "granted";
+
+}
+
+}
+
+return true;
+
+}catch(erro){
+
+console.error(erro);
+
+return false;
+
+}
+
+}
+
+
+async function criarArquivoBackup(){
+
+const produtosBackup =
+await carregarProdutosIndexedDB();
+
+return {
+
+versao:"1.1",
+
+aplicativo:
+"Controle de Estoque Inteligente",
+
+dataBackup:
+new Date().toISOString(),
+
+dados:{
+
+usuariosCadastrados:
+JSON.parse(
+localStorage.getItem("usuariosCadastrados")
+) || [],
+
+estoqueContainers:
+JSON.parse(
+localStorage.getItem("estoqueContainers")
+) || [],
+
+historicoMovimentacoes:
+JSON.parse(
+localStorage.getItem("historicoMovimentacoes")
+) || [],
+
+produtosCadastrados:
+produtosBackup || [],
+
+produtosMigradosParaIndexedDB:
+localStorage.getItem(
+"produtosMigradosParaIndexedDB"
+) === "true"
+
+}
+
+};
+
+}
+
+
+async function fazerBackup(){
+
+try{
+
+const backup =
+await criarArquivoBackup();
+
+const conteudo =
+JSON.stringify(
+backup,
+null,
+2
+);
+
+const nomeArquivo =
+"backup_controle_estoque_"+
+new Date().toISOString()
+.slice(0,10)+
+"_"+String(new Date().getHours()).padStart(2,"0")+
+"-"+String(new Date().getMinutes()).padStart(2,"0")+
+"-"+String(new Date().getSeconds()).padStart(2,"0")+
+".json";
+
+
+// Primeiro tenta usar a pasta configurada.
+let pasta =
+await carregarPastaBackup();
+
+if(!pasta){
+
+pasta =
+await escolherPastaBackup();
+
+}
+
+if(pasta){
+
+const permissao =
+await verificarPermissaoPastaBackup(
+pasta
+);
+
+if(permissao){
+
+const arquivo =
+await pasta.getFileHandle(
+nomeArquivo,
+{
+create:true
+}
+);
+
+const writable =
+await arquivo.createWritable();
+
+await writable.write(conteudo);
+
+await writable.close();
+
+alert(
+"✅ Backup realizado com sucesso!\n\n"+
+"Arquivo: "+nomeArquivo+
+"\n\n"+
+"Produtos: "+
+backup.dados.produtosCadastrados.length+
+"\nRegistros de estoque: "+
+backup.dados.estoqueContainers.length+
+"\nMovimentações: "+
+backup.dados.historicoMovimentacoes.length+
+"\nUsuários: "+
+backup.dados.usuariosCadastrados.length
+);
+
+return;
+
+}
+
+}
+
+
+// Fallback: se a pasta não estiver disponível,
+// continua salvando normalmente na pasta Downloads.
+const blob =
+new Blob(
+[conteudo],
+{
+type:
+"application/json;charset=utf-8;"
+}
+);
+
+const url =
+URL.createObjectURL(blob);
+
+const link =
+document.createElement("a");
+
+link.href =
+url;
+
+link.download =
+nomeArquivo;
+
+document.body.appendChild(link);
+
+link.click();
+
+document.body.removeChild(link);
+
+URL.revokeObjectURL(url);
+
+alert(
+"⚠️ O backup foi criado, mas o navegador não permitiu acessar a pasta configurada.\n\n"+
+"O arquivo foi enviado para a pasta Downloads.\n\n"+
+"Configure novamente a pasta de backup se necessário."
+);
+
+}catch(erro){
+
+console.error(erro);
+
+alert(
+"Não foi possível realizar o backup.\n\n"+
+"Detalhe: "+erro.message
+);
+
+}
+
+}
+
+
+async function abrirConfiguracaoPastaBackup(){
+
+await escolherPastaBackup();
+
+}
+
+
+function abrirRestauracaoBackup(){
+
+const campo =
+document.getElementById(
+"arquivo-backup"
+);
+
+if(!campo)return;
+
+campo.value="";
+
+campo.click();
+
+}
+
+
+async function restaurarBackup(campoArquivo){
+
+const arquivo =
+campoArquivo.files &&
+campoArquivo.files[0];
+
+if(!arquivo)return;
+
+try{
+
+const textoArquivo =
+await arquivo.text();
+
+const backup =
+JSON.parse(
+textoArquivo
+);
+
+if(
+!backup ||
+typeof backup !== "object" ||
+!backup.dados
+){
+
+throw new Error(
+"Este arquivo não é um backup válido do Controle de Estoque."
+);
+
+}
+
+const dados =
+backup.dados;
+
+if(
+!Array.isArray(
+dados.usuariosCadastrados
+) ||
+!Array.isArray(
+dados.estoqueContainers
+) ||
+!Array.isArray(
+dados.historicoMovimentacoes
+) ||
+!Array.isArray(
+dados.produtosCadastrados
+)
+){
+
+throw new Error(
+"O backup está incompleto ou foi criado por uma versão incompatível."
+);
+
+}
+
+const confirmar =
+confirm(
+"⚠️ RESTAURAR BACKUP\n\n"+
+"Essa operação substituirá os dados atuais pelos dados "+
+"salvos neste arquivo.\n\n"+
+"Os dados atuais serão sobrescritos.\n"+
+"O sistema será recarregado e será necessário fazer login novamente.\n\n"+
+"Backup criado em: "+
+(
+backup.dataBackup
+?
+new Date(
+backup.dataBackup
+).toLocaleString("pt-BR")
+:
+"data não informada"
+)+
+"\n\n"+
+"Deseja continuar?"
+);
+
+if(!confirmar)return;
+
+localStorage.setItem(
+"estoqueContainers",
+JSON.stringify(
+dados.estoqueContainers
+)
+);
+
+localStorage.setItem(
+"historicoMovimentacoes",
+JSON.stringify(
+dados.historicoMovimentacoes
+)
+);
+
+localStorage.setItem(
+"usuariosCadastrados",
+JSON.stringify(
+dados.usuariosCadastrados
+)
+);
+
+localStorage.removeItem(
+"credenciaisLogin"
+);
+
+await salvarProdutosIndexedDB(
+dados.produtosCadastrados
+);
+
+localStorage.setItem(
+"produtosMigradosParaIndexedDB",
+"true"
+);
+
+localStorage.removeItem(
+"sessaoAtiva"
+);
+
+alert(
+"✅ Backup restaurado com sucesso!\n\n"+
+"Produtos: "+
+dados.produtosCadastrados.length+
+"\nRegistros de estoque: "+
+dados.estoqueContainers.length+
+"\nMovimentações: "+
+dados.historicoMovimentacoes.length+
+"\nUsuários: "+
+dados.usuariosCadastrados.length+
+"\n\nO sistema será recarregado."
+);
+
+location.reload();
+
+}catch(erro){
+
+console.error(erro);
+
+alert(
+"Não foi possível restaurar o backup.\n\n"+
+"Verifique se o arquivo é um backup válido do sistema.\n\n"+
+"Detalhe: "+erro.message
+);
+
+}
+
+}
+
+
+// ======================================================
+// EXPORTAR EXCEL
+// ======================================================
+// ======================================================
+
+function exportarParaExcel(){
+
+if(estoque.length===0){
+
+alert(
+"Não existem dados para exportar."
+);
+
+return;
+
+}
+
+
+let csv =
+"Data;Tipo;Container;Fornecedor;Nota Fiscal;Código;Produto;Lote;Quantidade;Peso KG\n";
+
+
+estoque.forEach(
+function(item){
+
+csv +=
+`"${formatarData(item.data)}";`+
+`"ESTOQUE";`+
+`"${item.num}";`+
+`"${item.fornecedor}";`+
+`"${item.nf}";`+
+`"${item.codigo || ""}";`+
+`"${item.prod}";`+
+`"${item.lote}";`+
+`"${item.qtd}";`+
+`"${item.peso}"\n`;
+
+}
+);
+
+
+const blob =
+new Blob(
+[
+"\ufeff"+csv
+],
+{
+type:
+"text/csv;charset=utf-8;"
+}
+);
+
+
+const url =
+URL.createObjectURL(blob);
+
+
+const link =
+document.createElement("a");
+
+
+link.href=url;
+
+link.download=
+"controle_estoque.csv";
+
+
+document.body.appendChild(link);
+
+link.click();
+
+document.body.removeChild(link);
+
+URL.revokeObjectURL(url);
+
+}
+
+
+// ======================================================
+// INICIALIZAÇÃO
+// ======================================================
+
+async function iniciarAplicativo(){
+
+criarContainers();
+
+preencherDataHora();
+
+
+const avisoArmazenamento =
+document.getElementById("aviso-armazenamento");
+
+if(avisoArmazenamento){
+
+avisoArmazenamento.style.display = "block";
+
+}
+
+
+try{
+
+let produtosSalvos =
+await carregarProdutosIndexedDB();
+
+
+// Migração automática: se o IndexedDB ainda está vazio E a
+// migração nunca foi feita antes, tenta aproveitar dados que
+// ficaram no localStorage de uma versão anterior do app.
+//
+// A flag "produtosMigradosParaIndexedDB" garante que essa
+// migração rode UMA ÚNICA VEZ. Sem ela, se o usuário apagasse
+// todos os produtos do IndexedDB e recarregasse a página, o
+// código achava que era a primeira vez rodando e trazia de
+// volta os produtos que ainda estavam na chave antiga do
+// localStorage — fazendo a lista "ressuscitar" sozinha.
+
+const migracaoJaFeita =
+localStorage.getItem("produtosMigradosParaIndexedDB") === "true";
+
+if(produtosSalvos.length === 0 && !migracaoJaFeita){
+
+const antigos =
+JSON.parse(
+localStorage.getItem("produtosCadastrados")
+) || [];
+
+if(antigos.length > 0){
+
+produtosSalvos =
+antigos.map(function(item){
+
+if(typeof item === "string"){
+
+return {
+codigo:"",
+nome:item
+};
+
+}
+
+return item;
+
+});
+
+await salvarProdutosIndexedDB(produtosSalvos);
+
+}
+
+}
+
+// Marca a migração como concluída (mesmo que não tenha
+// encontrado nada para migrar) e apaga a chave antiga, para
+// que ela nunca mais seja usada como fonte de dados.
+
+if(!migracaoJaFeita){
+
+localStorage.setItem("produtosMigradosParaIndexedDB","true");
+
+localStorage.removeItem("produtosCadastrados");
+
+}
+
+produtosCadastrados = produtosSalvos;
+
+if(avisoArmazenamento){
+
+avisoArmazenamento.style.display = "none";
+
+}
+
+}catch(erro){
+
+alert(
+"Não foi possível carregar a lista de produtos salva. Detalhe: "+erro
+);
+
+console.error(erro);
+
+produtosCadastrados = [];
+
+if(avisoArmazenamento){
+
+avisoArmazenamento.innerText =
+"⚠️ Não foi possível carregar os produtos salvos.";
+
+}
+
+}
+
+
+atualizarListaProdutos();
+
+renderizarProdutosCadastrados();
+
+mostrarEstoque();
+
+mostrarHistorico();
+
+}
+
+
+// ======================================================
+// LOGIN / AUTENTICAÇÃO
+// ======================================================
+// Aviso: como este é um app de arquivo único, sem servidor,
+// esse login é um controle de acesso local (impede o uso
+// casual da tela) — não é segurança real, pois qualquer
+// pessoa com acesso ao arquivo/navegador e às ferramentas
+// de desenvolvedor pode contornar. Não use dados sensíveis
+// dependendo só disso.
+
+let modoCadastroLogin = false;
+
+let usuarioLogadoAtual = null;
+
+
+// ======================================================
+// USUÁRIOS CADASTRADOS (MULTIUSUÁRIO)
+// ======================================================
+// Guarda um ARRAY de usuários em vez de um único objeto.
+// Cada usuário: { usuario, senhaHash, senhaAlternativaHash, tipo }
+// tipo é "admin" ou "usuario".
+
+function carregarUsuariosCadastrados(){
+
+const lista =
+JSON.parse(
+localStorage.getItem("usuariosCadastrados")
+);
+
+if(Array.isArray(lista))return lista;
+
+
+// Migração automática do formato antigo (um único usuário
+// guardado em "credenciaisLogin"), que vira o primeiro admin.
+
+const antigo =
+JSON.parse(
+localStorage.getItem("credenciaisLogin")
+);
+
+if(antigo && antigo.usuario){
+
+const migrado =
+[{
+usuario:antigo.usuario,
+senhaHash:antigo.senhaHash,
+senhaAlternativaHash:antigo.senhaAlternativaHash || null,
+tipo:"admin"
+}];
+
+localStorage.setItem(
+"usuariosCadastrados",
+JSON.stringify(migrado)
+);
+
+localStorage.removeItem("credenciaisLogin");
+
+return migrado;
+
+}
+
+
+return [];
+
+}
+
+
+function salvarUsuariosCadastrados(lista){
+
+localStorage.setItem(
+"usuariosCadastrados",
+JSON.stringify(lista)
+);
+
+}
+
+
+function hashTexto(texto){
+
+const encoder =
+new TextEncoder();
+
+const dados =
+encoder.encode(texto);
+
+return crypto.subtle.digest("SHA-256",dados)
+.then(function(hashBuffer){
+
+const hashArray =
+Array.from(new Uint8Array(hashBuffer));
+
+return hashArray.map(function(b){
+
+return b.toString(16).padStart(2,"0");
+
+}).join("");
+
+});
+
+}
+
+
+function mostrarErroLogin(mensagem){
+
+const erro =
+document.getElementById("erro-login");
+
+if(!erro)return;
+
+erro.innerText = mensagem;
+
+erro.style.display = "block";
+
+}
+
+
+function esconderErroLogin(){
+
+const erro =
+document.getElementById("erro-login");
+
+if(!erro)return;
+
+erro.style.display = "none";
+
+}
+
+
+function verificarAutenticacao(){
+
+const usuarios =
+carregarUsuariosCadastrados();
+
+const subtitulo =
+document.getElementById("subtitulo-login");
+
+const campoConfirmar =
+document.getElementById("campo-confirmar-senha");
+
+const campoSenhaAlternativaCadastro =
+document.getElementById("campo-senha-alternativa-cadastro");
+
+const alternar =
+document.getElementById("alternar-login");
+
+const botao =
+document.getElementById("btn-acao-login");
+
+
+if(usuarios.length === 0){
+
+modoCadastroLogin = true;
+
+subtitulo.innerText =
+"Crie o primeiro usuário (administrador) para acessar o sistema";
+
+campoConfirmar.style.display = "block";
+
+if(campoSenhaAlternativaCadastro){
+
+campoSenhaAlternativaCadastro.style.display = "block";
+
+}
+
+alternar.style.display = "none";
+
+botao.innerText = "Criar conta e entrar";
+
+return;
+
+}
+
+
+modoCadastroLogin = false;
+
+subtitulo.innerText =
+"Entre com seu usuário e senha";
+
+campoConfirmar.style.display = "none";
+
+if(campoSenhaAlternativaCadastro){
+
+campoSenhaAlternativaCadastro.style.display = "none";
+
+}
+
+botao.innerText = "Entrar";
+
+alternar.innerHTML =
+'Esqueceu a senha? <a onclick="mostrarRecuperarSenha()">Redefinir com senha alternativa</a>';
+
+alternar.style.display = "block";
+
+
+const sessao =
+JSON.parse(
+localStorage.getItem("sessaoAtiva")
+);
+
+if(sessao && sessao.usuario){
+
+const usuarioSessao =
+usuarios.find(function(item){
+
+return item.usuario.toLowerCase() ===
+sessao.usuario.toLowerCase();
+
+});
+
+if(usuarioSessao){
+
+entrarNoApp(usuarioSessao);
+
+}
+
+else{
+
+localStorage.removeItem("sessaoAtiva");
+
+}
+
+}
+
+}
+
+
+function tratarEnvioLogin(){
+
+esconderErroLogin();
+
+const usuarioDigitado =
+document.getElementById("login-usuario").value.trim();
+
+const senha =
+document.getElementById("login-senha").value;
+
+
+if(!usuarioDigitado || !senha){
+
+mostrarErroLogin("Preencha usuário e senha.");
+
+return;
+
+}
+
+
+// ==================================================
+// PRIMEIRO CADASTRO (VIRA ADMIN)
+// ==================================================
+
+if(modoCadastroLogin){
+
+const confirmar =
+document.getElementById("login-confirmar-senha").value;
+
+const senhaAlternativa =
+document.getElementById("login-senha-alternativa").value;
+
+if(senha.length < 4){
+
+mostrarErroLogin("A senha deve ter pelo menos 4 caracteres.");
+
+return;
+
+}
+
+if(senha !== confirmar){
+
+mostrarErroLogin("As senhas não coincidem.");
+
+return;
+
+}
+
+if(senhaAlternativa.length < 4){
+
+mostrarErroLogin(
+"Crie uma senha alternativa com pelo menos 4 caracteres. "+
+"Ela será usada só para redefinir a senha principal caso você a esqueça."
+);
+
+return;
+
+}
+
+if(senhaAlternativa === senha){
+
+mostrarErroLogin(
+"A senha alternativa deve ser diferente da senha principal."
+);
+
+return;
+
+}
+
+
+Promise.all([
+hashTexto(senha),
+hashTexto(senhaAlternativa)
+]).then(function(hashes){
+
+const usuarios = [{
+
+usuario:usuarioDigitado,
+
+senhaHash:hashes[0],
+
+senhaAlternativaHash:hashes[1],
+
+tipo:"admin"
+
+}];
+
+salvarUsuariosCadastrados(usuarios);
+
+localStorage.setItem(
+"sessaoAtiva",
+JSON.stringify({usuario:usuarioDigitado})
+);
+
+entrarNoApp(usuarios[0]);
+
+});
+
+return;
+
+}
+
+
+// ==================================================
+// LOGIN NORMAL
+// ==================================================
+
+const usuarios =
+carregarUsuariosCadastrados();
+
+const usuarioEncontrado =
+usuarios.find(function(item){
+
+return item.usuario.toLowerCase() ===
+usuarioDigitado.toLowerCase();
+
+});
+
+if(!usuarioEncontrado){
+
+mostrarErroLogin("Usuário ou senha incorretos.");
+
+return;
+
+}
+
+hashTexto(senha).then(function(senhaHash){
+
+if(usuarioEncontrado.senhaHash !== senhaHash){
+
+mostrarErroLogin("Usuário ou senha incorretos.");
+
+return;
+
+}
+
+
+localStorage.setItem(
+"sessaoAtiva",
+JSON.stringify({usuario:usuarioEncontrado.usuario})
+);
+
+entrarNoApp(usuarioEncontrado);
+
+});
+
+}
+
+
+function entrarNoApp(usuarioObjeto){
+
+usuarioLogadoAtual = usuarioObjeto;
+
+document.getElementById("tela-login").style.display =
+"none";
+
+document.getElementById("app-principal").style.display =
+"block";
+
+document.getElementById("texto-usuario-logado").innerText =
+(usuarioObjeto.tipo === "admin" ? "👑 " : "👤 ")+
+usuarioObjeto.usuario+
+(usuarioObjeto.tipo === "admin" ? " (admin)" : "");
+
+const botaoAdmin =
+document.getElementById("btn-abrir-painel-admin");
+
+if(botaoAdmin){
+
+botaoAdmin.style.display =
+usuarioObjeto.tipo === "admin" ? "inline-block" : "none";
+
+}
+
+iniciarAplicativo();
+
+}
+
+
+function sair(){
+
+localStorage.removeItem("sessaoAtiva");
+
+location.reload();
+
+}
+
+
+// ======================================================
+// REDEFINIR SENHA COM SENHA ALTERNATIVA
+// ======================================================
+// Caso o usuário esqueça a senha principal, ele pode entrar
+// aqui com o usuário + a senha alternativa cadastrada no
+// momento do cadastro, e então definir uma nova senha
+// principal.
+
+function mostrarErroRecuperar(mensagem){
+
+const erro =
+document.getElementById("erro-recuperar");
+
+if(!erro)return;
+
+erro.innerText = mensagem;
+
+erro.style.display = "block";
+
+}
+
+
+function esconderErroRecuperar(){
+
+const erro =
+document.getElementById("erro-recuperar");
+
+if(!erro)return;
+
+erro.style.display = "none";
+
+}
+
+
+function mostrarRecuperarSenha(){
+
+esconderErroLogin();
+
+document.getElementById("bloco-login-normal").style.display =
+"none";
+
+document.getElementById("painel-recuperar-senha").style.display =
+"block";
+
+document.getElementById("recuperar-usuario").value = "";
+
+document.getElementById("recuperar-senha-alternativa").value = "";
+
+document.getElementById("recuperar-nova-senha").value = "";
+
+document.getElementById("recuperar-confirmar-senha").value = "";
+
+esconderErroRecuperar();
+
+}
+
+
+function esconderRecuperarSenha(){
+
+document.getElementById("painel-recuperar-senha").style.display =
+"none";
+
+document.getElementById("bloco-login-normal").style.display =
+"block";
+
+esconderErroRecuperar();
+
+}
+
+
+function confirmarRecuperacaoSenha(){
+
+esconderErroRecuperar();
+
+const usuarioDigitado =
+document.getElementById("recuperar-usuario").value.trim();
+
+const senhaAlternativaDigitada =
+document.getElementById("recuperar-senha-alternativa").value;
+
+const novaSenha =
+document.getElementById("recuperar-nova-senha").value;
+
+const confirmarSenha =
+document.getElementById("recuperar-confirmar-senha").value;
+
+if(!usuarioDigitado || !senhaAlternativaDigitada){
+
+mostrarErroRecuperar("Preencha o usuário e a senha alternativa.");
+
+return;
+
+}
+
+if(novaSenha.length < 4){
+
+mostrarErroRecuperar("A nova senha deve ter pelo menos 4 caracteres.");
+
+return;
+
+}
+
+if(novaSenha !== confirmarSenha){
+
+mostrarErroRecuperar("As senhas não coincidem.");
+
+return;
+
+}
+
+
+const usuarios =
+carregarUsuariosCadastrados();
+
+const usuarioEncontrado =
+usuarios.find(function(item){
+
+return item.usuario.toLowerCase() ===
+usuarioDigitado.toLowerCase();
+
+});
+
+if(!usuarioEncontrado || !usuarioEncontrado.senhaAlternativaHash){
+
+mostrarErroRecuperar(
+"Usuário não encontrado ou sem senha alternativa cadastrada."
+);
+
+return;
+
+}
+
+
+hashTexto(senhaAlternativaDigitada).then(function(senhaAlternativaHash){
+
+if(senhaAlternativaHash !== usuarioEncontrado.senhaAlternativaHash){
+
+mostrarErroRecuperar("Senha alternativa incorreta.");
+
+return;
+
+}
+
+
+hashTexto(novaSenha).then(function(novaSenhaHash){
+
+usuarioEncontrado.senhaHash = novaSenhaHash;
+
+salvarUsuariosCadastrados(usuarios);
+
+alert("Senha redefinida com sucesso! Faça login com a nova senha.");
+
+esconderRecuperarSenha();
+
+document.getElementById("login-usuario").value =
+usuarioEncontrado.usuario;
+
+document.getElementById("login-senha").value = "";
+
+});
+
+});
+
+}
+
+
+// ======================================================
+// PAINEL ADMIN: USUÁRIOS CADASTRADOS
+// ======================================================
+
+function toggleAdminUsuarios(){
+
+const painel =
+document.getElementById("painel-admin-usuarios");
+
+if(!painel)return;
+
+const oculto =
+painel.style.display === "none" ||
+painel.style.display === "";
+
+painel.style.display =
+oculto ? "block" : "none";
+
+const botao =
+document.getElementById("btn-abrir-painel-admin");
+
+if(botao){
+
+botao.innerText =
+oculto ? "🙈 Ocultar Usuários" : "👑 Usuários Cadastrados";
+
+}
+
+if(oculto){
+
+renderizarUsuariosCadastradosAdmin();
+
+}
+
+}
+
+
+function mostrarErroAdminUsuarios(mensagem){
+
+const erro =
+document.getElementById("erro-admin-usuarios");
+
+if(!erro)return;
+
+erro.innerText = mensagem;
+
+erro.style.display = "block";
+
+}
+
+
+function esconderErroAdminUsuarios(){
+
+const erro =
+document.getElementById("erro-admin-usuarios");
+
+if(!erro)return;
+
+erro.style.display = "none";
+
+}
+
+
+function renderizarUsuariosCadastradosAdmin(){
+
+const area =
+document.getElementById("lista-usuarios-cadastrados");
+
+if(!area)return;
+
+const usuarios =
+carregarUsuariosCadastrados();
+
+if(usuarios.length === 0){
+
+area.innerHTML =
+`
+<div class="vazio">
+Nenhum usuário cadastrado.
+</div>
+`;
+
+return;
+
+}
+
+
+area.innerHTML =
+usuarios.map(function(item,index){
+
+return `
+<div class="produto-item">
+<strong>${item.usuario}</strong>
+—
+${item.tipo === "admin" ? "👑 Administrador" : "👤 Usuário comum"}
+<div class="acoes-item">
+<button
+class="btn-acao"
+onclick="redefinirSenhaUsuarioAdmin(${index})"
+title="Redefinir senha"
+>
+🔑
+</button>
+<button
+class="btn-acao"
+onclick="excluirUsuarioAdmin(${index})"
+title="Excluir usuário"
+>
+🗑️
+</button>
+</div>
+</div>
+`;
+
+}).join("");
+
+}
+
+
+function cadastrarUsuarioAdmin(){
+
+esconderErroAdminUsuarios();
+
+const campoUsuario =
+document.getElementById("admin-novo-usuario");
+
+const campoSenha =
+document.getElementById("admin-nova-senha");
+
+const campoSenhaAlternativa =
+document.getElementById("admin-nova-senha-alternativa");
+
+const campoTipo =
+document.getElementById("admin-novo-tipo");
+
+const novoUsuario =
+campoUsuario.value.trim();
+
+const novaSenha =
+campoSenha.value;
+
+const novaSenhaAlternativa =
+campoSenhaAlternativa.value;
+
+const novoTipo =
+campoTipo.value;
+
+if(!novoUsuario){
+
+mostrarErroAdminUsuarios("Informe o nome do novo usuário.");
+
+return;
+
+}
+
+if(novaSenha.length < 4){
+
+mostrarErroAdminUsuarios("A senha deve ter pelo menos 4 caracteres.");
+
+return;
+
+}
+
+if(novaSenhaAlternativa.length < 4){
+
+mostrarErroAdminUsuarios(
+"A senha alternativa deve ter pelo menos 4 caracteres."
+);
+
+return;
+
+}
+
+if(novaSenhaAlternativa === novaSenha){
+
+mostrarErroAdminUsuarios(
+"A senha alternativa deve ser diferente da senha principal."
+);
+
+return;
+
+}
+
+
+const usuarios =
+carregarUsuariosCadastrados();
+
+const jaExiste =
+usuarios.some(function(item){
+
+return item.usuario.toLowerCase() ===
+novoUsuario.toLowerCase();
+
+});
+
+if(jaExiste){
+
+mostrarErroAdminUsuarios("Já existe um usuário com esse nome.");
+
+return;
+
+}
+
+
+Promise.all([
+hashTexto(novaSenha),
+hashTexto(novaSenhaAlternativa)
+]).then(function(hashes){
+
+usuarios.push({
+usuario:novoUsuario,
+senhaHash:hashes[0],
+senhaAlternativaHash:hashes[1],
+tipo:novoTipo
+});
+
+salvarUsuariosCadastrados(usuarios);
+
+renderizarUsuariosCadastradosAdmin();
+
+campoUsuario.value = "";
+
+campoSenha.value = "";
+
+campoSenhaAlternativa.value = "";
+
+campoTipo.value = "usuario";
+
+alert("Usuário cadastrado com sucesso!");
+
+});
+
+}
+
+
+function excluirUsuarioAdmin(index){
+
+const usuarios =
+carregarUsuariosCadastrados();
+
+const alvo =
+usuarios[index];
+
+if(!alvo)return;
+
+const totalAdmins =
+usuarios.filter(function(item){
+
+return item.tipo === "admin";
+
+}).length;
+
+if(alvo.tipo === "admin" && totalAdmins <= 1){
+
+alert(
+"Não é possível excluir o único administrador restante. "+
+"Cadastre outro admin antes de excluir este."
+);
+
+return;
+
+}
+
+if(
+usuarioLogadoAtual &&
+alvo.usuario.toLowerCase() === usuarioLogadoAtual.usuario.toLowerCase()
+){
+
+alert("Você não pode excluir o usuário com o qual está logado agora.");
+
+return;
+
+}
+
+if(
+!confirm(
+"Excluir o usuário \""+alvo.usuario+"\"? Essa ação não pode ser desfeita."
+)
+){
+return;
+}
+
+usuarios.splice(index,1);
+
+salvarUsuariosCadastrados(usuarios);
+
+renderizarUsuariosCadastradosAdmin();
+
+}
+
+
+function redefinirSenhaUsuarioAdmin(index){
+
+const usuarios =
+carregarUsuariosCadastrados();
+
+const alvo =
+usuarios[index];
+
+if(!alvo)return;
+
+const novaSenha =
+prompt(
+"Digite a nova senha para o usuário \""+alvo.usuario+
+"\" (mínimo 4 caracteres):"
+);
+
+if(novaSenha === null)return;
+
+if(novaSenha.length < 4){
+
+alert("A senha deve ter pelo menos 4 caracteres.");
+
+return;
+
+}
+
+hashTexto(novaSenha).then(function(senhaHash){
+
+alvo.senhaHash = senhaHash;
+
+salvarUsuariosCadastrados(usuarios);
+
+alert("Senha do usuário \""+alvo.usuario+"\" redefinida com sucesso.");
+
+});
+
+}
+
+
+// Permite enviar o formulário de login pressionando Enter.
+
+document.addEventListener("keydown",function(evento){
+
+if(evento.key !== "Enter")return;
+
+const telaLogin =
+document.getElementById("tela-login");
+
+if(telaLogin && telaLogin.style.display !== "none"){
+
+tratarEnvioLogin();
+
+}
+
+});
+
+
+verificarAutenticacao();
+
+</script>
+
+</body>
+
+</html>
