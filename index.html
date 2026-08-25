@@ -135,14 +135,16 @@ input::placeholder, textarea::placeholder {
 }
 
 .painel-entrada .linha-form {
+    display: flex;
     gap: 8px;
     flex-wrap: nowrap;
     width: 100%;
+    align-items: flex-end;
 }
 
 .painel-entrada .linha-form .campo {
     min-width: 0;
-    flex: 1 1 0;
+    flex: 0 0 auto;
 }
 
 .painel-entrada label {
@@ -152,6 +154,7 @@ input::placeholder, textarea::placeholder {
 }
 
 .painel-entrada input {
+    box-sizing: border-box;
     padding: 3px 7px;
     margin: 2px 0 4px;
     min-height: 27px;
@@ -159,16 +162,29 @@ input::placeholder, textarea::placeholder {
     font-size: 12px;
 }
 
-.painel-entrada .linha-form:nth-of-type(3) .campo:first-child {
-    flex: 0 0 24%;
-}
+/* Tamanhos exatamente proporcionais ao modelo enviado */
+.painel-entrada .linha-form:nth-of-type(1) #data { width: 105px; }
+.painel-entrada .linha-form:nth-of-type(1) #num { width: 125px; }
 
-.painel-entrada .linha-form:nth-of-type(3) .campo:nth-child(2) {
-    flex: 1 1 76%;
-}
+.painel-entrada .linha-form:nth-of-type(2) #fornecedor { width: 530px; }
+.painel-entrada .linha-form:nth-of-type(2) #nf { width: 145px; }
 
+.painel-entrada .linha-form:nth-of-type(3) #codigo { width: 105px; }
+.painel-entrada .linha-form:nth-of-type(3) #prod { width: 480px; }
+
+.painel-entrada .linha-form:nth-of-type(4) #lote { width: 460px; }
+.painel-entrada .linha-form:nth-of-type(4) #qtd { width: 90px; }
+.painel-entrada .linha-form:nth-of-type(4) #peso { width: 100px; }
+
+/* Mantém os campos maiores bem distribuídos e os menores compactos */
+.painel-entrada .linha-form:nth-of-type(1) .campo:first-child,
+.painel-entrada .linha-form:nth-of-type(1) .campo:nth-child(2),
+.painel-entrada .linha-form:nth-of-type(2) .campo:first-child,
+.painel-entrada .linha-form:nth-of-type(2) .campo:nth-child(2),
+.painel-entrada .linha-form:nth-of-type(3) .campo:first-child,
+.painel-entrada .linha-form:nth-of-type(3) .campo:nth-child(2),
 .painel-entrada .linha-form:nth-of-type(4) .campo {
-    flex: 1 1 33.333%;
+    flex: 0 0 auto;
 }
 
 .painel-entrada h2 {
@@ -180,9 +196,15 @@ input::placeholder, textarea::placeholder {
     margin-top: 6px;
 }
 
+@media(max-width: 1100px) {
+    .painel-entrada {
+        overflow-x: auto;
+    }
+}
+
 @media(max-width:700px) {
-    .linha-form {
-        flex-direction: column;
+    .painel-entrada {
+        overflow-x: visible;
     }
 
     .painel-entrada .linha-form {
@@ -190,10 +212,28 @@ input::placeholder, textarea::placeholder {
     }
 
     .painel-entrada .linha-form .campo,
+    .painel-entrada .linha-form:nth-of-type(1) .campo:first-child,
+    .painel-entrada .linha-form:nth-of-type(1) .campo:nth-child(2),
+    .painel-entrada .linha-form:nth-of-type(2) .campo:first-child,
+    .painel-entrada .linha-form:nth-of-type(2) .campo:nth-child(2),
     .painel-entrada .linha-form:nth-of-type(3) .campo:first-child,
     .painel-entrada .linha-form:nth-of-type(3) .campo:nth-child(2),
     .painel-entrada .linha-form:nth-of-type(4) .campo {
         flex: 1 1 100%;
+        width: 100%;
+    }
+
+    .painel-entrada input,
+    .painel-entrada .linha-form:nth-of-type(1) #data,
+    .painel-entrada .linha-form:nth-of-type(1) #num,
+    .painel-entrada .linha-form:nth-of-type(2) #fornecedor,
+    .painel-entrada .linha-form:nth-of-type(2) #nf,
+    .painel-entrada .linha-form:nth-of-type(3) #codigo,
+    .painel-entrada .linha-form:nth-of-type(3) #prod,
+    .painel-entrada .linha-form:nth-of-type(4) #lote,
+    .painel-entrada .linha-form:nth-of-type(4) #qtd,
+    .painel-entrada .linha-form:nth-of-type(4) #peso {
+        width: 100%;
     }
 }
 
@@ -644,7 +684,7 @@ button:disabled {
 
 <div class="cartao-login">
 
-<h1>📦 Controle de Estoque</h1>
+<h1>📦 Controle de Containers</h1>
 
 <div class="subtitulo-login" id="subtitulo-login">
 Entre com seu usuário e senha
