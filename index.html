@@ -4887,8 +4887,8 @@ hashTexto(novaSenha).then(function(senhaHash){
 
 usuarios.push({
 usuario:novoUsuario,
-senhaHash:hashes[0],
-senhaAlternativaHash:hashes[1],
+senhaHash:senhaHash,
+senhaAlternativaHash:null,
 tipo:novoTipo
 });
 
@@ -4998,14 +4998,20 @@ alvo.senhaHash = senhaHash;
 
 salvarUsuariosCadastrados(usuarios);
 
-alert("Senha do usuário \""+alvo.usuario+"\" redefinida com sucesso.");
+renderizarUsuariosCadastradosAdmin();
 
-})
+alert("Senha do usuário \""+alvo.usuario+"\" redefinida com sucesso.");
 
 if(typeof aoConcluir === "function"){
 aoConcluir();
 }
-;
+
+}).catch(function(erro){
+
+console.error(erro);
+alert("Não foi possível redefinir a senha. Tente novamente.");
+
+});
 
 }
 
