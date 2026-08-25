@@ -5146,8 +5146,8 @@ hashTexto(novaSenha).then(function(senhaHash){
 
 usuarios.push({
 usuario:novoUsuario,
-senhaHash:hashes[0],
-senhaAlternativaHash:hashes[1],
+senhaHash:senhaHash,
+senhaAlternativaHash:null,
 tipo:novoTipo
 });
 
