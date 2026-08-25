@@ -6,7 +6,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Controle de containers</title>
+<title>Controle de Containers</title>
 
 <style>
 
@@ -30,7 +30,7 @@
 
 body {
     font-family: 'Segoe UI', Arial, sans-serif;
-    margin: 20px;
+    margin: 12px;
     background:
         radial-gradient(circle at 15% 0%, rgba(86,210,255,.06), transparent 45%),
         var(--bg);
@@ -129,9 +129,71 @@ input::placeholder, textarea::placeholder {
     margin-bottom: 0;
 }
 
+/* Formulário de containers: campos mais compactos e aproveitando toda a largura */
+.painel-entrada {
+    padding: 14px 12px;
+}
+
+.painel-entrada .linha-form {
+    gap: 8px;
+    flex-wrap: nowrap;
+    width: 100%;
+}
+
+.painel-entrada .linha-form .campo {
+    min-width: 0;
+    flex: 1 1 0;
+}
+
+.painel-entrada label {
+    font-size: 11.5px;
+    margin-bottom: 1px;
+    display: block;
+}
+
+.painel-entrada input {
+    padding: 3px 7px;
+    margin: 2px 0 4px;
+    min-height: 27px;
+    height: 27px;
+    font-size: 12px;
+}
+
+.painel-entrada .linha-form:nth-of-type(3) .campo:first-child {
+    flex: 0 0 24%;
+}
+
+.painel-entrada .linha-form:nth-of-type(3) .campo:nth-child(2) {
+    flex: 1 1 76%;
+}
+
+.painel-entrada .linha-form:nth-of-type(4) .campo {
+    flex: 1 1 33.333%;
+}
+
+.painel-entrada h2 {
+    margin-top: 0;
+    margin-bottom: 9px;
+}
+
+.painel-entrada .container-botoes {
+    margin-top: 6px;
+}
+
 @media(max-width:700px) {
     .linha-form {
         flex-direction: column;
+    }
+
+    .painel-entrada .linha-form {
+        flex-wrap: wrap;
+    }
+
+    .painel-entrada .linha-form .campo,
+    .painel-entrada .linha-form:nth-of-type(3) .campo:first-child,
+    .painel-entrada .linha-form:nth-of-type(3) .campo:nth-child(2),
+    .painel-entrada .linha-form:nth-of-type(4) .campo {
+        flex: 1 1 100%;
     }
 }
 
@@ -659,7 +721,7 @@ Entrar
 <button type="button" class="btn-sair" onclick="sair()">🚪 Sair</button>
 </div>
 
-<h1>📦 Controle de containers</h1>
+<h1>📦 Controle de Containers</h1>
 
 
 <!-- PAINEL ADMIN: USUÁRIOS CADASTRADOS -->
@@ -758,7 +820,7 @@ onchange="restaurarBackup(this)"
 
 <!-- FORMULÁRIO -->
 
-<div class="painel">
+<div class="painel painel-entrada">
 
 <h2 id="titulo-form">
 📥 Entrada de Mercadoria
