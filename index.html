@@ -675,6 +675,12 @@ Entrar
 <div id="lista-solicitacoes-admin"></div>
 </div>
 
+<div id="painel-aprovacoes-alteracoes" style="background:rgba(245,158,11,.10);border:1px solid #f59e0b;padding:12px;border-radius:8px;margin-bottom:18px;">
+<h2 style="margin-top:0;color:#fbbf24;">🔔 Alterações aguardando aprovação <span id="contador-alteracoes-admin" style="font-size:12px;color:var(--texto-fraco);"></span></h2>
+<div id="lista-alteracoes-admin"></div>
+<div style="margin-top:8px;font-size:11px;color:var(--texto-fraco);">As alterações feitas por usuários comuns não entram no estoque até serem aprovadas aqui.</div>
+</div>
+
 <div class="linha-form">
 
 <div class="campo">
@@ -827,6 +833,11 @@ onfocus="mostrarSugestoesProduto()"
 onblur="esconderSugestoesProduto()"
 >
 <div id="sugestoes-produto" class="sugestoes-produto"></div>
+<div style="margin-top:5px;text-align:right;">
+<button type="button" id="btn-solicitar-novo-produto" class="btn-cancelar" style="display:none;padding:5px 9px;font-size:11px;" onclick="solicitarNovoProdutoAdmin()">
+➕ Solicitar novo produto
+</button>
+</div>
 </div>
 
 </div>
@@ -1901,12 +1912,28 @@ const PRODUTOS_CADASTRADOS_HTML = [
     { codigo:"PA000858", nome:"MOSTARDA AMARELA CANADENSE 45,36 KG" }
 ];
 
+const CHAVE_SOLICITACOES_ALTERACOES = "solicitacoesAlteracoesAdmin";
+const CHAVE_PRODUTOS_EXTRAS_APROVADOS = "produtosExtrasAprovados";
+
 let produtosCadastrados = PRODUTOS_CADASTRADOS_HTML.map(function(item){
     return {
         codigo: String(item.codigo || "").trim(),
         nome: String(item.nome || "").trim()
     };
 });
+
+try{
+    const extrasIniciais = JSON.parse(localStorage.getItem(CHAVE_PRODUTOS_EXTRAS_APROVADOS));
+    if(Array.isArray(extrasIniciais)){
+        extrasIniciais.forEach(function(extra){
+            if(extra && extra.nome && !produtosCadastrados.some(function(p){
+                return (p.codigo||"").toLowerCase()===String(extra.codigo||"").toLowerCase() || p.nome.toLowerCase()===String(extra.nome).toLowerCase();
+            })){
+                produtosCadastrados.push({codigo:String(extra.codigo||"").trim(),nome:String(extra.nome).trim()});
+            }
+        });
+    }
+}catch(e){}
 
 // ======================================================
 // SALVAR DADOS
@@ -1941,6 +1968,267 @@ console.error(erro);
 
 }
 
+
+// ======================================================
+// APROVAÇÕES DO ADMINISTRADOR
+// ======================================================
+// Alterações feitas por usuários comuns ficam pendentes até
+// o administrador aprovar. A fila usa localStorage para permitir
+// atualização entre abas do mesmo navegador/origem.
+
+
+function carregarSolicitacoesAlteracoes(){
+    const lista = JSON.parse(localStorage.getItem(CHAVE_SOLICITACOES_ALTERACOES));
+    return Array.isArray(lista) ? lista : [];
+}
+
+function salvarSolicitacoesAlteracoes(lista){
+    localStorage.setItem(CHAVE_SOLICITACOES_ALTERACOES, JSON.stringify(lista));
+}
+
+function carregarProdutosExtrasAprovados(){
+    const lista = JSON.parse(localStorage.getItem(CHAVE_PRODUTOS_EXTRAS_APROVADOS));
+    return Array.isArray(lista) ? lista : [];
+}
+
+function salvarProdutosExtrasAprovados(lista){
+    localStorage.setItem(CHAVE_PRODUTOS_EXTRAS_APROVADOS, JSON.stringify(lista));
+}
+
+function gerarIdEstoque(){
+    return "EST-" + Date.now() + "-" + Math.random().toString(36).slice(2,8);
+}
+
+function garantirIdsEstoque(){
+    let alterado = false;
+    estoque.forEach(function(item){
+        if(!item.id){
+            item.id = gerarIdEstoque();
+            alterado = true;
+        }
+    });
+    if(alterado){
+        localStorage.setItem("estoqueContainers", JSON.stringify(estoque));
+    }
+}
+
+function operadorAtual(){
+    return usuarioLogadoAtual ? usuarioLogadoAtual.usuario : "Usuário não identificado";
+}
+
+function usuarioEhAdmin(){
+    return !!(usuarioLogadoAtual && usuarioLogadoAtual.tipo === "admin");
+}
+
+function solicitarAlteracaoAdmin(tipo, dados, descricao){
+    const solicitacoes = carregarSolicitacoesAlteracoes();
+    solicitacoes.push({
+        id: Date.now() + Math.floor(Math.random()*1000),
+        tipo: tipo,
+        descricao: descricao || "Alteração solicitada.",
+        dados: dados,
+        operador: operadorAtual(),
+        data: new Date().toISOString(),
+        status: "pendente"
+    });
+    salvarSolicitacoesAlteracoes(solicitacoes);
+    try{ localStorage.setItem("_sinalAtualizacaoAdmin", String(Date.now())); }catch(e){}
+    renderizarSolicitacoesAlteracoesAdmin();
+}
+
+function escaparHtmlAlteracao(texto){
+    return String(texto == null ? "" : texto)
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#039;");
+}
+
+function formatarDataAlteracaoAdmin(iso){
+    const data = new Date(iso);
+    if(Number.isNaN(data.getTime())) return iso || "";
+    return data.toLocaleString("pt-BR");
+}
+
+function textoTipoAlteracao(tipo){
+    const mapa={
+        ENTRADA:"📥 Nova entrada no container",
+        ALTERACAO:"✏️ Alteração de container",
+        EXCLUSAO:"🗑️ Exclusão de item do container",
+        ZERAR_CONTAINER:"🧹 Zerar container",
+        NOVO_PRODUTO:"🏷️ Solicitação de novo produto",
+        LIMPAR_HISTORICO:"🧾 Limpeza do histórico"
+    };
+    return mapa[tipo] || "📋 Alteração";
+}
+
+function resumoSolicitacaoAlteracao(sol){
+    const dados=sol.dados || {};
+    if(sol.tipo === "NOVO_PRODUTO") return "Código: <strong>"+escaparHtmlAlteracao(dados.codigo)+"</strong> — "+escaparHtmlAlteracao(dados.nome);
+    if(sol.tipo === "ZERAR_CONTAINER") return "Container <strong>"+escaparHtmlAlteracao(dados.num)+"</strong> — "+((dados.itens || []).length)+" item(ns) serão removidos.";
+    if(sol.tipo === "LIMPAR_HISTORICO") return "Solicitado pelo operador: apagar o histórico de movimentações.";
+    const item=dados.novoItem || dados.item || {};
+    return "Container <strong>"+escaparHtmlAlteracao(item.num)+"</strong> — "+escaparHtmlAlteracao(item.prod || "")+(item.qtd != null ? " — Qtd: "+escaparHtmlAlteracao(item.qtd) : "");
+}
+
+function aplicarAlteracaoAprovada(sol){
+    const dados=sol.dados || {};
+
+    if(sol.tipo === "ENTRADA"){
+        const novoItem={...dados.item};
+        if(!novoItem.id) novoItem.id=gerarIdEstoque();
+        estoque.push(novoItem);
+        registrarMovimentacao("ENTRADA", novoItem, "Entrada aprovada pelo administrador. Operador: "+sol.operador);
+        return "Nova entrada aprovada e adicionada ao estoque.";
+    }
+
+    if(sol.tipo === "ALTERACAO"){
+        const indice=estoque.findIndex(function(item){ return item.id === dados.itemId; });
+        if(indice < 0) throw new Error("O item do estoque não foi encontrado. A alteração não foi aplicada.");
+        const novoItem={...dados.novoItem, id:dados.itemId};
+        const antigo=estoque[indice];
+        estoque[indice]=novoItem;
+        registrarMovimentacao("ALTERAÇÃO", novoItem, "Alteração aprovada pelo administrador. Operador: "+sol.operador+". Quantidade anterior: "+antigo.qtd+", Peso anterior: "+antigo.peso+" KG.");
+        return "Alteração do container aprovada.";
+    }
+
+    if(sol.tipo === "EXCLUSAO"){
+        const indice=estoque.findIndex(function(item){ return item.id === dados.itemId; });
+        if(indice < 0) throw new Error("O item do estoque não foi encontrado. A exclusão não foi aplicada.");
+        const item=estoque[indice];
+        estoque.splice(indice,1);
+        registrarMovimentacao("EXCLUSÃO", item, "Exclusão aprovada pelo administrador. Operador: "+sol.operador);
+        return "Exclusão aprovada.";
+    }
+
+    if(sol.tipo === "ZERAR_CONTAINER"){
+        const num=Number(dados.num);
+        const itensAtuais=estoque.filter(function(item){ return Number(item.num)===num; });
+        if(itensAtuais.length===0) return "O container já estava vazio.";
+        itensAtuais.forEach(function(item){
+            registrarMovimentacao("CONTAINER ZERADO", item, "Container zerado com aprovação do administrador. Operador: "+sol.operador);
+        });
+        estoque=estoque.filter(function(item){ return Number(item.num)!==num; });
+        return "Container "+num+" zerado com sucesso.";
+    }
+
+    if(sol.tipo === "NOVO_PRODUTO"){
+        const codigo=String(dados.codigo || "").trim();
+        const nome=String(dados.nome || "").trim();
+        if(!nome) throw new Error("Nome do produto inválido.");
+        if(produtosCadastrados.some(function(p){ return (p.codigo||"").toLowerCase()===codigo.toLowerCase() || p.nome.toLowerCase()===nome.toLowerCase(); })) throw new Error("Este produto já existe na lista.");
+        const extras=carregarProdutosExtrasAprovados();
+        const novo={codigo:codigo,nome:nome};
+        extras.push(novo);
+        salvarProdutosExtrasAprovados(extras);
+        produtosCadastrados.push(novo);
+        atualizarListaProdutos();
+        return "Novo produto aprovado e incluído na lista desta instalação.";
+    }
+
+    if(sol.tipo === "LIMPAR_HISTORICO"){
+        historico=[];
+        localStorage.setItem("historicoMovimentacoes", JSON.stringify(historico));
+        return "Histórico limpo com aprovação do administrador.";
+    }
+
+    throw new Error("Tipo de alteração desconhecido.");
+}
+
+function aprovarAlteracaoAdmin(id){
+    if(!usuarioEhAdmin()){ alert("Apenas o administrador pode aprovar alterações."); return; }
+    const lista=carregarSolicitacoesAlteracoes();
+    const sol=lista.find(function(item){ return item.id===id && item.status==="pendente"; });
+    if(!sol)return;
+    try{
+        const mensagem=aplicarAlteracaoAprovada(sol);
+        sol.status="aprovada";
+        sol.atendidoPor=usuarioLogadoAtual.usuario;
+        sol.atendidoEm=new Date().toISOString();
+        salvarSolicitacoesAlteracoes(lista);
+        salvarDados();
+        mostrarEstoque();
+        mostrarHistorico();
+        renderizarSolicitacoesAlteracoesAdmin();
+        alert("✅ "+mensagem);
+    }catch(erro){
+        alert("Não foi possível aprovar a alteração.\n\n"+erro.message);
+    }
+}
+
+function recusarAlteracaoAdmin(id){
+    if(!usuarioEhAdmin()){ alert("Apenas o administrador pode recusar alterações."); return; }
+    const lista=carregarSolicitacoesAlteracoes();
+    const sol=lista.find(function(item){ return item.id===id && item.status==="pendente"; });
+    if(!sol)return;
+    if(!confirm("Recusar esta alteração solicitada por "+sol.operador+"?")) return;
+    sol.status="recusada";
+    sol.atendidoPor=usuarioLogadoAtual.usuario;
+    sol.atendidoEm=new Date().toISOString();
+    salvarSolicitacoesAlteracoes(lista);
+    renderizarSolicitacoesAlteracoesAdmin();
+}
+
+function renderizarSolicitacoesAlteracoesAdmin(){
+    const area=document.getElementById("lista-alteracoes-admin");
+    const contador=document.getElementById("contador-alteracoes-admin");
+    if(!area)return;
+    const pendentes=carregarSolicitacoesAlteracoes().filter(function(item){ return item.status==="pendente"; });
+    if(contador) contador.innerText=pendentes.length ? "("+pendentes.length+" pendente(s))" : "(nenhuma pendente)";
+    if(pendentes.length===0){
+        area.innerHTML='<div class="vazio" style="margin-top:10px;">✅ Nenhuma alteração aguardando validação.</div>';
+        atualizarIndicadorAdmin();
+        return;
+    }
+    area.innerHTML=pendentes.map(function(sol){
+        return '<div class="produto-item" style="padding-right:0;margin-bottom:10px;background:var(--bg-painel-2);border:1px solid #f59e0b;border-radius:8px;padding:12px;">'+
+        '<strong>'+textoTipoAlteracao(sol.tipo)+'</strong><br>'+
+        '<span style="font-size:11.5px;color:var(--texto-fraco);">👤 Operador: '+escaparHtmlAlteracao(sol.operador)+' · 🕒 '+formatarDataAlteracaoAdmin(sol.data)+'</span><br>'+
+        '<span style="font-size:12px;">'+resumoSolicitacaoAlteracao(sol)+'</span>'+
+        (sol.descricao ? '<br><span style="font-size:12px;color:var(--texto-fraco);">📝 '+escaparHtmlAlteracao(sol.descricao)+'</span>' : '')+
+        '<div class="container-botoes" style="margin-top:10px;">'+
+        '<button type="button" class="btn-salvar" onclick="aprovarAlteracaoAdmin('+sol.id+')">✅ Aprovar</button>'+
+        '<button type="button" class="btn-limpar" onclick="recusarAlteracaoAdmin('+sol.id+')">❌ Recusar</button>'+
+        '</div></div>';
+    }).join("");
+    atualizarIndicadorAdmin();
+}
+
+function atualizarIndicadorAdmin(){
+    const botao=document.getElementById("btn-abrir-painel-admin");
+    if(!botao || !usuarioEhAdmin())return;
+    const acessos=carregarSolicitacoesAcesso().filter(function(item){ return item.status==="pendente"; }).length;
+    const alteracoes=carregarSolicitacoesAlteracoes().filter(function(item){ return item.status==="pendente"; }).length;
+    const painel=document.getElementById("painel-admin-usuarios");
+    botao.innerText = (acessos+alteracoes)>0 ? "👑 Usuários / 🔔 "+(acessos+alteracoes)+" pendente(s)" : (painel && painel.style.display !== "none" ? "🙈 Ocultar Usuários" : "👑 Usuários Cadastrados");
+}
+
+function solicitarNovoProdutoAdmin(){
+    if(usuarioEhAdmin()){
+        alert("O administrador pode editar diretamente a lista PRODUTOS_CADASTRADOS_HTML no código para produtos permanentes.");
+        return;
+    }
+    const codigo=prompt("Digite o código do novo produto:");
+    if(codigo===null)return;
+    const nome=prompt("Digite o nome do novo produto:");
+    if(nome===null)return;
+    const c=String(codigo).trim();
+    const n=String(nome).trim();
+    if(!n){ alert("Informe o nome do produto."); return; }
+    if(produtosCadastrados.some(function(p){ return (p.codigo||"").toLowerCase()===c.toLowerCase() || p.nome.toLowerCase()===n.toLowerCase(); })) { alert("Este produto já está cadastrado."); return; }
+    solicitarAlteracaoAdmin("NOVO_PRODUTO", {codigo:c,nome:n}, "Solicitação de inclusão de novo produto feita pelo operador.");
+    alert("📨 Solicitação enviada ao administrador para aprovação do novo produto.");
+}
+
+window.addEventListener("storage",function(evento){
+    if(evento.key===CHAVE_SOLICITACOES_ALTERACOES || evento.key==="solicitacoesAcessoAdmin" || evento.key==="_sinalAtualizacaoAdmin"){
+        if(usuarioEhAdmin()){
+            renderizarSolicitacoesAlteracoesAdmin();
+            renderizarSolicitacoesAcessoAdmin();
+        }
+    }
+});
 
 // ======================================================
 // DATA E HORA
@@ -2455,186 +2743,82 @@ function importarProdutos(){
 
 function adicionarItem(){
 
-const data =
-document.getElementById("data").value;
+const data = document.getElementById("data").value;
+const num = document.getElementById("num").value;
+const fornecedor = document.getElementById("fornecedor").value.trim();
+const nf = document.getElementById("nf").value.trim();
+const prod = document.getElementById("prod").value.trim();
+const codigo = document.getElementById("codigo").value.trim();
+const lote = document.getElementById("lote").value.trim();
+const qtd = document.getElementById("qtd").value;
+const peso = document.getElementById("peso").value;
+const editIndex = document.getElementById("edit-index").value;
 
-const num =
-document.getElementById("num").value;
+if(!data){ alert("Informe a data."); return; }
+if(!num){ alert("Informe o container."); return; }
+if(num < 1 || num > 60){ alert("O container deve estar entre 1 e 60."); return; }
+if(!fornecedor){ alert("Informe o fornecedor."); return; }
+if(!nf){ alert("Informe a Nota Fiscal."); return; }
+if(!prod){ alert("Informe o produto."); return; }
+if(!lote){ alert("Informe o lote."); return; }
+if(!qtd){ alert("Informe a quantidade."); return; }
+if(!peso){ alert("Informe o peso."); return; }
 
-const fornecedor =
-document.getElementById("fornecedor").value.trim();
-
-const nf =
-document.getElementById("nf").value.trim();
-
-const prod =
-document.getElementById("prod").value.trim();
-
-const codigo =
-document.getElementById("codigo").value.trim();
-
-const lote =
-document.getElementById("lote").value.trim();
-
-const qtd =
-document.getElementById("qtd").value;
-
-const peso =
-document.getElementById("peso").value;
-
-const editIndex =
-document.getElementById("edit-index").value;
-
-
-if(!data){
-alert("Informe a data.");
-return;
-}
-
-if(!num){
-alert("Informe o container.");
-return;
-}
-
-if(num < 1 || num > 60){
-alert("O container deve estar entre 1 e 60.");
-return;
-}
-
-if(!fornecedor){
-alert("Informe o fornecedor.");
-return;
-}
-
-if(!nf){
-alert("Informe a Nota Fiscal.");
-return;
-}
-
-if(!prod){
-alert("Informe o produto.");
-return;
-}
-
-if(!lote){
-alert("Informe o lote.");
-return;
-}
-
-if(!qtd){
-alert("Informe a quantidade.");
-return;
-}
-
-if(!peso){
-alert("Informe o peso.");
-return;
-}
-
-
-// O produto deve existir na lista definida no código HTML.
 const produtoCadastrado = produtosCadastrados.find(function(itemProduto){
     return itemProduto.nome.toLowerCase() === prod.toLowerCase();
 });
 
 if(!produtoCadastrado){
-    alert("Produto não cadastrado na lista do sistema. Adicione-o em PRODUTOS_CADASTRADOS_HTML no código HTML.");
+    alert("Produto não cadastrado na lista do sistema. Solicite a inclusão do produto ao administrador.");
     return;
 }
 
-// Preenche o código automaticamente com o cadastro do produto.
 if(!codigo && produtoCadastrado.codigo){
     document.getElementById("codigo").value = produtoCadastrado.codigo;
 }
 
-
 const item={
-
-data:data,
-
-hora:"",
-
-num:Number(num),
-
-fornecedor:fornecedor,
-
-nf:nf,
-
-prod:prod,
-
-codigo:codigo,
-
-lote:lote,
-
-qtd:Number(qtd),
-
-peso:Number(peso)
-
+    id: editIndex !== "" && estoque[Number(editIndex)] ? estoque[Number(editIndex)].id : gerarIdEstoque(),
+    data:data,
+    hora:"",
+    num:Number(num),
+    fornecedor:fornecedor,
+    nf:nf,
+    prod:prod,
+    codigo:codigo || produtoCadastrado.codigo || "",
+    lote:lote,
+    qtd:Number(qtd),
+    peso:Number(peso)
 };
 
+if(editIndex !== "") {
+    const indice=Number(editIndex);
+    const antigo=estoque[indice];
+    if(!antigo){ alert("O item selecionado não existe mais no estoque."); return; }
 
-// ==================================================
-// ALTERAÇÃO
-// ==================================================
-
-if(editIndex !== ""){
-
-const antigo =
-estoque[
-Number(editIndex)
-];
-
-
-estoque[
-Number(editIndex)
-]=item;
-
-
-registrarMovimentacao(
-"ALTERAÇÃO",
-item,
-`Registro alterado. Quantidade anterior: ${antigo.qtd}, Peso anterior: ${antigo.peso} KG.`
-);
-
-
-alert(
-"Entrada alterada e movimentação registrada!"
-);
-
+    if(usuarioEhAdmin()){
+        estoque[indice]=item;
+        registrarMovimentacao("ALTERAÇÃO", item, `Registro alterado pelo administrador. Quantidade anterior: ${antigo.qtd}, Peso anterior: ${antigo.peso} KG.`);
+        alert("✅ Entrada alterada com sucesso!");
+    }else{
+        solicitarAlteracaoAdmin("ALTERACAO", {itemId:antigo.id, antigoItem:antigo, novoItem:item}, "O operador solicitou alteração de uma mercadoria já registrada.");
+        alert("📨 Alteração enviada ao administrador. O estoque só será alterado após aprovação.");
+    }
+}else{
+    if(usuarioEhAdmin()){
+        estoque.push(item);
+        registrarMovimentacao("ENTRADA", item, "Nova mercadoria recebida pelo administrador.");
+        alert("✅ Mercadoria registrada com sucesso!");
+    }else{
+        solicitarAlteracaoAdmin("ENTRADA", {item:item}, "O operador solicitou uma nova entrada no container.");
+        alert("📨 Nova entrada enviada ao administrador. Ela aparecerá no painel para validação.");
+    }
 }
-
-
-// ==================================================
-// NOVA ENTRADA
-// ==================================================
-
-else{
-
-estoque.push(item);
-
-
-registrarMovimentacao(
-"ENTRADA",
-item,
-"Nova mercadoria recebida."
-);
-
-
-alert(
-"Mercadoria registrada com sucesso!"
-);
-
-}
-
 
 limparFormulario();
-
 mostrarEstoque();
-
 mostrarHistorico();
-
 }
-
 
 // ======================================================
 // LIMPAR FORMULÁRIO
@@ -2911,39 +3095,21 @@ limparFormulario();
 // ======================================================
 
 function excluirItem(index){
+    const item=estoque[index];
+    if(!item)return;
+    if(!confirm("Excluir esta mercadoria do estoque?")) return;
 
-const item =
-estoque[index];
+    if(usuarioEhAdmin()){
+        estoque.splice(index,1);
+        registrarMovimentacao("EXCLUSÃO", item, "Mercadoria excluída pelo administrador.");
+        mostrarEstoque();
+        mostrarHistorico();
+        alert("✅ Mercadoria excluída com sucesso.");
+        return;
+    }
 
-
-if(
-!confirm(
-"Excluir esta mercadoria do estoque?"
-)
-){
-return;
-}
-
-
-estoque.splice(index,1);
-
-
-registrarMovimentacao(
-"EXCLUSÃO",
-item,
-"Mercadoria excluída do estoque."
-);
-
-
-mostrarEstoque();
-
-mostrarHistorico();
-
-
-alert(
-"Mercadoria excluída. A movimentação foi registrada no histórico."
-);
-
+    solicitarAlteracaoAdmin("EXCLUSAO", {itemId:item.id, item:item}, "O operador solicitou a exclusão desta mercadoria.");
+    alert("📨 Exclusão enviada ao administrador. O item permanecerá no estoque até a aprovação.");
 }
 
 
@@ -2952,94 +3118,28 @@ alert(
 // ======================================================
 
 function esvaziarContainer(){
+    const num=document.getElementById("num").value;
+    if(!num){ alert("Digite o número do container."); return; }
 
-const num =
-document.getElementById("num").value;
+    const itens=estoque.filter(function(item){ return Number(item.num)===Number(num); });
+    if(itens.length===0){ alert("Esse container já está vazio."); return; }
+    if(!confirm("Tem certeza que deseja zerar o Container "+num+"?")) return;
 
+    if(usuarioEhAdmin()){
+        itens.forEach(function(item){
+            registrarMovimentacao("CONTAINER ZERADO", item, "Produto removido através da função Zerar Container pelo administrador.");
+        });
+        estoque=estoque.filter(function(item){ return Number(item.num)!==Number(num); });
+        salvarDados();
+        mostrarEstoque();
+        mostrarHistorico();
+        limparFormulario();
+        alert("✅ Container "+num+" zerado com sucesso.");
+        return;
+    }
 
-if(!num){
-
-alert(
-"Digite o número do container."
-);
-
-return;
-
-}
-
-
-const itens =
-estoque.filter(
-function(item){
-
-return Number(item.num) ===
-Number(num);
-
-}
-);
-
-
-if(itens.length===0){
-
-alert(
-"Esse container já está vazio."
-);
-
-return;
-
-}
-
-
-if(
-!confirm(
-"Tem certeza que deseja zerar o Container "+
-num+"?"
-)
-){
-return;
-}
-
-
-// REGISTAR CADA ITEM NO HISTÓRICO
-
-itens.forEach(
-function(item){
-
-registrarMovimentacao(
-"CONTAINER ZERADO",
-item,
-"Produto removido através da função Zerar Container."
-);
-
-}
-);
-
-
-estoque =
-estoque.filter(
-function(item){
-
-return Number(item.num) !==
-Number(num);
-
-}
-);
-
-
-salvarDados();
-
-mostrarEstoque();
-
-mostrarHistorico();
-
-limparFormulario();
-
-
-alert(
-"Container "+num+
-" zerado. Todas as movimentações foram registradas."
-);
-
+    solicitarAlteracaoAdmin("ZERAR_CONTAINER", {num:Number(num), itens:itens}, "O operador solicitou o zeramento completo do container.");
+    alert("📨 Solicitação para zerar o Container "+num+" enviada ao administrador. O estoque não será alterado até a aprovação.");
 }
 
 
@@ -3398,39 +3498,20 @@ movimento.style.display=
 // ======================================================
 
 function limparHistorico(){
+    if(historico.length===0){ alert("O histórico já está vazio."); return; }
+    const confirmar=confirm("Tem certeza que deseja apagar todo o histórico de movimentações?\n\nO estoque atual NÃO será apagado.");
+    if(!confirmar)return;
 
-if(historico.length===0){
+    if(usuarioEhAdmin()){
+        historico=[];
+        salvarDados();
+        mostrarHistorico();
+        alert("✅ Histórico apagado com sucesso.");
+        return;
+    }
 
-alert(
-"O histórico já está vazio."
-);
-
-return;
-
-}
-
-
-const confirmar =
-confirm(
-"Tem certeza que deseja apagar todo o histórico de movimentações?\n\n"+
-"O estoque atual NÃO será apagado."
-);
-
-
-if(!confirmar)return;
-
-
-historico=[];
-
-salvarDados();
-
-mostrarHistorico();
-
-
-alert(
-"Histórico apagado com sucesso."
-);
-
+    solicitarAlteracaoAdmin("LIMPAR_HISTORICO", {}, "O operador solicitou a limpeza do histórico de movimentações.");
+    alert("📨 Solicitação enviada ao administrador. O histórico só será apagado após aprovação.");
 }
 
 
@@ -4128,18 +4209,30 @@ URL.revokeObjectURL(url);
 // ======================================================
 
 async function iniciarAplicativo(){
+    criarContainers();
+    preencherDataHora();
+    garantirIdsEstoque();
 
-criarContainers();
+    const extras = carregarProdutosExtrasAprovados();
+    extras.forEach(function(extra){
+        if(extra && extra.nome && !produtosCadastrados.some(function(p){
+            return (p.codigo||"").toLowerCase()===String(extra.codigo||"").toLowerCase() || p.nome.toLowerCase()===String(extra.nome).toLowerCase();
+        })){
+            produtosCadastrados.push({codigo:String(extra.codigo||"").trim(),nome:String(extra.nome).trim()});
+        }
+    });
 
-preencherDataHora();
+    atualizarListaProdutos();
+    mostrarEstoque();
+    mostrarHistorico();
 
-// Os produtos são carregados diretamente da lista definida no código.
-// Não há cadastro, importação ou banco de dados de produtos nesta tela.
+    const botaoNovoProduto=document.getElementById("btn-solicitar-novo-produto");
+    if(botaoNovoProduto) botaoNovoProduto.style.display = usuarioEhAdmin() ? "none" : "inline-block";
 
-mostrarEstoque();
-
-mostrarHistorico();
-
+    if(usuarioEhAdmin()){
+        renderizarSolicitacoesAlteracoesAdmin();
+        atualizarIndicadorAdmin();
+    }
 }
 
 
@@ -4314,8 +4407,8 @@ hashTexto(SENHA_ALTERNATIVA_ADMIN_PADRAO)
 const usuariosComAdminPadrao =
 [{
 usuario:USUARIO_ADMIN_PADRAO,
-senhaHash:senhaHash,
-senhaAlternativaHash:null,
+senhaHash:hashes[0],
+senhaAlternativaHash:hashes[1],
 tipo:"admin"
 }];
 
@@ -4348,7 +4441,7 @@ alternar.style.display = "block";
 
 const sessao =
 JSON.parse(
-localStorage.getItem("sessaoAtiva")
+sessionStorage.getItem("sessaoAtiva")
 );
 
 if(sessao && sessao.usuario){
@@ -4369,7 +4462,7 @@ entrarNoApp(usuarioSessao);
 
 else{
 
-localStorage.removeItem("sessaoAtiva");
+sessionStorage.removeItem("sessaoAtiva");
 
 }
 
@@ -4428,7 +4521,7 @@ return;
 }
 
 
-localStorage.setItem(
+sessionStorage.setItem(
 "sessaoAtiva",
 JSON.stringify({usuario:usuarioEncontrado.usuario})
 );
@@ -4472,7 +4565,7 @@ iniciarAplicativo();
 
 function sair(){
 
-localStorage.removeItem("sessaoAtiva");
+sessionStorage.removeItem("sessaoAtiva");
 
 location.reload();
 
@@ -4640,11 +4733,12 @@ oculto ? "🙈 Ocultar Usuários" : "👑 Usuários Cadastrados";
 }
 
 if(oculto){
-
-renderizarSolicitacoesAcessoAdmin();
-renderizarUsuariosCadastradosAdmin();
-
+    renderizarSolicitacoesAcessoAdmin();
+    renderizarSolicitacoesAlteracoesAdmin();
+    renderizarUsuariosCadastradosAdmin();
 }
+
+atualizarIndicadorAdmin();
 
 }
 
@@ -4715,6 +4809,7 @@ area.innerHTML = `
 <div class="vazio" style="margin-top:10px;">
 ✅ Nenhuma solicitação de acesso pendente.
 </div>`;
+atualizarIndicadorAdmin();
 return;
 
 }
@@ -4738,6 +4833,7 @@ ${mensagemHtml}
 </div>`;
 
 }).join("");
+atualizarIndicadorAdmin();
 
 }
 
@@ -4970,8 +5066,8 @@ hashTexto(novaSenha).then(function(senhaHash){
 
 usuarios.push({
 usuario:novoUsuario,
-senhaHash:senhaHash,
-senhaAlternativaHash:null,
+senhaHash:hashes[0],
+senhaAlternativaHash:hashes[1],
 tipo:novoTipo
 });
 
@@ -5116,6 +5212,14 @@ tratarEnvioLogin();
 
 });
 
+
+setInterval(function(){
+    if(usuarioEhAdmin() && document.getElementById("painel-admin-usuarios")?.style.display !== "none"){
+        renderizarSolicitacoesAcessoAdmin();
+        renderizarSolicitacoesAlteracoesAdmin();
+    }
+    atualizarIndicadorAdmin();
+}, 2000);
 
 verificarAutenticacao();
 
