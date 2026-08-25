@@ -168,12 +168,12 @@ input::placeholder, textarea::placeholder {
 
 /* Linha 1: data + container + fornecedor + NF */
 .painel-entrada .linha-identificacao {
-    grid-template-columns: 125px 135px minmax(300px, 2.3fr) minmax(220px, 1fr);
+    grid-template-columns: 125px 135px 260px 220px;
 }
 
 /* Linha 2: código + produto + lote */
 .painel-entrada .linha-produto {
-    grid-template-columns: 125px minmax(430px, 4fr) minmax(260px, 1.8fr);
+    grid-template-columns: 125px 430px 260px;
 }
 
 /* Linha 3: quantidade + peso */
@@ -196,12 +196,12 @@ input::placeholder, textarea::placeholder {
     }
 
     .painel-entrada .linha-identificacao {
-        grid-template-columns: 125px 135px minmax(260px, 1.8fr) minmax(200px, 1fr);
+        grid-template-columns: 125px 135px 220px 200px;
         min-width: 760px;
     }
 
     .painel-entrada .linha-produto {
-        grid-template-columns: 125px minmax(360px, 3fr) minmax(220px, 1.5fr);
+        grid-template-columns: 125px 360px 220px;
         min-width: 760px;
     }
 }
