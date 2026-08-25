@@ -941,140 +941,8 @@ id="grade"
 </div>
 
 
-<!-- CADASTRO DE PRODUTOS (SEÇÃO PRÓPRIA, ABAIXO DA MOVIMENTAÇÃO DOS CONTAINERS) -->
-
-<div class="painel">
-
-<h2>🏷️ Cadastro de Produtos</h2>
-
-<div class="aviso-armazenamento" id="aviso-armazenamento" style="display:none;">
-⏳ Carregando lista de produtos...
-</div>
-
-<label>🔢 Código do Produto:</label>
-
-<input
-type="text"
-id="novo-codigo"
-placeholder="Ex: 0001"
-autocomplete="off"
-style="max-width:200px;"
->
-
-<label>📋 Novo Produto:</label>
-
-<div class="produto-cadastro">
-
-<input
-type="text"
-id="novo-produto"
-placeholder="Digite o nome do novo produto"
-autocomplete="off"
-style="flex:2;"
->
-
-<button
-type="button"
-onclick="cadastrarProduto()"
-class="btn-produto"
->
-➕ Cadastrar Produto
-</button>
-
-</div>
-
-<div class="container-botoes">
-
-<button
-type="button"
-onclick="toggleImportarProdutos()"
-class="btn-historico"
-id="btn-toggle-importar"
->
-📥 Importar Lista de Produtos
-</button>
-
-</div>
-
-<div
-id="painel-importar-produtos"
-style="display:none;margin-top:15px;padding-top:15px;border-top:1px dashed #cbd5e1;"
->
-
-<label>📋 Cole a lista de produtos (um por linha, no formato "código;nome"):</label>
-
-<textarea
-id="texto-importar-produtos"
-rows="6"
-placeholder="0001;Produto A
-0002;Produto B
-0003;Produto C"
-style="width:100%;padding:10px;border-radius:8px;border:1px solid #cbd5e1;font-family:monospace;font-size:13px;background:#f8fafc;"
-></textarea>
-
-<div class="container-botoes">
-
-<button
-type="button"
-onclick="importarProdutos()"
-class="btn-salvar"
-id="btn-confirmar-importar"
->
-✅ Confirmar Importação
-</button>
-
-<button
-type="button"
-onclick="toggleImportarProdutos()"
-class="btn-cancelar"
->
-❌ Cancelar
-</button>
-
-</div>
-
-</div>
-
-<div class="container-botoes" style="margin-top:20px;">
-
-<button
-type="button"
-onclick="toggleListaProdutosCadastrados()"
-class="btn-historico"
-id="btn-toggle-lista-produtos"
->
-👁️ Mostrar Produtos Cadastrados
-</button>
-
-<button
-type="button"
-onclick="apagarTodosProdutos()"
-class="btn-apagar-historico"
-id="btn-apagar-produtos"
->
-🗑️ Apagar Todos os Produtos
-</button>
-
-</div>
-
-<h2 style="margin-top:20px;font-size:16px;display:none;" id="titulo-lista-produtos">Produtos Cadastrados</h2>
-
-<div
-id="contador-produtos"
-class="contador-produtos"
-style="display:none;"
->
-</div>
-
-<div
-id="lista-produtos-cadastrados"
-class="lista-produtos"
-style="display:none;"
->
-</div>
-
-</div>
-
+<!-- CADASTRO DE PRODUTOS REMOVIDO DA TELA.
+     Os produtos são definidos diretamente em PRODUTOS_CADASTRADOS_HTML no código. -->
 
 <!-- HISTÓRICO -->
 
@@ -1172,128 +1040,24 @@ localStorage.getItem("historicoMovimentacoes")
 
 
 // ======================================================
-// BANCO DE DADOS - PRODUTOS CADASTRADOS (IndexedDB)
+// LISTA DE PRODUTOS - CADASTRO DIRETO NO CÓDIGO HTML
 // ======================================================
-// A lista de produtos cadastrados foi movida para o
-// IndexedDB porque o localStorage tem um limite pequeno
-// (cerca de 5 MB, compartilhado entre estoque, histórico
-// e produtos) e é isso que causava a falha silenciosa ao
-// tentar cadastrar/importar acima de ~800 produtos.
-// O IndexedDB suporta um volume MUITO maior de dados,
-// então na prática a lista deixa de ter esse limite.
+// Edite esta lista para cadastrar, alterar ou remover produtos.
+// Exemplo: { codigo:"0001", nome:"Açúcar Cristal" }
+// A pesquisa do campo Produto usa esta lista automaticamente.
 
-const NOME_BANCO_PRODUTOS = "controleEstoqueDB";
+const PRODUTOS_CADASTRADOS_HTML = [
+    { codigo:"0001", nome:"Produto Exemplo 1" },
+    { codigo:"0002", nome:"Produto Exemplo 2" },
+    { codigo:"0003", nome:"Produto Exemplo 3" }
+];
 
-const NOME_ARMAZEM_PRODUTOS = "produtos";
-
-let produtosCadastrados = [];
-
-
-function abrirBancoProdutos(){
-
-return new Promise(function(resolve,reject){
-
-const requisicao =
-indexedDB.open(NOME_BANCO_PRODUTOS,1);
-
-requisicao.onupgradeneeded =
-function(evento){
-
-const db = evento.target.result;
-
-if(!db.objectStoreNames.contains(NOME_ARMAZEM_PRODUTOS)){
-
-db.createObjectStore(NOME_ARMAZEM_PRODUTOS);
-
-}
-
-};
-
-requisicao.onsuccess =
-function(evento){
-
-resolve(evento.target.result);
-
-};
-
-requisicao.onerror =
-function(evento){
-
-reject(evento.target.error);
-
-};
-
+let produtosCadastrados = PRODUTOS_CADASTRADOS_HTML.map(function(item){
+    return {
+        codigo: String(item.codigo || "").trim(),
+        nome: String(item.nome || "").trim()
+    };
 });
-
-}
-
-
-function salvarProdutosIndexedDB(lista){
-
-return abrirBancoProdutos().then(function(db){
-
-return new Promise(function(resolve,reject){
-
-const transacao =
-db.transaction(NOME_ARMAZEM_PRODUTOS,"readwrite");
-
-transacao.objectStore(NOME_ARMAZEM_PRODUTOS)
-.put(lista,"lista");
-
-transacao.oncomplete =
-function(){
-
-resolve();
-
-};
-
-transacao.onerror =
-function(evento){
-
-reject(evento.target.error);
-
-};
-
-});
-
-});
-
-}
-
-
-function carregarProdutosIndexedDB(){
-
-return abrirBancoProdutos().then(function(db){
-
-return new Promise(function(resolve,reject){
-
-const transacao =
-db.transaction(NOME_ARMAZEM_PRODUTOS,"readonly");
-
-const requisicao =
-transacao.objectStore(NOME_ARMAZEM_PRODUTOS)
-.get("lista");
-
-requisicao.onsuccess =
-function(){
-
-resolve(requisicao.result || []);
-
-};
-
-requisicao.onerror =
-function(evento){
-
-reject(evento.target.error);
-
-};
-
-});
-
-});
-
-}
-
 
 // ======================================================
 // SALVAR DADOS
@@ -1325,20 +1089,6 @@ console.error(erro);
 }
 
 
-// Produtos ficam no IndexedDB, que suporta um volume de
-// dados muito maior — aqui apenas persistimos a lista
-// atual de forma assíncrona.
-
-salvarProdutosIndexedDB(produtosCadastrados)
-.catch(function(erro){
-
-alert(
-"Não foi possível salvar a lista de produtos. Detalhe: "+erro
-);
-
-console.error(erro);
-
-});
 
 }
 
@@ -1828,420 +1578,25 @@ title="Remover produto"
 
 
 function cadastrarProduto(){
-
-const campoCodigo =
-document.getElementById("novo-codigo");
-
-const campoNome =
-document.getElementById("novo-produto");
-
-const codigo =
-campoCodigo.value.trim();
-
-const nome =
-campoNome.value.trim();
-
-if(!nome){
-
-alert("Digite o nome do produto.");
-
-return;
-
-}
-
-const existe =
-produtosCadastrados.some(
-function(item){
-
-if(codigo){
-
-return (item.codigo || "").toLowerCase() ===
-codigo.toLowerCase();
-
-}
-
-return item.nome.toLowerCase() ===
-nome.toLowerCase();
-
-}
-);
-
-if(existe){
-
-alert("Já existe um produto cadastrado com esse código."+(codigo?"":" (produto sem código já cadastrado com esse nome)"));
-
-campoNome.value="";
-
-return;
-
-}
-
-produtosCadastrados.push({
-codigo:codigo,
-nome:nome
-});
-
-salvarDados();
-
-atualizarListaProdutos();
-
-renderizarProdutosCadastrados();
-
-campoCodigo.value="";
-
-campoNome.value="";
-
-alert("Produto cadastrado com sucesso!");
-
+    alert("O cadastro de produtos agora é feito diretamente no código HTML. Edite PRODUTOS_CADASTRADOS_HTML no início do script.");
 }
 
 
 function removerProdutoCadastrado(index){
-
-if(
-!confirm(
-"Remover este produto da lista de cadastro?\n\n"+
-"Isso não altera entradas já registradas no estoque."
-)
-){
-return;
+    alert("A lista de produtos é definida diretamente no código HTML e não pode ser alterada pela tela.");
 }
 
-produtosCadastrados.splice(index,1);
-
-salvarDados();
-
-atualizarListaProdutos();
-
-renderizarProdutosCadastrados();
-
-}
-
-
-// ======================================================
-// APAGAR TODOS OS PRODUTOS CADASTRADOS
-// ======================================================
 
 function apagarTodosProdutos(){
-
-if(produtosCadastrados.length===0){
-
-alert(
-"A lista de produtos já está vazia."
-);
-
-return;
-
+    alert("A lista de produtos é definida diretamente no código HTML e não pode ser apagada pela tela.");
 }
 
 
-const confirmar =
-confirm(
-"Tem certeza que deseja apagar TODOS os "+
-produtosCadastrados.length+
-" produtos cadastrados?\n\n"+
-"Isso NÃO altera o estoque nem o histórico — apenas a "+
-"lista de produtos usada para cadastro/sugestões.\n\n"+
-"Essa ação não pode ser desfeita."
-);
-
-if(!confirmar)return;
-
-
-// Segunda confirmação para uma ação tão destrutiva.
-
-const confirmarNovamente =
-confirm(
-"Confirma mesmo? Todos os produtos cadastrados serão apagados."
-);
-
-if(!confirmarNovamente)return;
-
-
-const botao =
-document.getElementById("btn-apagar-produtos");
-
-if(botao){
-
-botao.disabled = true;
-
-botao.innerText = "⏳ Apagando...";
-
-}
-
-
-produtosCadastrados = [];
-
-
-salvarProdutosIndexedDB(produtosCadastrados)
-.then(function(){
-
-// Garante que nenhuma cópia antiga da lista (de uma versão
-// anterior do app, guardada no localStorage) sobreviva para
-// "ressuscitar" os produtos apagados numa próxima migração.
-
-localStorage.removeItem("produtosCadastrados");
-
-localStorage.setItem("produtosMigradosParaIndexedDB","true");
-
-atualizarListaProdutos();
-
-renderizarProdutosCadastrados();
-
-alert(
-"Todos os produtos cadastrados foram apagados."
-);
-
-})
-.catch(function(erro){
-
-alert(
-"Não foi possível apagar a lista de produtos. Detalhe: "+erro
-);
-
-console.error(erro);
-
-})
-.finally(function(){
-
-if(botao){
-
-botao.disabled = false;
-
-botao.innerText = "🗑️ Apagar Todos os Produtos";
-
-}
-
-});
-
-}
-
-
-// ======================================================
-// IMPORTAR LISTA PRONTA DE PRODUTOS (EM LOTE)
-// ======================================================
-
-function toggleImportarProdutos(){
-
-const painel =
-document.getElementById(
-"painel-importar-produtos"
-);
-
-if(!painel)return;
-
-painel.style.display =
-(painel.style.display === "none" || painel.style.display === "")
-? "block"
-: "none";
-
-}
+function toggleImportarProdutos(){}
 
 
 function importarProdutos(){
-
-const campoTexto =
-document.getElementById(
-"texto-importar-produtos"
-);
-
-const botaoConfirmar =
-document.getElementById(
-"btn-confirmar-importar"
-);
-
-const texto =
-campoTexto.value;
-
-const linhas =
-texto
-.split("\n")
-.map(function(linha){return linha.trim();})
-.filter(function(linha){return linha !== "";});
-
-if(linhas.length===0){
-
-alert(
-"Cole ao menos uma linha no formato \"código;nome\" (ou apenas o nome, um produto por linha)."
-);
-
-return;
-
-}
-
-let adicionados = 0;
-
-let ignorados = 0;
-
-
-// Usamos um Set com os códigos/nomes já existentes para a
-// verificação de duplicados ficar rápida mesmo com listas
-// muito grandes (milhares de produtos).
-
-const codigosExistentes =
-new Set(
-produtosCadastrados
-.filter(function(item){return item.codigo;})
-.map(function(item){return item.codigo.toLowerCase();})
-);
-
-const nomesExistentes =
-new Set(
-produtosCadastrados
-.map(function(item){return item.nome.toLowerCase();})
-);
-
-
-linhas.forEach(function(linha){
-
-const partes =
-linha
-.split(/;|,|\t/)
-.map(function(p){return p.trim();})
-.filter(function(p){return p !== "";});
-
-let codigo = "";
-
-let nome = "";
-
-if(partes.length >= 2){
-
-codigo = partes[0];
-
-nome = partes.slice(1).join(" ");
-
-}
-
-else if(partes.length === 1){
-
-nome = partes[0];
-
-}
-
-if(!nome){
-
-ignorados++;
-
-return;
-
-}
-
-const existe =
-codigo
-?
-codigosExistentes.has(codigo.toLowerCase())
-:
-nomesExistentes.has(nome.toLowerCase());
-
-if(existe){
-
-ignorados++;
-
-return;
-
-}
-
-produtosCadastrados.push({
-codigo:codigo,
-nome:nome
-});
-
-if(codigo){
-
-codigosExistentes.add(codigo.toLowerCase());
-
-}
-
-nomesExistentes.add(nome.toLowerCase());
-
-adicionados++;
-
-});
-
-
-if(botaoConfirmar){
-
-botaoConfirmar.disabled = true;
-
-botaoConfirmar.innerText = "⏳ Salvando...";
-
-}
-
-
-salvarProdutosIndexedDB(produtosCadastrados)
-.then(function(){
-
-// Mantém estoque/histórico também persistidos, sem
-// depender do IndexedDB para eles.
-
-try{
-
-localStorage.setItem(
-"estoqueContainers",
-JSON.stringify(estoque)
-);
-
-localStorage.setItem(
-"historicoMovimentacoes",
-JSON.stringify(historico)
-);
-
-}catch(erro){
-
-console.error(erro);
-
-}
-
-
-// Marca a migração como concluída e limpa a chave antiga,
-// para que a lista salva no IndexedDB seja sempre a única
-// fonte de verdade a partir de agora.
-
-localStorage.setItem("produtosMigradosParaIndexedDB","true");
-
-localStorage.removeItem("produtosCadastrados");
-
-
-atualizarListaProdutos();
-
-renderizarProdutosCadastrados();
-
-campoTexto.value="";
-
-toggleImportarProdutos();
-
-alert(
-adicionados+" produto(s) importado(s) com sucesso."+
-(ignorados>0
-?
-" "+ignorados+" linha(s) ignorada(s) (vazia ou já cadastrada)."
-:
-""
-)
-);
-
-})
-.catch(function(erro){
-
-alert(
-"Não foi possível salvar os produtos importados. Detalhe: "+erro
-);
-
-console.error(erro);
-
-})
-.finally(function(){
-
-if(botaoConfirmar){
-
-botaoConfirmar.disabled = false;
-
-botaoConfirmar.innerText = "✅ Confirmar Importação";
-
-}
-
-});
-
+    alert("A importação pela tela foi desativada. Edite PRODUTOS_CADASTRADOS_HTML no código.");
 }
 
 
@@ -2328,32 +1683,19 @@ return;
 }
 
 
-// Se o produto foi digitado manualmente, cadastra automaticamente
-// na lista para aparecer nas próximas pesquisas.
-if(!produtosCadastrados.some(
-function(itemProduto){
-
-if(codigo){
-
-return (itemProduto.codigo || "").toLowerCase() === codigo.toLowerCase();
-
-}
-
-return itemProduto.nome.toLowerCase() === prod.toLowerCase();
-}
-)){
-
-produtosCadastrados.push({
-codigo:codigo,
-nome:prod
+// O produto deve existir na lista definida no código HTML.
+const produtoCadastrado = produtosCadastrados.find(function(itemProduto){
+    return itemProduto.nome.toLowerCase() === prod.toLowerCase();
 });
 
-salvarDados();
+if(!produtoCadastrado){
+    alert("Produto não cadastrado na lista do sistema. Adicione-o em PRODUTOS_CADASTRADOS_HTML no código HTML.");
+    return;
+}
 
-atualizarListaProdutos();
-
-renderizarProdutosCadastrados();
-
+// Preenche o código automaticamente com o cadastro do produto.
+if(!codigo && produtoCadastrado.codigo){
+    document.getElementById("codigo").value = produtoCadastrado.codigo;
 }
 
 
@@ -3504,7 +2846,7 @@ return false;
 async function criarArquivoBackup(){
 
 const produtosBackup =
-await carregarProdutosIndexedDB();
+produtosCadastrados;
 
 return {
 
@@ -3816,14 +3158,9 @@ localStorage.removeItem(
 "credenciaisLogin"
 );
 
-await salvarProdutosIndexedDB(
-dados.produtosCadastrados
-);
+// A lista de produtos é definida diretamente no código HTML.
+// Portanto, restaurar um backup não altera essa lista.
 
-localStorage.setItem(
-"produtosMigradosParaIndexedDB",
-"true"
-);
 
 localStorage.removeItem(
 "sessaoAtiva"
@@ -3947,111 +3284,8 @@ criarContainers();
 
 preencherDataHora();
 
-
-const avisoArmazenamento =
-document.getElementById("aviso-armazenamento");
-
-if(avisoArmazenamento){
-
-avisoArmazenamento.style.display = "block";
-
-}
-
-
-try{
-
-let produtosSalvos =
-await carregarProdutosIndexedDB();
-
-
-// Migração automática: se o IndexedDB ainda está vazio E a
-// migração nunca foi feita antes, tenta aproveitar dados que
-// ficaram no localStorage de uma versão anterior do app.
-//
-// A flag "produtosMigradosParaIndexedDB" garante que essa
-// migração rode UMA ÚNICA VEZ. Sem ela, se o usuário apagasse
-// todos os produtos do IndexedDB e recarregasse a página, o
-// código achava que era a primeira vez rodando e trazia de
-// volta os produtos que ainda estavam na chave antiga do
-// localStorage — fazendo a lista "ressuscitar" sozinha.
-
-const migracaoJaFeita =
-localStorage.getItem("produtosMigradosParaIndexedDB") === "true";
-
-if(produtosSalvos.length === 0 && !migracaoJaFeita){
-
-const antigos =
-JSON.parse(
-localStorage.getItem("produtosCadastrados")
-) || [];
-
-if(antigos.length > 0){
-
-produtosSalvos =
-antigos.map(function(item){
-
-if(typeof item === "string"){
-
-return {
-codigo:"",
-nome:item
-};
-
-}
-
-return item;
-
-});
-
-await salvarProdutosIndexedDB(produtosSalvos);
-
-}
-
-}
-
-// Marca a migração como concluída (mesmo que não tenha
-// encontrado nada para migrar) e apaga a chave antiga, para
-// que ela nunca mais seja usada como fonte de dados.
-
-if(!migracaoJaFeita){
-
-localStorage.setItem("produtosMigradosParaIndexedDB","true");
-
-localStorage.removeItem("produtosCadastrados");
-
-}
-
-produtosCadastrados = produtosSalvos;
-
-if(avisoArmazenamento){
-
-avisoArmazenamento.style.display = "none";
-
-}
-
-}catch(erro){
-
-alert(
-"Não foi possível carregar a lista de produtos salva. Detalhe: "+erro
-);
-
-console.error(erro);
-
-produtosCadastrados = [];
-
-if(avisoArmazenamento){
-
-avisoArmazenamento.innerText =
-"⚠️ Não foi possível carregar os produtos salvos.";
-
-}
-
-}
-
-
-atualizarListaProdutos();
-
-renderizarProdutosCadastrados();
+// Os produtos são carregados diretamente da lista definida no código.
+// Não há cadastro, importação ou banco de dados de produtos nesta tela.
 
 mostrarEstoque();
 
