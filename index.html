@@ -602,16 +602,6 @@ Entre com seu usuário e senha
 <input type="password" id="login-senha" autocomplete="off" placeholder="Digite sua senha">
 </div>
 
-<div class="campo-login" id="campo-confirmar-senha" style="display:none;">
-<label>🔒 Confirmar Senha:</label>
-<input type="password" id="login-confirmar-senha" autocomplete="off" placeholder="Repita a senha">
-</div>
-
-<div class="campo-login" id="campo-senha-alternativa-cadastro" style="display:none;">
-<label>🔑 Senha alternativa (use se esquecer a principal):</label>
-<input type="password" id="login-senha-alternativa" autocomplete="off" placeholder="Crie uma senha alternativa">
-</div>
-
 <button type="button" class="btn-login" id="btn-acao-login" onclick="tratarEnvioLogin()">
 Entrar
 </button>
@@ -4074,8 +4064,22 @@ mostrarHistorico();
 // pessoa com acesso ao arquivo/navegador e às ferramentas
 // de desenvolvedor pode contornar. Não use dados sensíveis
 // dependendo só disso.
+//
+// A tela de "criar o primeiro usuário (administrador)" foi
+// removida. Ninguém que abrir o app consegue mais criar sua
+// própria conta: só existe a tela de login, e só um admin
+// já logado pode cadastrar novos usuários (painel "Usuários
+// Cadastrados"). Para o app nunca ficar sem nenhum admin,
+// se a lista de usuários estiver vazia (primeiríssima vez
+// que o app roda em um navegador), um admin padrão é criado
+// automaticamente nos bastidores, sem mostrar formulário
+// nenhum: usuário "admin", senha "admin123". É altamente
+// recomendado logar com essas credenciais e trocar a senha
+// (e cadastrar seu usuário definitivo) assim que possível.
 
-let modoCadastroLogin = false;
+const USUARIO_ADMIN_PADRAO = "admin";
+const SENHA_ADMIN_PADRAO = "admin123";
+const SENHA_ALTERNATIVA_ADMIN_PADRAO = "recuperar-admin-2026";
 
 let usuarioLogadoAtual = null;
 
@@ -4193,19 +4197,51 @@ erro.style.display = "none";
 }
 
 
-function verificarAutenticacao(){
+// ======================================================
+// GARANTIR QUE EXISTE UM ADMIN (SEM TELA PÚBLICA)
+// ======================================================
+// Só cria o admin padrão se a lista de usuários estiver
+// realmente vazia. Uma vez que exista qualquer usuário
+// cadastrado (mesmo que só o admin padrão), essa função
+// não cria mais ninguém — o cadastro passa a ser exclusivo
+// do painel de admin, dentro do app.
+
+async function garantirAdminPadrao(){
 
 const usuarios =
 carregarUsuariosCadastrados();
 
-const subtitulo =
-document.getElementById("subtitulo-login");
+if(usuarios.length > 0){
 
-const campoConfirmar =
-document.getElementById("campo-confirmar-senha");
+return usuarios;
 
-const campoSenhaAlternativaCadastro =
-document.getElementById("campo-senha-alternativa-cadastro");
+}
+
+const hashes =
+await Promise.all([
+hashTexto(SENHA_ADMIN_PADRAO),
+hashTexto(SENHA_ALTERNATIVA_ADMIN_PADRAO)
+]);
+
+const usuariosComAdminPadrao =
+[{
+usuario:USUARIO_ADMIN_PADRAO,
+senhaHash:hashes[0],
+senhaAlternativaHash:hashes[1],
+tipo:"admin"
+}];
+
+salvarUsuariosCadastrados(usuariosComAdminPadrao);
+
+return usuariosComAdminPadrao;
+
+}
+
+
+async function verificarAutenticacao(){
+
+const usuarios =
+await garantirAdminPadrao();
 
 const alternar =
 document.getElementById("alternar-login");
@@ -4213,43 +4249,6 @@ document.getElementById("alternar-login");
 const botao =
 document.getElementById("btn-acao-login");
 
-
-if(usuarios.length === 0){
-
-modoCadastroLogin = true;
-
-subtitulo.innerText =
-"Crie o primeiro usuário (administrador) para acessar o sistema";
-
-campoConfirmar.style.display = "block";
-
-if(campoSenhaAlternativaCadastro){
-
-campoSenhaAlternativaCadastro.style.display = "block";
-
-}
-
-alternar.style.display = "none";
-
-botao.innerText = "Criar conta e entrar";
-
-return;
-
-}
-
-
-modoCadastroLogin = false;
-
-subtitulo.innerText =
-"Entre com seu usuário e senha";
-
-campoConfirmar.style.display = "none";
-
-if(campoSenhaAlternativaCadastro){
-
-campoSenhaAlternativaCadastro.style.display = "none";
-
-}
 
 botao.innerText = "Entrar";
 
@@ -4310,93 +4309,6 @@ return;
 
 }
 
-
-// ==================================================
-// PRIMEIRO CADASTRO (VIRA ADMIN)
-// ==================================================
-
-if(modoCadastroLogin){
-
-const confirmar =
-document.getElementById("login-confirmar-senha").value;
-
-const senhaAlternativa =
-document.getElementById("login-senha-alternativa").value;
-
-if(senha.length < 4){
-
-mostrarErroLogin("A senha deve ter pelo menos 4 caracteres.");
-
-return;
-
-}
-
-if(senha !== confirmar){
-
-mostrarErroLogin("As senhas não coincidem.");
-
-return;
-
-}
-
-if(senhaAlternativa.length < 4){
-
-mostrarErroLogin(
-"Crie uma senha alternativa com pelo menos 4 caracteres. "+
-"Ela será usada só para redefinir a senha principal caso você a esqueça."
-);
-
-return;
-
-}
-
-if(senhaAlternativa === senha){
-
-mostrarErroLogin(
-"A senha alternativa deve ser diferente da senha principal."
-);
-
-return;
-
-}
-
-
-Promise.all([
-hashTexto(senha),
-hashTexto(senhaAlternativa)
-]).then(function(hashes){
-
-const usuarios = [{
-
-usuario:usuarioDigitado,
-
-senhaHash:hashes[0],
-
-senhaAlternativaHash:hashes[1],
-
-tipo:"admin"
-
-}];
-
-salvarUsuariosCadastrados(usuarios);
-
-localStorage.setItem(
-"sessaoAtiva",
-JSON.stringify({usuario:usuarioDigitado})
-);
-
-entrarNoApp(usuarios[0]);
-
-});
-
-return;
-
-}
-
-
-// ==================================================
-// LOGIN NORMAL
-// ==================================================
 
 const usuarios =
 carregarUsuariosCadastrados();
@@ -4483,9 +4395,9 @@ location.reload();
 // REDEFINIR SENHA COM SENHA ALTERNATIVA
 // ======================================================
 // Caso o usuário esqueça a senha principal, ele pode entrar
-// aqui com o usuário + a senha alternativa cadastrada no
-// momento do cadastro, e então definir uma nova senha
-// principal.
+// aqui com o usuário + a senha alternativa cadastrada (pelo
+// admin, no momento em que criou o usuário), e então definir
+// uma nova senha principal.
 
 function mostrarErroRecuperar(mensagem){
 
