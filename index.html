@@ -1002,6 +1002,39 @@ class="btn-produto"
 </div>
 
 
+<!-- PESQUISA DOS CONTAINERS -->
+
+<div class="painel-busca">
+
+<strong style="color:#3b82f6;">
+🔎 Pesquisar Containers:
+</strong>
+
+<input
+type="text"
+id="campo-busca"
+class="input-busca"
+placeholder="Produto, lote, container, NF ou fornecedor..."
+oninput="filtrarEstoque()"
+>
+
+</div>
+
+<!-- STATUS E CONTAINERS -->
+
+<h2>Status dos 60 Containers</h2>
+
+<div id="contador" class="contador">
+Containers ocupados: 0 / 60
+</div>
+
+<div
+class="grid"
+id="grade"
+>
+</div>
+
+
 <!-- HISTÓRICO -->
 
 <div class="painel">
