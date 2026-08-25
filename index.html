@@ -129,22 +129,26 @@ input::placeholder, textarea::placeholder {
     margin-bottom: 0;
 }
 
-/* Formulário de containers: campos mais compactos e aproveitando toda a largura */
+/* Formulário de containers — layout compacto e organizado */
 .painel-entrada {
     padding: 14px 12px;
 }
 
+.painel-entrada h2 {
+    margin-top: 0;
+    margin-bottom: 9px;
+}
+
 .painel-entrada .linha-form {
-    display: flex;
+    display: grid;
     gap: 8px;
-    flex-wrap: nowrap;
     width: 100%;
-    align-items: flex-end;
+    align-items: end;
+    margin-bottom: 2px;
 }
 
 .painel-entrada .linha-form .campo {
     min-width: 0;
-    flex: 0 0 auto;
 }
 
 .painel-entrada label {
@@ -162,43 +166,43 @@ input::placeholder, textarea::placeholder {
     font-size: 12px;
 }
 
-/* Tamanhos exatamente proporcionais ao modelo enviado */
-.painel-entrada .linha-form:nth-of-type(1) #data { width: 105px; }
-.painel-entrada .linha-form:nth-of-type(1) #num { width: 125px; }
-
-.painel-entrada .linha-form:nth-of-type(2) #fornecedor { width: 530px; }
-.painel-entrada .linha-form:nth-of-type(2) #nf { width: 145px; }
-
-.painel-entrada .linha-form:nth-of-type(3) #codigo { width: 105px; }
-.painel-entrada .linha-form:nth-of-type(3) #prod { width: 480px; }
-
-.painel-entrada .linha-form:nth-of-type(4) #lote { width: 460px; }
-.painel-entrada .linha-form:nth-of-type(4) #qtd { width: 90px; }
-.painel-entrada .linha-form:nth-of-type(4) #peso { width: 100px; }
-
-/* Mantém os campos maiores bem distribuídos e os menores compactos */
-.painel-entrada .linha-form:nth-of-type(1) .campo:first-child,
-.painel-entrada .linha-form:nth-of-type(1) .campo:nth-child(2),
-.painel-entrada .linha-form:nth-of-type(2) .campo:first-child,
-.painel-entrada .linha-form:nth-of-type(2) .campo:nth-child(2),
-.painel-entrada .linha-form:nth-of-type(3) .campo:first-child,
-.painel-entrada .linha-form:nth-of-type(3) .campo:nth-child(2),
-.painel-entrada .linha-form:nth-of-type(4) .campo {
-    flex: 0 0 auto;
+/* Linha 1: data + container + fornecedor + NF */
+.painel-entrada .linha-identificacao {
+    grid-template-columns: 125px 135px minmax(300px, 2.3fr) minmax(220px, 1fr);
 }
 
-.painel-entrada h2 {
-    margin-top: 0;
-    margin-bottom: 9px;
+/* Linha 2: código + produto + lote */
+.painel-entrada .linha-produto {
+    grid-template-columns: 125px minmax(430px, 4fr) minmax(260px, 1.8fr);
+}
+
+/* Linha 3: quantidade + peso */
+.painel-entrada .linha-quantidade {
+    grid-template-columns: 170px 190px;
+    max-width: 380px;
+}
+
+.painel-entrada .campo-produto {
+    min-width: 0;
 }
 
 .painel-entrada .container-botoes {
-    margin-top: 6px;
+    margin-top: 5px;
 }
 
 @media(max-width: 1100px) {
     .painel-entrada {
         overflow-x: auto;
+    }
+
+    .painel-entrada .linha-identificacao {
+        grid-template-columns: 125px 135px minmax(260px, 1.8fr) minmax(200px, 1fr);
+        min-width: 760px;
+    }
+
+    .painel-entrada .linha-produto {
+        grid-template-columns: 125px minmax(360px, 3fr) minmax(220px, 1.5fr);
+        min-width: 760px;
     }
 }
 
@@ -207,33 +211,16 @@ input::placeholder, textarea::placeholder {
         overflow-x: visible;
     }
 
-    .painel-entrada .linha-form {
-        flex-wrap: wrap;
+    .painel-entrada .linha-form,
+    .painel-entrada .linha-identificacao,
+    .painel-entrada .linha-produto {
+        grid-template-columns: 1fr;
+        min-width: 0;
     }
 
-    .painel-entrada .linha-form .campo,
-    .painel-entrada .linha-form:nth-of-type(1) .campo:first-child,
-    .painel-entrada .linha-form:nth-of-type(1) .campo:nth-child(2),
-    .painel-entrada .linha-form:nth-of-type(2) .campo:first-child,
-    .painel-entrada .linha-form:nth-of-type(2) .campo:nth-child(2),
-    .painel-entrada .linha-form:nth-of-type(3) .campo:first-child,
-    .painel-entrada .linha-form:nth-of-type(3) .campo:nth-child(2),
-    .painel-entrada .linha-form:nth-of-type(4) .campo {
-        flex: 1 1 100%;
-        width: 100%;
-    }
-
-    .painel-entrada input,
-    .painel-entrada .linha-form:nth-of-type(1) #data,
-    .painel-entrada .linha-form:nth-of-type(1) #num,
-    .painel-entrada .linha-form:nth-of-type(2) #fornecedor,
-    .painel-entrada .linha-form:nth-of-type(2) #nf,
-    .painel-entrada .linha-form:nth-of-type(3) #codigo,
-    .painel-entrada .linha-form:nth-of-type(3) #prod,
-    .painel-entrada .linha-form:nth-of-type(4) #lote,
-    .painel-entrada .linha-form:nth-of-type(4) #qtd,
-    .painel-entrada .linha-form:nth-of-type(4) #peso {
-        width: 100%;
+    .painel-entrada .linha-quantidade {
+        grid-template-columns: 1fr 1fr;
+        max-width: none;
     }
 }
 
@@ -868,7 +855,8 @@ onchange="restaurarBackup(this)"
 
 <input type="hidden" id="edit-index">
 
-<div class="linha-form">
+<!-- Linha 1: identificação da entrada -->
+<div class="linha-form linha-identificacao">
 
 <div class="campo">
 <label>📅 Data de Entrada:</label>
@@ -885,11 +873,6 @@ max="60"
 placeholder="Ex: 01"
 >
 </div>
-
-</div>
-
-
-<div class="linha-form">
 
 <div class="campo">
 <label>🏢 Fornecedor:</label>
@@ -911,10 +894,10 @@ placeholder="Número da NF-e"
 
 </div>
 
+<!-- Linha 2: código, produto e lote -->
+<div class="linha-form linha-produto">
 
-<div class="linha-form">
-
-<div class="campo" style="flex:1;">
+<div class="campo">
 <label>🔢 Código:</label>
 <input
 type="text"
@@ -923,7 +906,7 @@ placeholder="Código"
 >
 </div>
 
-<div class="campo" style="flex:2;position:relative;">
+<div class="campo campo-produto" style="position:relative;">
 <label>📋 Produto:</label>
 <input
 type="text"
@@ -942,11 +925,6 @@ onblur="esconderSugestoesProduto()"
 </div>
 </div>
 
-</div>
-
-
-<div class="linha-form">
-
 <div class="campo">
 <label>🏷️ Lote:</label>
 <input
@@ -955,6 +933,11 @@ id="lote"
 placeholder="Número do lote"
 >
 </div>
+
+</div>
+
+<!-- Linha 3: quantidade e peso -->
+<div class="linha-form linha-quantidade">
 
 <div class="campo">
 <label>🔢 Quantidade:</label>
@@ -979,7 +962,6 @@ placeholder="Peso líquido total"
 
 </div>
 
-
 <div class="container-botoes">
 
 <button
@@ -990,7 +972,6 @@ class="btn-salvar"
 💾 Registrar Entrada
 </button>
 
-
 <button
 id="btn-cancelar"
 onclick="cancelarEdicao()"
@@ -1000,18 +981,18 @@ style="display:none;"
 ❌ Cancelar Alteração
 </button>
 
-
 <button
+type="button"
 onclick="esvaziarContainer()"
-class="btn-limpar"
+class="btn-cancelar"
 >
 🗑️ Zerar Container
 </button>
 
-
 <button
+type="button"
 onclick="exportarParaExcel()"
-class="btn-excel"
+class="btn-produto"
 >
 📊 Exportar Excel
 </button>
@@ -1020,42 +1001,6 @@ class="btn-excel"
 
 </div>
 
-
-<!-- PESQUISA DOS CONTAINERS -->
-
-<div class="painel-busca">
-
-<strong style="color:#3b82f6;">
-🔎 Pesquisar Containers:
-</strong>
-
-<input
-type="text"
-id="campo-busca"
-class="input-busca"
-placeholder="Produto, lote, container, NF ou fornecedor..."
-oninput="filtrarEstoque()"
->
-
-</div>
-
-<!-- CONTAINERS -->
-
-<h2>Status dos 60 Containers</h2>
-
-<div id="contador" class="contador">
-Containers ocupados: 0 / 60
-</div>
-
-<div
-class="grid"
-id="grade"
->
-</div>
-
-
-<!-- CADASTRO DE PRODUTOS REMOVIDO DA TELA.
-     Os produtos são definidos diretamente em PRODUTOS_CADASTRADOS_HTML no código. -->
 
 <!-- HISTÓRICO -->
 
