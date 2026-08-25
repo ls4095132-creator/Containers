@@ -612,11 +612,15 @@ Entrar
 </div>
 
 
-<!-- PAINEL DE REDEFINIR SENHA COM SENHA ALTERNATIVA -->
+<!-- PAINEL DE SOLICITAÇÃO DE ACESSO AO ADMINISTRADOR -->
 
 <div id="painel-recuperar-senha" style="display:none;">
 
 <div class="erro-login" id="erro-recuperar"></div>
+
+<div style="background:var(--azul-fraco);border:1px solid var(--azul-forte);color:var(--texto);padding:10px;border-radius:8px;font-size:11.5px;margin-bottom:12px;">
+🔐 Seu acesso será analisado pelo administrador. Você não poderá alterar a própria senha por esta tela.
+</div>
 
 <div class="campo-login">
 <label>👤 Usuário:</label>
@@ -624,24 +628,13 @@ Entrar
 </div>
 
 <div class="campo-login">
-<label>🔑 Senha alternativa:</label>
-<input type="password" id="recuperar-senha-alternativa" autocomplete="off" placeholder="Digite a senha alternativa cadastrada">
+<label>📝 Mensagem para o administrador (opcional):</label>
+<textarea id="recuperar-mensagem" rows="3" placeholder="Ex.: Esqueci minha senha e preciso recuperar meu acesso."></textarea>
 </div>
 
-<div class="campo-login">
-<label>🔒 Nova senha:</label>
-<input type="password" id="recuperar-nova-senha" autocomplete="off" placeholder="Digite a nova senha">
-</div>
-
-<div class="campo-login">
-<label>🔒 Confirmar nova senha:</label>
-<input type="password" id="recuperar-confirmar-senha" autocomplete="off" placeholder="Repita a nova senha">
-</div>
-
-<button type="button" class="btn-login" onclick="confirmarRecuperacaoSenha()">
-✅ Redefinir senha
+<button type="button" class="btn-login" onclick="solicitarAcessoAdmin()">
+📨 Solicitar acesso ao administrador
 </button>
-
 
 <div class="alternar-login" style="display:block;">
 <a onclick="esconderRecuperarSenha()">← Voltar para o login</a>
@@ -677,6 +670,11 @@ Entrar
 
 <div class="erro-login" id="erro-admin-usuarios" style="display:none;"></div>
 
+<div style="background:var(--azul-fraco);border:1px solid var(--azul-forte);padding:12px;border-radius:8px;margin-bottom:18px;">
+<h2 style="margin-top:0;">📨 Solicitações de acesso <span id="contador-solicitacoes-admin" style="font-size:12px;color:var(--texto-fraco);"></span></h2>
+<div id="lista-solicitacoes-admin"></div>
+</div>
+
 <div class="linha-form">
 
 <div class="campo">
@@ -687,11 +685,6 @@ Entrar
 <div class="campo">
 <label>🔒 Senha:</label>
 <input type="password" id="admin-nova-senha" placeholder="Senha (mín. 4 caracteres)" autocomplete="off">
-</div>
-
-<div class="campo">
-<label>🔑 Senha alternativa:</label>
-<input type="password" id="admin-nova-senha-alternativa" placeholder="Senha alternativa" autocomplete="off">
 </div>
 
 <div class="campo">
@@ -3530,6 +3523,11 @@ JSON.parse(
 localStorage.getItem("usuariosCadastrados")
 ) || [],
 
+solicitacoesAcessoAdmin:
+JSON.parse(
+localStorage.getItem("solicitacoesAcessoAdmin")
+) || [],
+
 estoqueContainers:
 JSON.parse(
 localStorage.getItem("estoqueContainers")
@@ -3806,6 +3804,13 @@ JSON.stringify(
 dados.usuariosCadastrados
 )
 );
+
+if(Array.isArray(dados.solicitacoesAcessoAdmin)){
+localStorage.setItem(
+"solicitacoesAcessoAdmin",
+JSON.stringify(dados.solicitacoesAcessoAdmin)
+);
+}
 
 localStorage.removeItem(
 "credenciaisLogin"
@@ -4226,8 +4231,8 @@ hashTexto(SENHA_ALTERNATIVA_ADMIN_PADRAO)
 const usuariosComAdminPadrao =
 [{
 usuario:USUARIO_ADMIN_PADRAO,
-senhaHash:hashes[0],
-senhaAlternativaHash:hashes[1],
+senhaHash:senhaHash,
+senhaAlternativaHash:null,
 tipo:"admin"
 }];
 
@@ -4253,7 +4258,7 @@ document.getElementById("btn-acao-login");
 botao.innerText = "Entrar";
 
 alternar.innerHTML =
-'Esqueceu a senha? <a onclick="mostrarRecuperarSenha()">Redefinir com senha alternativa</a>';
+'Esqueceu a senha? <a onclick="mostrarRecuperarSenha()">Solicitar acesso ao administrador</a>';
 
 alternar.style.display = "block";
 
@@ -4392,12 +4397,113 @@ location.reload();
 
 
 // ======================================================
-// REDEFINIR SENHA COM SENHA ALTERNATIVA
+// SOLICITAÇÃO DE ACESSO AO ADMINISTRADOR
 // ======================================================
-// Caso o usuário esqueça a senha principal, ele pode entrar
-// aqui com o usuário + a senha alternativa cadastrada (pelo
-// admin, no momento em que criou o usuário), e então definir
-// uma nova senha principal.
+// O usuário comum apenas registra uma solicitação. A senha
+// nunca é alterada nesta tela. O administrador decide, dentro
+// do painel, se irá alterar a senha ou refazer o usuário.
+
+function carregarSolicitacoesAcesso(){
+
+const lista =
+JSON.parse(
+localStorage.getItem("solicitacoesAcessoAdmin")
+);
+
+return Array.isArray(lista) ? lista : [];
+
+}
+
+function salvarSolicitacoesAcesso(lista){
+
+localStorage.setItem(
+"solicitacoesAcessoAdmin",
+JSON.stringify(lista)
+);
+
+}
+
+function mostrarRecuperarSenha(){
+
+esconderErroLogin();
+
+const bloco = document.getElementById("bloco-login-normal");
+const painel = document.getElementById("painel-recuperar-senha");
+
+if(bloco) bloco.style.display = "none";
+if(painel) painel.style.display = "block";
+
+const campoUsuario = document.getElementById("recuperar-usuario");
+const campoMensagem = document.getElementById("recuperar-mensagem");
+
+if(campoUsuario) campoUsuario.value = "";
+if(campoMensagem) campoMensagem.value = "";
+
+esconderErroRecuperar();
+
+}
+
+function esconderRecuperarSenha(){
+
+const painel = document.getElementById("painel-recuperar-senha");
+const bloco = document.getElementById("bloco-login-normal");
+
+if(painel) painel.style.display = "none";
+if(bloco) bloco.style.display = "block";
+
+esconderErroRecuperar();
+
+}
+
+function solicitarAcessoAdmin(){
+
+esconderErroRecuperar();
+
+const campoUsuario = document.getElementById("recuperar-usuario");
+const campoMensagem = document.getElementById("recuperar-mensagem");
+
+const usuario = campoUsuario ? campoUsuario.value.trim() : "";
+const mensagem = campoMensagem ? campoMensagem.value.trim() : "";
+
+if(!usuario){
+
+mostrarErroRecuperar("Informe seu nome de usuário.");
+return;
+
+}
+
+const solicitacoes = carregarSolicitacoesAcesso();
+
+const existentePendente = solicitacoes.find(function(item){
+return item.usuario.toLowerCase() === usuario.toLowerCase() &&
+item.status === "pendente";
+});
+
+if(existentePendente){
+
+mostrarErroRecuperar("Já existe uma solicitação pendente para este usuário. Aguarde o administrador.");
+return;
+
+}
+
+solicitacoes.push({
+ id: Date.now(),
+ usuario: usuario,
+ mensagem: mensagem,
+ data: new Date().toISOString(),
+ status: "pendente"
+});
+
+salvarSolicitacoesAcesso(solicitacoes);
+
+alert("Solicitação enviada ao administrador. Aguarde a liberação do seu acesso.");
+
+esconderRecuperarSenha();
+
+document.getElementById("login-usuario").value = usuario;
+document.getElementById("login-senha").value = "";
+
+}
 
 function mostrarErroRecuperar(mensagem){
 
@@ -4407,11 +4513,9 @@ document.getElementById("erro-recuperar");
 if(!erro)return;
 
 erro.innerText = mensagem;
-
 erro.style.display = "block";
 
 }
-
 
 function esconderErroRecuperar(){
 
@@ -4423,139 +4527,6 @@ if(!erro)return;
 erro.style.display = "none";
 
 }
-
-
-function mostrarRecuperarSenha(){
-
-esconderErroLogin();
-
-document.getElementById("bloco-login-normal").style.display =
-"none";
-
-document.getElementById("painel-recuperar-senha").style.display =
-"block";
-
-document.getElementById("recuperar-usuario").value = "";
-
-document.getElementById("recuperar-senha-alternativa").value = "";
-
-document.getElementById("recuperar-nova-senha").value = "";
-
-document.getElementById("recuperar-confirmar-senha").value = "";
-
-esconderErroRecuperar();
-
-}
-
-
-function esconderRecuperarSenha(){
-
-document.getElementById("painel-recuperar-senha").style.display =
-"none";
-
-document.getElementById("bloco-login-normal").style.display =
-"block";
-
-esconderErroRecuperar();
-
-}
-
-
-function confirmarRecuperacaoSenha(){
-
-esconderErroRecuperar();
-
-const usuarioDigitado =
-document.getElementById("recuperar-usuario").value.trim();
-
-const senhaAlternativaDigitada =
-document.getElementById("recuperar-senha-alternativa").value;
-
-const novaSenha =
-document.getElementById("recuperar-nova-senha").value;
-
-const confirmarSenha =
-document.getElementById("recuperar-confirmar-senha").value;
-
-if(!usuarioDigitado || !senhaAlternativaDigitada){
-
-mostrarErroRecuperar("Preencha o usuário e a senha alternativa.");
-
-return;
-
-}
-
-if(novaSenha.length < 4){
-
-mostrarErroRecuperar("A nova senha deve ter pelo menos 4 caracteres.");
-
-return;
-
-}
-
-if(novaSenha !== confirmarSenha){
-
-mostrarErroRecuperar("As senhas não coincidem.");
-
-return;
-
-}
-
-
-const usuarios =
-carregarUsuariosCadastrados();
-
-const usuarioEncontrado =
-usuarios.find(function(item){
-
-return item.usuario.toLowerCase() ===
-usuarioDigitado.toLowerCase();
-
-});
-
-if(!usuarioEncontrado || !usuarioEncontrado.senhaAlternativaHash){
-
-mostrarErroRecuperar(
-"Usuário não encontrado ou sem senha alternativa cadastrada."
-);
-
-return;
-
-}
-
-
-hashTexto(senhaAlternativaDigitada).then(function(senhaAlternativaHash){
-
-if(senhaAlternativaHash !== usuarioEncontrado.senhaAlternativaHash){
-
-mostrarErroRecuperar("Senha alternativa incorreta.");
-
-return;
-
-}
-
-
-hashTexto(novaSenha).then(function(novaSenhaHash){
-
-usuarioEncontrado.senhaHash = novaSenhaHash;
-
-salvarUsuariosCadastrados(usuarios);
-
-alert("Senha redefinida com sucesso! Faça login com a nova senha.");
-
-esconderRecuperarSenha();
-
-document.getElementById("login-usuario").value =
-usuarioEncontrado.usuario;
-
-document.getElementById("login-senha").value = "";
-
-});
-
-});
-
-}
-
 
 // ======================================================
 // PAINEL ADMIN: USUÁRIOS CADASTRADOS
@@ -4587,6 +4558,7 @@ oculto ? "🙈 Ocultar Usuários" : "👑 Usuários Cadastrados";
 
 if(oculto){
 
+renderizarSolicitacoesAcessoAdmin();
 renderizarUsuariosCadastradosAdmin();
 
 }
@@ -4619,6 +4591,181 @@ erro.style.display = "none";
 
 }
 
+
+function escaparHtmlSolicitacao(texto){
+return String(texto || "")
+.replace(/&/g,"&amp;")
+.replace(/</g,"&lt;")
+.replace(/>/g,"&gt;")
+.replace(/"/g,"&quot;")
+.replace(/'/g,"&#039;");
+}
+
+function formatarDataSolicitacaoAdmin(iso){
+
+const data = new Date(iso);
+
+if(Number.isNaN(data.getTime()))return iso || "";
+
+return data.toLocaleString("pt-BR");
+
+}
+
+function renderizarSolicitacoesAcessoAdmin(){
+
+const area = document.getElementById("lista-solicitacoes-admin");
+const contador = document.getElementById("contador-solicitacoes-admin");
+
+if(!area)return;
+
+const solicitacoes = carregarSolicitacoesAcesso().filter(function(item){
+return item.status === "pendente";
+});
+
+if(contador){
+contador.innerText = solicitacoes.length ? "("+solicitacoes.length+" pendente(s))" : "(nenhuma pendente)";
+}
+
+if(solicitacoes.length === 0){
+
+area.innerHTML = `
+<div class="vazio" style="margin-top:10px;">
+✅ Nenhuma solicitação de acesso pendente.
+</div>`;
+return;
+
+}
+
+area.innerHTML = solicitacoes.map(function(item){
+
+const usuarioHtml = escaparHtmlSolicitacao(item.usuario);
+const mensagemHtml = item.mensagem ? `<br><span style="font-size:12px;">📝 ${escaparHtmlSolicitacao(item.mensagem)}</span>` : "";
+
+return `
+<div class="produto-item" style="padding-right:0;margin-bottom:10px;background:var(--bg-painel-2);border:1px solid var(--borda);border-radius:8px;padding:12px;">
+<strong>👤 ${usuarioHtml}</strong>
+<br>
+<span style="font-size:11.5px;color:var(--texto-fraco);">🕒 ${formatarDataSolicitacaoAdmin(item.data)}</span>
+${mensagemHtml}
+<div class="container-botoes" style="margin-top:10px;">
+<button type="button" class="btn-salvar" onclick="atenderSolicitacaoAcesso(${item.id}, 'senha')">🔑 Alterar senha</button>
+<button type="button" class="btn-produto" onclick="atenderSolicitacaoAcesso(${item.id}, 'refazer')">♻️ Refazer usuário</button>
+<button type="button" class="btn-cancelar" onclick="atenderSolicitacaoAcesso(${item.id}, 'recusar')">❌ Recusar</button>
+</div>
+</div>`;
+
+}).join("");
+
+}
+
+function atualizarSolicitacao(id,status){
+
+const solicitacoes = carregarSolicitacoesAcesso();
+const item = solicitacoes.find(function(registro){
+return registro.id === id;
+});
+
+if(!item)return;
+
+item.status = status;
+item.atendidoEm = new Date().toISOString();
+item.atendidoPor = usuarioLogadoAtual ? usuarioLogadoAtual.usuario : "admin";
+
+salvarSolicitacoesAcesso(solicitacoes);
+renderizarSolicitacoesAcessoAdmin();
+
+}
+
+function atenderSolicitacaoAcesso(id,acao){
+
+if(!usuarioLogadoAtual || usuarioLogadoAtual.tipo !== "admin"){
+alert("Apenas o administrador pode atender solicitações de acesso.");
+return;
+}
+
+const solicitacoes = carregarSolicitacoesAcesso();
+const solicitacao = solicitacoes.find(function(item){
+return item.id === id && item.status === "pendente";
+});
+
+if(!solicitacao)return;
+
+const usuarios = carregarUsuariosCadastrados();
+const indiceUsuario = usuarios.findIndex(function(item){
+return item.usuario.toLowerCase() === solicitacao.usuario.toLowerCase();
+});
+
+if(acao === "recusar"){
+
+if(confirm("Recusar a solicitação de \""+solicitacao.usuario+"\"?")){
+
+atualizarSolicitacao(id,"recusada");
+alert("Solicitação recusada.");
+}
+return;
+
+}
+
+if(acao === "senha"){
+
+if(indiceUsuario < 0){
+alert("O usuário \""+solicitacao.usuario+"\" não foi encontrado. Use \"Refazer usuário\" para cadastrá-lo novamente.");
+return;
+}
+
+redefinirSenhaUsuarioAdmin(indiceUsuario,function(){
+atualizarSolicitacao(id,"atendida");
+});
+return;
+
+}
+
+if(acao === "refazer"){
+
+const alvo = indiceUsuario >= 0 ? usuarios[indiceUsuario] : null;
+
+if(alvo && alvo.usuario.toLowerCase() === usuarioLogadoAtual.usuario.toLowerCase()){
+alert("Você não pode refazer o usuário com o qual está logado agora.");
+return;
+}
+
+if(alvo && alvo.tipo === "admin"){
+
+const totalAdmins = usuarios.filter(function(item){
+return item.tipo === "admin";
+}).length;
+
+if(totalAdmins <= 1){
+alert("Não é possível refazer o único administrador restante.");
+return;
+}
+}
+
+if(!confirm("Refazer o usuário \""+solicitacao.usuario+"\"? O cadastro atual será removido e você deverá definir uma nova senha.")){
+return;
+}
+
+if(indiceUsuario >= 0){
+usuarios.splice(indiceUsuario,1);
+salvarUsuariosCadastrados(usuarios);
+}
+
+const campoUsuario = document.getElementById("admin-novo-usuario");
+const campoSenha = document.getElementById("admin-nova-senha");
+const campoTipo = document.getElementById("admin-novo-tipo");
+
+if(campoUsuario) campoUsuario.value = solicitacao.usuario;
+if(campoSenha) campoSenha.value = "";
+if(campoTipo) campoTipo.value = (alvo && alvo.tipo === "admin") ? "admin" : "usuario";
+
+renderizarUsuariosCadastradosAdmin();
+atualizarSolicitacao(id,"refazendo");
+
+alert("O usuário foi removido e preparado para novo cadastro. Defina a nova senha e clique em \"Cadastrar Usuário\".");
+
+}
+
+}
 
 function renderizarUsuariosCadastradosAdmin(){
 
@@ -4686,9 +4833,6 @@ document.getElementById("admin-novo-usuario");
 const campoSenha =
 document.getElementById("admin-nova-senha");
 
-const campoSenhaAlternativa =
-document.getElementById("admin-nova-senha-alternativa");
-
 const campoTipo =
 document.getElementById("admin-novo-tipo");
 
@@ -4697,9 +4841,6 @@ campoUsuario.value.trim();
 
 const novaSenha =
 campoSenha.value;
-
-const novaSenhaAlternativa =
-campoSenhaAlternativa.value;
 
 const novoTipo =
 campoTipo.value;
@@ -4720,25 +4861,6 @@ return;
 
 }
 
-if(novaSenhaAlternativa.length < 4){
-
-mostrarErroAdminUsuarios(
-"A senha alternativa deve ter pelo menos 4 caracteres."
-);
-
-return;
-
-}
-
-if(novaSenhaAlternativa === novaSenha){
-
-mostrarErroAdminUsuarios(
-"A senha alternativa deve ser diferente da senha principal."
-);
-
-return;
-
-}
 
 
 const usuarios =
@@ -4761,10 +4883,7 @@ return;
 }
 
 
-Promise.all([
-hashTexto(novaSenha),
-hashTexto(novaSenhaAlternativa)
-]).then(function(hashes){
+hashTexto(novaSenha).then(function(senhaHash){
 
 usuarios.push({
 usuario:novoUsuario,
@@ -4781,7 +4900,6 @@ campoUsuario.value = "";
 
 campoSenha.value = "";
 
-campoSenhaAlternativa.value = "";
 
 campoTipo.value = "usuario";
 
@@ -4848,7 +4966,7 @@ renderizarUsuariosCadastradosAdmin();
 }
 
 
-function redefinirSenhaUsuarioAdmin(index){
+function redefinirSenhaUsuarioAdmin(index,aoConcluir){
 
 const usuarios =
 carregarUsuariosCadastrados();
@@ -4882,7 +5000,12 @@ salvarUsuariosCadastrados(usuarios);
 
 alert("Senha do usuário \""+alvo.usuario+"\" redefinida com sucesso.");
 
-});
+})
+
+if(typeof aoConcluir === "function"){
+aoConcluir();
+}
+;
 
 }
 
