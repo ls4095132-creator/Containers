@@ -1,4 +1,4 @@
-name: Salvar Novo Cliente no Banco
+name: Salvar Novo Usuario no Banco
 
 on:
   repository_dispatch:
@@ -8,32 +8,24 @@ jobs:
   atualizar_banco:
     runs-on: ubuntu-latest
     steps:
-      - name: Baixar código do repositório
+      - name: Baixar codigo do repositorio
         uses: actions/checkout@v4
 
       - name: Adicionar dados no arquivo JSON
         run: |
           PAYLOAD='${{ toJson(github.event.client_payload) }}'
-          if [ ! -f banco_dados/clientes.json ]; then
+          if [ ! -f banco_dados/usuarios.json ]; then
             mkdir -p banco_dados
-            echo "[]" > banco_dados/clientes.json
+            echo "[]" > banco_dados/usuarios.json
           fi
-          python3 -c "
-import json, os
-with open('banco_dados/clientes.json', 'r') as f:
-    dados = json.load(f)
-novo = json.loads('''$PAYLOAD''')
-dados.append(novo)
-with open('banco_dados/clientes.json', 'w') as f:
-    json.dump(dados, f, indent=2)
-"
+          python3 -c "import json; f=open('banco_dados/usuarios.json','r'); dados=json.load(f); f.close(); novo=json.loads('''$PAYLOAD'''); dados.append(novo); f=open('banco_dados/usuarios.json','w'); json.dump(dados,f,indent=2); f.close()"
 
-      - name: Gravar alterações no banco do GitHub
+      - name: Gravar alteracoes no banco do GitHub
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
-          git add banco_dados/clientes.json
-          git commit -m "Banco updated: Novo cliente cadastrado"
+          git add banco_dados/usuarios.json
+          git commit -m "Banco atualizado: Novo usuario cadastrado"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.TOKEN_GITHUB }}
