@@ -675,22 +675,41 @@ const supabaseClient = window.supabase.createClient(
 
 console.log("✅ Supabase conectado ao sistema!");
 
-    async function testarBanco() {
+    async function carregarProdutosDoBanco() {
+
     const { data, error } = await supabaseClient
         .from("produtos")
-        .select("*")
-        .limit(5);
+        .select("codigo,nome")
+        .order("nome", { ascending: true });
 
     if (error) {
-        console.error("❌ Erro ao consultar o banco:", error);
+        console.error("❌ Erro ao carregar produtos:", error);
         return;
     }
 
-    console.log("✅ Banco de dados respondendo!");
-    console.log("Produtos encontrados:", data);
+    if (!data) {
+        console.warn("⚠️ Nenhum produto encontrado.");
+        return;
+    }
+
+    produtosCadastrados = data.map(function(item) {
+        return {
+            codigo: String(item.codigo || "").trim(),
+            nome: String(item.nome || "").trim()
+        };
+    });
+
+    console.log(
+        "✅ Produtos carregados do Supabase:",
+        produtosCadastrados.length
+    );
+
+    atualizarListaProdutos();
+    atualizarContadorProdutos();
+    renderizarProdutosCadastrados();
 }
 
-testarBanco();
+carregarProdutosDoBanco();
     
 </script>
 </head>
