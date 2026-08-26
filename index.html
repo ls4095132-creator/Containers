@@ -674,6 +674,24 @@ const supabaseClient = window.supabase.createClient(
 );
 
 console.log("✅ Supabase conectado ao sistema!");
+
+    async function testarBanco() {
+    const { data, error } = await supabaseClient
+        .from("produtos")
+        .select("*")
+        .limit(5);
+
+    if (error) {
+        console.error("❌ Erro ao consultar o banco:", error);
+        return;
+    }
+
+    console.log("✅ Banco de dados respondendo!");
+    console.log("Produtos encontrados:", data);
+}
+
+testarBanco();
+    
 </script>
 </head>
 
