@@ -1,5 +1,5 @@
 // CONFIGURAÇÕES DO SEU REPOSITÓRIO
-const TOKEN = "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"; // Vamos criar isso no próximo passo
+const TOKEN = "ghp_KwaxCmRhuu1CI5cEQ0IxzMz8Q4pGfT0LNTFA"; 
 const OWNER = "ls4095132-creator";
 const REPO = "Contêineres";
 const PATH = "banco_dados/clientes.json";
@@ -33,7 +33,7 @@ document.getElementById('formCliente').addEventListener('submit', async (e) => {
             headers: {
                 "Authorization": `token ${TOKEN}`,
                 "Content-Type": "application/json"
-                    },
+            },
             body: JSON.stringify({
                 message: "Novo cliente cadastrado pelo site",
                 content: novoConteudoBase64,
