@@ -22,8 +22,9 @@ document.querySelector('form').addEventListener('submit', async (e) => {
     };
 
     try {
-        // Envia os dados para a fila de automação segura do GitHub
+                // LINHA CORRIGIDA:
         const url = `https://github.com{OWNER}/${REPO}/dispatches`;
+
         
         const resposta = await fetch(url, {
             method: "POST",
