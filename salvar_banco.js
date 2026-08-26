@@ -1,55 +1,51 @@
-// CONFIGURAÇÕES DO SEU REPOSITÓRIO
-const TOKEN = "ghp_KwaxCmRhuu1CI5cEQ0IxzMz8Q4pGfT0LNTFA"; 
+// CONFIGURAÇÕES PÚBLICAS (Sem senhas expostas!)
 const OWNER = "ls4095132-creator";
-const REPO = "Contêineres";
-const PATH = "banco_dados/clientes.json";
+const REPO = "Containers"; // Nome corrigido sem acento para a API do GitHub encontrar
 
-document.getElementById('formCliente').addEventListener('submit', async (e) => {
+// Escuta o clique do seu botão roxo "Cadastrar Usuário"
+// Nota: Certifique-se de que o seu <form> no HTML tenha o id="formUsuario" ou mude aqui embaixo
+document.querySelector('form').addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    const nome = document.getElementById('nome').value;
-    const telefone = document.getElementById('telefone').value;
-    const novoCliente = { id: Date.now(), nome, telefone };
+    // Captura os dados exatos dos campos da sua imagem
+    const usuario = document.querySelector('input[placeholder="Nome de usuário"]').value;
+    const senha = document.querySelector('input[placeholder*="Senha"]').value;
+    const tipoAcesso = document.querySelector('select').value; // Pega se é Usuário Comum ou Admin
+    
+    // Organiza os dados que vão para a memória do GitHub
+    const dadosUsuario = { 
+        id: Date.now(), 
+        usuario: usuario, 
+        senha: senha, // Nota: No futuro ideal, senhas devem ser criptografadas
+        tipo_acesso: tipoAcesso,
+        data_cadastro: new Date().toISOString()
+    };
 
     try {
-        // 1. Pega o arquivo atual do GitHub para não apagar os clientes antigos
-        const url = `https://github.com{OWNER}/${REPO}/contents/${PATH}`;
+        // Envia os dados para a fila de automação segura do GitHub
+        const url = `https://github.com{OWNER}/${REPO}/dispatches`;
+        
         const resposta = await fetch(url, {
-            headers: { "Authorization": `token ${TOKEN}` }
-        });
-        const arquivo = await resposta.json();
-        
-        // Decodifica o conteúdo atual (o GitHub guarda em formato Base64)
-        const conteudoAtual = JSON.parse(atob(arquivo.content));
-        
-        // Adiciona o novo cliente na lista existente
-        conteudoAtual.push(novoCliente);
-
-        // 2. Envia a lista atualizada de volta para o GitHub
-        const novoConteudoBase64 = btoa(JSON.stringify(conteudoAtual, null, 2));
-        
-        const atualizacao = await fetch(url, {
-            method: "PUT",
+            method: "POST",
             headers: {
-                "Authorization": `token ${TOKEN}`,
+                "Accept": "application/vnd.github.v3+json",
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                message: "Novo cliente cadastrado pelo site",
-                content: novoConteudoBase64,
-                sha: arquivo.sha // O SHA é obrigatório para o GitHub aceitar a alteração
+                event_type: "novo_cadastro",
+                client_payload: dadosUsuario
             })
         });
 
-        if (atualizacao.ok) {
-            alert("Cliente salvo com sucesso na memória do GitHub!");
-            document.getElementById('formCliente').reset();
+        if (resposta.status === 204 || resposta.ok) {
+            alert("Solicitação de cadastro de usuário enviada! O sistema vai atualizar a lista em alguns segundos.");
+            document.querySelector('form').reset();
         } else {
-            alert("Erro ao salvar dados.");
+            alert("Erro ao enviar dados para o servidor do GitHub.");
         }
 
     } catch (erro) {
         console.error(erro);
-        alert("Erro na conexão com o banco de dados.");
+        alert("Erro na conexão com o sistema.");
     }
 });
