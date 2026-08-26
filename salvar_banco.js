@@ -1,5 +1,5 @@
 // CONFIGURAÇÕES DO SEU REPOSITÓRIO
-const TOKEN = "SEU_TOKEN_AQUI"; // Vamos criar isso no próximo passo
+const TOKEN = "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"; // Vamos criar isso no próximo passo
 const OWNER = "ls4095132-creator";
 const REPO = "Contêineres";
 const PATH = "banco_dados/clientes.json";
