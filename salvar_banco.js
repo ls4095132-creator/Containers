@@ -1,75 +1,55 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <title>Cadastro de Clientes</title>
-</head>
-<body>
+// CONFIGURAÇÕES DO SEU REPOSITÓRIO
+const TOKEN = "SEU_TOKEN_AQUI"; // Vamos criar isso no próximo passo
+const OWNER = "ls4095132-creator";
+const REPO = "Contêineres";
+const PATH = "banco_dados/clientes.json";
 
-    <h2>Cadastrar Novo Cliente</h2>
-    <form id="formCliente">
-        <input type="text" id="nome" placeholder="Nome do Cliente" required><br><br>
-        <input type="text" id="telefone" placeholder="Telefone" required><br><br>
-        <button type="submit">Salvar no GitHub</button>
-    </form>
+document.getElementById('formCliente').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const nome = document.getElementById('nome').value;
+    const telefone = document.getElementById('telefone').value;
+    const novoCliente = { id: Date.now(), nome, telefone };
 
-    <script>
-        // CONFIGURAÇÕES DO SEU REPOSITÓRIO
-        const TOKEN = "SEU_TOKEN_AQUI"; // Vamos criar isso no próximo passo
-        const OWNER = "ls4095132-creator";
-        const REPO = "Contêineres";
-        const PATH = "banco_dados/clientes.json";
-
-        document.getElementById('formCliente').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const nome = document.getElementById('nome').value;
-            const telefone = document.getElementById('telefone').value;
-            const novoCliente = { id: Date.now(), nome, telefone };
-
-            try {
-                // 1. Pega o arquivo atual do GitHub para não apagar os clientes antigos
-                const url = `https://github.com{OWNER}/${REPO}/contents/${PATH}`;
-                const resposta = await fetch(url, {
-                    headers: { "Authorization": `token ${TOKEN}` }
-                });
-                const arquivo = await resposta.json();
-                
-                // Decodifica o conteúdo atual (o GitHub guarda em formato Base64)
-                const conteudoAtual = JSON.parse(atob(arquivo.content));
-                
-                // Adiciona o novo cliente na lista existente
-                conteudoAtual.push(novoCliente);
-
-                // 2. Envia a lista atualizada de volta para o GitHub
-                const novoConteudoBase64 = btoa(JSON.stringify(conteudoAtual, null, 2));
-                
-                const atualizacao = await fetch(url, {
-                    method: "PUT",
-                    headers: {
-                        "Authorization": `token ${TOKEN}`,
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        message: "Novo cliente cadastrado pelo site",
-                        content: novoConteudoBase64,
-                        sha: arquivo.sha // O SHA é obrigatório para o GitHub aceitar a alteração
-                    })
-                });
-
-                if (atualizacao.ok) {
-                    alert("Cliente salvo com sucesso na memória do GitHub!");
-                    document.getElementById('formCliente').reset();
-                } else {
-                    alert("Erro ao salvar dados.");
-                }
-
-            } catch (erro) {
-                console.error(erro);
-                alert("Erro na conexão com o banco de dados.");
-            }
+    try {
+        // 1. Pega o arquivo atual do GitHub para não apagar os clientes antigos
+        const url = `https://github.com{OWNER}/${REPO}/contents/${PATH}`;
+        const resposta = await fetch(url, {
+            headers: { "Authorization": `token ${TOKEN}` }
         });
-    </script>
-</body>
-</html>
+        const arquivo = await resposta.json();
+        
+        // Decodifica o conteúdo atual (o GitHub guarda em formato Base64)
+        const conteudoAtual = JSON.parse(atob(arquivo.content));
+        
+        // Adiciona o novo cliente na lista existente
+        conteudoAtual.push(novoCliente);
 
+        // 2. Envia a lista atualizada de volta para o GitHub
+        const novoConteudoBase64 = btoa(JSON.stringify(conteudoAtual, null, 2));
+        
+        const atualizacao = await fetch(url, {
+            method: "PUT",
+            headers: {
+                "Authorization": `token ${TOKEN}`,
+                "Content-Type": "application/json"
+                    },
+            body: JSON.stringify({
+                message: "Novo cliente cadastrado pelo site",
+                content: novoConteudoBase64,
+                sha: arquivo.sha // O SHA é obrigatório para o GitHub aceitar a alteração
+            })
+        });
+
+        if (atualizacao.ok) {
+            alert("Cliente salvo com sucesso na memória do GitHub!");
+            document.getElementById('formCliente').reset();
+        } else {
+            alert("Erro ao salvar dados.");
+        }
+
+    } catch (erro) {
+        console.error(erro);
+        alert("Erro na conexão com o banco de dados.");
+    }
+});
