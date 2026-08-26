@@ -1,30 +1,28 @@
 // CONFIGURAÇÕES PÚBLICAS (Sem senhas expostas!)
 const OWNER = "ls4095132-creator";
-const REPO = "Containers"; // Nome corrigido sem acento para a API do GitHub encontrar
+const REPO = "Containers"; 
 
 // Escuta o clique do seu botão roxo "Cadastrar Usuário"
-// Nota: Certifique-se de que o seu <form> no HTML tenha o id="formUsuario" ou mude aqui embaixo
 document.querySelector('form').addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    // Captura os dados exatos dos campos da sua imagem
+    // Captura os dados exatos dos campos da sua tela
     const usuario = document.querySelector('input[placeholder="Nome de usuário"]').value;
     const senha = document.querySelector('input[placeholder*="Senha"]').value;
-    const tipoAcesso = document.querySelector('select').value; // Pega se é Usuário Comum ou Admin
+    const tipoAcesso = document.querySelector('select').value; 
     
     // Organiza os dados que vão para a memória do GitHub
     const dadosUsuario = { 
         id: Date.now(), 
         usuario: usuario, 
-        senha: senha, // Nota: No futuro ideal, senhas devem ser criptografadas
+        senha: senha, 
         tipo_acesso: tipoAcesso,
         data_cadastro: new Date().toISOString()
     };
 
     try {
-                // LINHA CORRIGIDA:
+        // Envia os dados para a fila de automação segura do GitHub
         const url = `https://github.com{OWNER}/${REPO}/dispatches`;
-
         
         const resposta = await fetch(url, {
             method: "POST",
