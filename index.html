@@ -1144,28 +1144,19 @@ let historico = JSON.parse(localStorage.getItem("historicoMovimentacoes")) || []
 let firebaseSincronizacaoAtiva = false;
 let firebaseListenersAtivos = false;
 
+// Monitora a autenticação globalmente de forma segura
+firebaseAuth.onAuthStateChanged((user) => {
+    if (user && !firebaseListenersAtivos) {
+        iniciarSincronizacaoFirebase();
+    }
+});
+
 async function iniciarSincronizacaoFirebase(){
     if(firebaseListenersAtivos) return;
 
-    // Monitora o estado de autenticação antes de rodar a sincronização
-    firebaseAuth.onAuthStateChanged(async (user) => {
-        if (!user) {
-            console.warn("Firebase: aguardando autenticação do usuário...");
-            return;
-        }
-
-        // Se o usuário estiver logado e os listeners ainda não começaram
-        if (!firebaseListenersAtivos) {
-            firebaseListenersAtivos = true;
-            
-            const estoqueRef = firebaseDB.ref("estoque");
-            const historicoRef = firebaseDB.ref("historico");
-            
-            // O restante do seu código original (bloco try/catch) continua aqui embaixo...
-        }
-    });
-}
-
+    firebaseListenersAtivos = true;
+    const estoqueRef = firebaseDB.ref("estoque");
+    const historicoRef = firebaseDB.ref("historico");
 
     try {
         const [estoqueSnap, historicoSnap] = await Promise.all([
