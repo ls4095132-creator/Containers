@@ -2844,6 +2844,21 @@ if(!lote){ alert("Informe o lote."); return; }
 if(!qtd){ alert("Informe a quantidade."); return; }
 if(!peso){ alert("Informe o peso."); return; }
 
+        // Envia os dados validados diretamente para o Firebase
+    if (window.salvarNoFirebase) {
+        window.salvarNoFirebase({
+            dataEntrada: data,
+            numContainer: num,
+            fornecedor: fornecedor,
+            notaFiscal: nf,
+            codigo: codigo,
+            produto: prod,
+            lote: lote,
+            quantidade: qtd,
+            peso: peso
+        });
+    }
+
 const produtoCadastrado = produtosCadastrados.find(function(itemProduto){
     return itemProduto.nome.toLowerCase() === prod.toLowerCase();
 });
