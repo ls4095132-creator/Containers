@@ -5321,17 +5321,10 @@ verificarAutenticacao();
 // CONEXÃO COM O FIREBASE CLOUD FIRESTORE
 // ==========================================
 
-// Carrega os scripts do Firebase de forma compatível com seu arquivo atual
-const fbScript = document.createElement('script');
-fbScript.src = "https://gstatic.com";
-document.head.appendChild(fbScript);
-
-const fsScript = document.createElement('script');
-fsScript.src = "https://gstatic.com";
-document.head.appendChild(fsScript);
-
-fbScript.onload = () => {
-    // Credenciais exclusivas do seu projeto
+// ==========================================
+// CONEXÃO COM O FIREBASE CLOUD FIRESTORE (CORRIGIDO)
+// ==========================================
+(function() {
     const firebaseConfig = {
       apiKey: "AiZaSyB7nueKFNhlXRNg5aOH-JknVcmF5Eihawc",
       authDomain: "://firebaseapp.com",
@@ -5342,36 +5335,48 @@ fbScript.onload = () => {
       measurementId: "G-HFHBBERNJF"
     };
 
-    // Inicializa a conexão
-    firebase.initializeApp(firebaseConfig);
-    window.dbFirebase = firebase.firestore();
-    console.log("Firebase conectado com sucesso!");
-};
+    const s1 = document.createElement('script');
+    s1.src = "https://gstatic.com";
+    document.head.appendChild(s1);
 
-// Função global para enviar os dados do seu formulário para o Firebase
-window.salvarNoFirebase = async function(dadosFormulario) {
-    if (!window.dbFirebase) {
-        console.error("Firebase ainda não carregou totalmente.");
-        return;
-    }
-    try {
-        await window.dbFirebase.collection("containers").add({
-            data_entrada: dadosFormulario.dataEntrada || "",
-            numero_container: dadosFormulario.numContainer || "",
-            fornecedor: dadosFormulario.fornecedor || "",
-            nota_fiscal: dadosFormulario.notaFiscal || "",
-            codigo: dadosFormulario.codigo || "",
-            produto: dadosFormulario.produto || "",
-            lote: dadosFormulario.lote || "",
-            quantidade_volumes: dadosFormulario.quantidade || "",
-            peso_liquido: dadosFormulario.peso || "",
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        console.log("Dados salvos na nuvem do Firebase!");
-    } catch (erro) {
-        console.error("Erro ao salvar no Firebase:", erro);
-    }
-}
+    s1.onload = () => {
+        const s2 = document.createElement('script');
+        s2.src = "https://gstatic.com";
+        document.head.appendChild(s2);
+        
+        s2.onload = () => {
+            firebase.initializeApp(firebaseConfig);
+            window.dbFirebase = firebase.firestore();
+            console.log("Conexão com Firebase estabelecida com sucesso!");
+        };
+    };
+
+    window.salvarNoFirebase = async function(dadosFormulario) {
+        if (!window.dbFirebase) {
+            console.warn("Aguardando conexão com o servidor Firebase...");
+            setTimeout(() => window.salvarNoFirebase(dadosFormulario), 1000);
+            return;
+        }
+        try {
+            await window.dbFirebase.collection("containers").add({
+                data_entrada: String(dadosFormulario.dataEntrada || ""),
+                numero_container: Number(dadosFormulario.numContainer || 0),
+                fornecedor: String(dadosFormulario.fornecedor || ""),
+                nota_fiscal: String(dadosFormulario.notaFiscal || ""),
+                codigo: String(dadosFormulario.codigo || ""),
+                produto: String(dadosFormulario.produto || ""),
+                lote: String(dadosFormulario.lote || ""),
+                quantidade_volumes: Number(dadosFormulario.quantidade || 0),
+                peso_liquido: Number(dadosFormulario.peso || 0),
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            console.log("Documento sincronizado na nuvem com sucesso!");
+        } catch (erro) {
+            console.error("Erro interno ao enviar para o Firebase:", erro);
+        }
+    };
+})();
+
 
 </script>
 
