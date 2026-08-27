@@ -2844,21 +2844,6 @@ if(!lote){ alert("Informe o lote."); return; }
 if(!qtd){ alert("Informe a quantidade."); return; }
 if(!peso){ alert("Informe o peso."); return; }
 
-        // Envia os dados validados diretamente para o Firebase
-    if (window.salvarNoFirebase) {
-        window.salvarNoFirebase({
-            dataEntrada: data,
-            numContainer: num,
-            fornecedor: fornecedor,
-            notaFiscal: nf,
-            codigo: codigo,
-            produto: prod,
-            lote: lote,
-            quantidade: qtd,
-            peso: peso
-        });
-    }
-
 const produtoCadastrado = produtosCadastrados.find(function(itemProduto){
     return itemProduto.nome.toLowerCase() === prod.toLowerCase();
 });
@@ -5317,66 +5302,6 @@ setInterval(function(){
 }, 2000);
 
 verificarAutenticacao();
-// ==========================================
-// CONEXÃO COM O FIREBASE CLOUD FIRESTORE
-// ==========================================
-
-// ==========================================
-// CONEXÃO COM O FIREBASE CLOUD FIRESTORE (CORRIGIDO)
-// ==========================================
-(function() {
-    const firebaseConfig = {
-      apiKey: "AiZaSyB7nueKFNhlXRNg5aOH-JknVcmF5Eihawc",
-      authDomain: "://firebaseapp.com",
-      projectId: "controle-de-containers-150d0",
-      storageBucket: "controle-de-containers-150d0.firebasestorage.app",
-      messagingSenderId: "518139053",
-      appId: "1:518139053:web:d7b9103aadd982954eea24",
-      measurementId: "G-HFHBBERNJF"
-    };
-
-    const s1 = document.createElement('script');
-    s1.src = "https://gstatic.com";
-    document.head.appendChild(s1);
-
-    s1.onload = () => {
-        const s2 = document.createElement('script');
-        s2.src = "https://gstatic.com";
-        document.head.appendChild(s2);
-        
-        s2.onload = () => {
-            firebase.initializeApp(firebaseConfig);
-            window.dbFirebase = firebase.firestore();
-            console.log("Conexão com Firebase estabelecida com sucesso!");
-        };
-    };
-
-    window.salvarNoFirebase = async function(dadosFormulario) {
-        if (!window.dbFirebase) {
-            console.warn("Aguardando conexão com o servidor Firebase...");
-            setTimeout(() => window.salvarNoFirebase(dadosFormulario), 1000);
-            return;
-        }
-        try {
-            await window.dbFirebase.collection("containers").add({
-                data_entrada: String(dadosFormulario.dataEntrada || ""),
-                numero_container: Number(dadosFormulario.numContainer || 0),
-                fornecedor: String(dadosFormulario.fornecedor || ""),
-                nota_fiscal: String(dadosFormulario.notaFiscal || ""),
-                codigo: String(dadosFormulario.codigo || ""),
-                produto: String(dadosFormulario.produto || ""),
-                lote: String(dadosFormulario.lote || ""),
-                quantidade_volumes: Number(dadosFormulario.quantidade || 0),
-                peso_liquido: Number(dadosFormulario.peso || 0),
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            console.log("Documento sincronizado na nuvem com sucesso!");
-        } catch (erro) {
-            console.error("Erro interno ao enviar para o Firebase:", erro);
-        }
-    };
-})();
-
 
 </script>
 
