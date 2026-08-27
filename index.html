@@ -660,6 +660,28 @@ button:disabled {
 
 </style>
 
+<!-- FIREBASE: conexão do sistema -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+    apiKey: "AIzaSyB7nueKFNhlXRNg5aOH-JknVcmF5Eihawc",
+    authDomain: "controle-de-containers-150d0.firebaseapp.com",
+    databaseURL: "https://controle-de-containers-150d0-default-rtdb.firebaseio.com",
+    projectId: "controle-de-containers-150d0",
+    storageBucket: "controle-de-containers-150d0.firebasestorage.app",
+    messagingSenderId: "518139053",
+    appId: "1:518139053:web:5807a54925ae7d014eea24",
+    measurementId: "G-92M4YNWQ6B"
+};
+firebase.initializeApp(firebaseConfig);
+const firebaseAuth = firebase.auth();
+const firebaseDB = firebase.database();
+firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(console.error);
+console.log("🔥 Firebase conectado!");
+</script>
+
 </head>
 
 <body>
@@ -1111,23 +1133,83 @@ style="margin-top:20px;"
 
 
 // ======================================================
-// BANCO DE DADOS - ESTOQUE E HISTÓRICO (localStorage)
+// BANCO DE DADOS - FIREBASE REALTIME DATABASE
 // ======================================================
-// Estoque e histórico continuam em localStorage: são
-// coleções pequenas (no máximo 60 containers e um
-// histórico de movimentações) e não é aí que mora o
-// limite de itens.
+// O Firebase passa a ser a fonte central. O localStorage
+// fica apenas como cópia temporária/fallback durante a
+// migração, para não perder dados já existentes no PC.
 
-let estoque =
-JSON.parse(
-localStorage.getItem("estoqueContainers")
-) || [];
+let estoque = JSON.parse(localStorage.getItem("estoqueContainers")) || [];
+let historico = JSON.parse(localStorage.getItem("historicoMovimentacoes")) || [];
+let firebaseSincronizacaoAtiva = false;
+let firebaseListenersAtivos = false;
 
+async function iniciarSincronizacaoFirebase(){
+    if(firebaseListenersAtivos) return;
+    if(!firebaseAuth.currentUser) {
+        console.warn("Firebase: usuário não autenticado; sincronização não iniciada.");
+        return;
+    }
 
-let historico =
-JSON.parse(
-localStorage.getItem("historicoMovimentacoes")
-) || [];
+    firebaseListenersAtivos = true;
+    const estoqueRef = firebaseDB.ref("estoque");
+    const historicoRef = firebaseDB.ref("historico");
+
+    try {
+        const [estoqueSnap, historicoSnap] = await Promise.all([
+            estoqueRef.once("value"),
+            historicoRef.once("value")
+        ]);
+
+        // Primeira sincronização: se o banco estiver vazio,
+        // preserva os dados locais existentes.
+        if(estoqueSnap.exists()) {
+            const remoto = estoqueSnap.val();
+            estoque = Array.isArray(remoto) ? remoto : Object.values(remoto || {});
+        } else {
+            await estoqueRef.set(estoque);
+        }
+
+        if(historicoSnap.exists()) {
+            const remoto = historicoSnap.val();
+            historico = Array.isArray(remoto) ? remoto : Object.values(remoto || {});
+        } else {
+            await historicoRef.set(historico);
+        }
+
+        localStorage.setItem("estoqueContainers", JSON.stringify(estoque));
+        localStorage.setItem("historicoMovimentacoes", JSON.stringify(historico));
+
+        // Atualização em tempo real para todos os dispositivos autenticados.
+        estoqueRef.on("value", function(snapshot){
+            if(!snapshot.exists()) return;
+            const remoto = snapshot.val();
+            estoque = Array.isArray(remoto) ? remoto : Object.values(remoto || {});
+            localStorage.setItem("estoqueContainers", JSON.stringify(estoque));
+            try { garantirIdsEstoque(); } catch(e) {}
+            mostrarEstoque();
+            atualizarContador();
+        }, function(error){ console.error("Firebase estoque:", error); });
+
+        historicoRef.on("value", function(snapshot){
+            if(!snapshot.exists()) return;
+            const remoto = snapshot.val();
+            historico = Array.isArray(remoto) ? remoto : Object.values(remoto || {});
+            localStorage.setItem("historicoMovimentacoes", JSON.stringify(historico));
+            mostrarHistorico();
+        }, function(error){ console.error("Firebase histórico:", error); });
+
+        firebaseSincronizacaoAtiva = true;
+        console.log("☁️ Firebase: estoque e histórico sincronizados em tempo real.");
+        mostrarEstoque();
+        mostrarHistorico();
+        atualizarContador();
+    } catch(error) {
+        firebaseListenersAtivos = false;
+        console.error("Erro ao iniciar sincronização Firebase:", error);
+        alert("O login funcionou, mas o banco Firebase ainda está bloqueado. Vamos configurar as regras de segurança no próximo passo.");
+    }
+}
 
 
 // ======================================================
@@ -2019,33 +2101,24 @@ try{
 // SALVAR DADOS
 // ======================================================
 
-function salvarDados(){
+async function salvarDados(){
+    try{
+        // Cópia local para manter o sistema funcional durante a migração.
+        localStorage.setItem("estoqueContainers", JSON.stringify(estoque));
+        localStorage.setItem("historicoMovimentacoes", JSON.stringify(historico));
 
-try{
-
-localStorage.setItem(
-"estoqueContainers",
-JSON.stringify(estoque)
-);
-
-localStorage.setItem(
-"historicoMovimentacoes",
-JSON.stringify(historico)
-);
-
-}catch(erro){
-
-alert(
-"Não foi possível salvar o estoque/histórico: o armazenamento do navegador está cheio. "+
-"Considere exportar e limpar o histórico antigo."
-);
-
-console.error(erro);
-
-}
-
-
-
+        // Banco central: qualquer alteração passa a ser publicada no Firebase.
+        if(firebaseAuth.currentUser){
+            await Promise.all([
+                firebaseDB.ref("estoque").set(estoque),
+                firebaseDB.ref("historico").set(historico)
+            ]);
+            console.log("☁️ Dados salvos no Firebase.");
+        }
+    }catch(erro){
+        console.error("Erro ao salvar no Firebase/localStorage:", erro);
+        alert("Não foi possível salvar no banco. Verifique sua conexão e as regras do Firebase.");
+    }
 }
 
 
@@ -2843,6 +2916,42 @@ if(!prod){ alert("Informe o produto."); return; }
 if(!lote){ alert("Informe o lote."); return; }
 if(!qtd){ alert("Informe a quantidade."); return; }
 if(!peso){ alert("Informe o peso."); return; }
+
+    // ==========================================
+    // ENVIO DE DADOS PARA O GOOGLE SHEETS
+    // ==========================================
+    
+    // Organiza os dados com os mesmos nomes das colunas da Planilha
+    const dadosParaPlanilha = {
+        data: data,
+        container: num,
+        fornecedor: fornecedor,
+        nf: nf,
+        codigo: codigo,
+        produto: prod,
+        lote: lote,
+        quantidade: qtd,
+        peso: peso,
+        id: "ID_" + Math.floor(Math.random() * 100000) // Código único para o registro
+    };
+
+    // Altere o link abaixo colocando o link gerado pelo seu SheetDB
+    fetch("https://sheetdb.io/api/v1/vwfmr44codho6", {
+        method: "POST",
+        headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ data: [dadosParaPlanilha] })
+    })
+    .then(response => response.json())
+    .then(resultado => {
+        console.log("Sucesso! Linha adicionada na Planilha Google:", resultado);
+    })
+    .catch(erro => {
+        console.error("Erro ao enviar dados para a planilha:", erro);
+    });
+
 
 const produtoCadastrado = produtosCadastrados.find(function(itemProduto){
     return itemProduto.nome.toLowerCase() === prod.toLowerCase();
@@ -4292,6 +4401,7 @@ async function iniciarAplicativo(){
     criarContainers();
     preencherDataHora();
     garantirIdsEstoque();
+    await iniciarSincronizacaoFirebase();
 
     const extras = carregarProdutosExtrasAprovados();
     extras.forEach(function(extra){
@@ -4551,68 +4661,83 @@ sessionStorage.removeItem("sessaoAtiva");
 }
 
 
-function tratarEnvioLogin(){
-
-esconderErroLogin();
-
-const usuarioDigitado =
-document.getElementById("login-usuario").value.trim();
-
-const senha =
-document.getElementById("login-senha").value;
-
-
-if(!usuarioDigitado || !senha){
-
-mostrarErroLogin("Preencha usuário e senha.");
-
-return;
-
+function usuarioParaEmail(usuario){
+    const valor = (usuario || "").trim().toLowerCase();
+    if(valor.includes("@")) return valor;
+    return valor + "@controlecontainers.com";
 }
 
+async function tratarEnvioLogin(){
+    esconderErroLogin();
 
-const usuarios =
-carregarUsuariosCadastrados();
+    const usuarioDigitado = document.getElementById("login-usuario").value.trim();
+    const senha = document.getElementById("login-senha").value;
 
-const usuarioEncontrado =
-usuarios.find(function(item){
+    if(!usuarioDigitado || !senha){
+        mostrarErroLogin("Preencha usuário e senha.");
+        return;
+    }
 
-return item.usuario.toLowerCase() ===
-usuarioDigitado.toLowerCase();
+    const botao = document.getElementById("btn-acao-login");
+    if(botao) botao.disabled = true;
 
-});
+    try {
+        // A partir de agora, a senha é validada pelo Firebase Authentication.
+        const email = usuarioParaEmail(usuarioDigitado);
+        const credencial = await firebaseAuth.signInWithEmailAndPassword(email, senha);
+        const emailAutenticado = (credencial.user.email || "").toLowerCase();
 
-if(!usuarioEncontrado){
+        let usuarios = carregarUsuariosCadastrados();
+        let usuarioEncontrado = usuarios.find(function(item){
+            return item.usuario.toLowerCase() === usuarioDigitado.toLowerCase();
+        });
 
-mostrarErroLogin("Usuário ou senha incorretos.");
+        // Compatibilidade: se o administrador ainda não estiver no cadastro local,
+        // reconhecemos o administrador Firebase pelo e-mail oficial.
+        if(!usuarioEncontrado && emailAutenticado === "admin@controlecontainers.com"){
+            usuarioEncontrado = {
+                usuario: "admin",
+                senhaHash: null,
+                senhaAlternativaHash: null,
+                tipo: "admin"
+            };
+            usuarios.push(usuarioEncontrado);
+            salvarUsuariosCadastrados(usuarios);
+        }
 
-return;
+        if(!usuarioEncontrado){
+            await firebaseAuth.signOut();
+            mostrarErroLogin("Login do Firebase realizado, mas este usuário ainda não possui perfil no sistema.");
+            return;
+        }
 
+        sessionStorage.setItem("sessaoAtiva", JSON.stringify({
+            usuario: usuarioEncontrado.usuario,
+            uid: credencial.user.uid
+        }));
+
+        entrarNoApp(usuarioEncontrado);
+
+    } catch(erro){
+        console.error("Erro no login Firebase:", erro);
+
+        let mensagem = "Usuário ou senha incorretos.";
+
+        if(erro && erro.code === "auth/invalid-credential"){
+            mensagem = "Usuário ou senha incorretos.";
+        } else if(erro && erro.code === "auth/user-not-found"){
+            mensagem = "Usuário não encontrado no Firebase.";
+        } else if(erro && erro.code === "auth/too-many-requests"){
+            mensagem = "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
+        } else if(erro && erro.code === "auth/network-request-failed"){
+            mensagem = "Sem conexão com o Firebase. Verifique a internet.";
+        }
+
+        mostrarErroLogin(mensagem);
+    } finally {
+        if(botao) botao.disabled = false;
+    }
 }
-
-hashTexto(senha).then(function(senhaHash){
-
-if(usuarioEncontrado.senhaHash !== senhaHash){
-
-mostrarErroLogin("Usuário ou senha incorretos.");
-
-return;
-
-}
-
-
-sessionStorage.setItem(
-"sessaoAtiva",
-JSON.stringify({usuario:usuarioEncontrado.usuario})
-);
-
-entrarNoApp(usuarioEncontrado);
-
-});
-
-}
-
-
 function entrarNoApp(usuarioObjeto){
 
 usuarioLogadoAtual = usuarioObjeto;
