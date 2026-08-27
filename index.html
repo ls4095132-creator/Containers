@@ -3064,20 +3064,16 @@ document.getElementById(
 // ======================================================
 
 function mostrarEstoque(){
+    // Verifica se a primeira área existe na tela. Se não existir, não executa o código.
+    if (!document.getElementById("dados-1")) return;
 
-for(let i=1;i<=60;i++){
+    for (let i = 1; i <= 60; i++){
+        const area = document.getElementById("dados-" + i);
+        const container = document.getElementById("c-" + i);
+        
+        // Proteção extra para cada item do laço
+        if (area) area.innerHTML = "";
 
-const area =
-document.getElementById(
-"dados-"+i
-);
-
-const container =
-document.getElementById(
-"c-"+i
-);
-
-area.innerHTML="";
 
 container.classList.remove(
 "ocupado"
