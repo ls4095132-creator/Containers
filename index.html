@@ -1146,14 +1146,26 @@ let firebaseListenersAtivos = false;
 
 async function iniciarSincronizacaoFirebase(){
     if(firebaseListenersAtivos) return;
-    if(!firebaseAuth.currentUser) {
-        console.warn("Firebase: usuário não autenticado; sincronização não iniciada.");
-        return;
-    }
 
-    firebaseListenersAtivos = true;
-    const estoqueRef = firebaseDB.ref("estoque");
-    const historicoRef = firebaseDB.ref("historico");
+    // Monitora o estado de autenticação antes de rodar a sincronização
+    firebaseAuth.onAuthStateChanged(async (user) => {
+        if (!user) {
+            console.warn("Firebase: aguardando autenticação do usuário...");
+            return;
+        }
+
+        // Se o usuário estiver logado e os listeners ainda não começaram
+        if (!firebaseListenersAtivos) {
+            firebaseListenersAtivos = true;
+            
+            const estoqueRef = firebaseDB.ref("estoque");
+            const historicoRef = firebaseDB.ref("historico");
+            
+            // O restante do seu código original (bloco try/catch) continua aqui embaixo...
+        }
+    });
+}
+
 
     try {
         const [estoqueSnap, historicoSnap] = await Promise.all([
