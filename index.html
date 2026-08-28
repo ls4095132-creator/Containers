@@ -28,13 +28,9 @@
     box-sizing: border-box;
 }
 
-html, body {
-    min-height: 100%;
-}
-
 body {
     font-family: 'Segoe UI', Arial, sans-serif;
-    margin: 0;
+    margin: 12px;
     background:
         radial-gradient(circle at 15% 0%, rgba(86,210,255,.06), transparent 45%),
         var(--bg);
@@ -552,18 +548,14 @@ button:disabled {
 }
 
 .tela-login {
-    position: fixed !important;
-    inset: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    box-sizing: border-box !important;
-    margin: 0 !important;
+    position: fixed;
+    inset: 0;
     background:
         radial-gradient(circle at 20% 10%, rgba(86,210,255,.08), transparent 45%),
         var(--bg);
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     z-index: 100;
     padding: 20px;
 }
@@ -686,8 +678,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const firebaseAuth = firebase.auth();
 const firebaseDB = firebase.database();
-// A sessão não fica persistida entre recarregamentos/aberturas.
-// A função configurarAutenticacaoSemPersistencia() confirma isso antes do login.
+firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(console.error);
 console.log("🔥 Firebase conectado!");
 </script>
 
@@ -949,7 +940,11 @@ onfocus="mostrarSugestoesProduto()"
 onblur="esconderSugestoesProduto()"
 >
 <div id="sugestoes-produto" class="sugestoes-produto"></div>
-
+<div style="margin-top:5px;text-align:right;">
+<button type="button" id="btn-solicitar-novo-produto" class="btn-cancelar" style="display:none;padding:5px 9px;font-size:11px;" onclick="solicitarNovoProdutoAdmin()">
+➕ Solicitar novo produto
+</button>
+</div>
 </div>
 
 <div class="campo">
@@ -1147,6 +1142,13 @@ let estoque = JSON.parse(localStorage.getItem("estoqueContainers")) || [];
 let historico = JSON.parse(localStorage.getItem("historicoMovimentacoes")) || [];
 let firebaseSincronizacaoAtiva = false;
 let firebaseListenersAtivos = false;
+
+// Monitora a autenticação globalmente de forma segura
+firebaseAuth.onAuthStateChanged((user) => {
+    if (user && !firebaseListenersAtivos) {
+        iniciarSincronizacaoFirebase();
+    }
+});
 
 async function iniciarSincronizacaoFirebase(){
     if(firebaseListenersAtivos) return;
@@ -2075,6 +2077,7 @@ const PRODUTOS_CADASTRADOS_HTML = [
 ];
 
 const CHAVE_SOLICITACOES_ALTERACOES = "solicitacoesAlteracoesAdmin";
+const CHAVE_PRODUTOS_EXTRAS_APROVADOS = "produtosExtrasAprovados";
 
 let produtosCadastrados = PRODUTOS_CADASTRADOS_HTML.map(function(item){
     return {
@@ -2082,6 +2085,19 @@ let produtosCadastrados = PRODUTOS_CADASTRADOS_HTML.map(function(item){
         nome: String(item.nome || "").trim()
     };
 });
+
+try{
+    const extrasIniciais = JSON.parse(localStorage.getItem(CHAVE_PRODUTOS_EXTRAS_APROVADOS));
+    if(Array.isArray(extrasIniciais)){
+        extrasIniciais.forEach(function(extra){
+            if(extra && extra.nome && !produtosCadastrados.some(function(p){
+                return (p.codigo||"").toLowerCase()===String(extra.codigo||"").toLowerCase() || p.nome.toLowerCase()===String(extra.nome).toLowerCase();
+            })){
+                produtosCadastrados.push({codigo:String(extra.codigo||"").trim(),nome:String(extra.nome).trim()});
+            }
+        });
+    }
+}catch(e){}
 
 // ======================================================
 // SALVAR DADOS
@@ -2125,6 +2141,14 @@ function salvarSolicitacoesAlteracoes(lista){
     localStorage.setItem(CHAVE_SOLICITACOES_ALTERACOES, JSON.stringify(lista));
 }
 
+function carregarProdutosExtrasAprovados(){
+    const lista = JSON.parse(localStorage.getItem(CHAVE_PRODUTOS_EXTRAS_APROVADOS));
+    return Array.isArray(lista) ? lista : [];
+}
+
+function salvarProdutosExtrasAprovados(lista){
+    localStorage.setItem(CHAVE_PRODUTOS_EXTRAS_APROVADOS, JSON.stringify(lista));
+}
 
 function gerarIdEstoque(){
     return "EST-" + Date.now() + "-" + Math.random().toString(36).slice(2,8);
@@ -2188,6 +2212,7 @@ function textoTipoAlteracao(tipo){
         ALTERACAO:"✏️ Alteração de container",
         EXCLUSAO:"🗑️ Exclusão de item do container",
         ZERAR_CONTAINER:"🧹 Zerar container",
+        NOVO_PRODUTO:"🏷️ Solicitação de novo produto",
         LIMPAR_HISTORICO:"🧾 Limpeza do histórico"
     };
     return mapa[tipo] || "📋 Alteração";
@@ -2195,6 +2220,7 @@ function textoTipoAlteracao(tipo){
 
 function resumoSolicitacaoAlteracao(sol){
     const dados=sol.dados || {};
+    if(sol.tipo === "NOVO_PRODUTO") return "Código: <strong>"+escaparHtmlAlteracao(dados.codigo)+"</strong> — "+escaparHtmlAlteracao(dados.nome);
     if(sol.tipo === "ZERAR_CONTAINER") return "Container <strong>"+escaparHtmlAlteracao(dados.num)+"</strong> — "+((dados.itens || []).length)+" item(ns) serão removidos.";
     if(sol.tipo === "LIMPAR_HISTORICO") return "Solicitado pelo operador: apagar o histórico de movimentações.";
     const item=dados.novoItem || dados.item || {};
@@ -2240,6 +2266,20 @@ function aplicarAlteracaoAprovada(sol){
         });
         estoque=estoque.filter(function(item){ return Number(item.num)!==num; });
         return "Container "+num+" zerado com sucesso.";
+    }
+
+    if(sol.tipo === "NOVO_PRODUTO"){
+        const codigo=String(dados.codigo || "").trim();
+        const nome=String(dados.nome || "").trim();
+        if(!nome) throw new Error("Nome do produto inválido.");
+        if(produtosCadastrados.some(function(p){ return (p.codigo||"").toLowerCase()===codigo.toLowerCase() || p.nome.toLowerCase()===nome.toLowerCase(); })) throw new Error("Este produto já existe na lista.");
+        const extras=carregarProdutosExtrasAprovados();
+        const novo={codigo:codigo,nome:nome};
+        extras.push(novo);
+        salvarProdutosExtrasAprovados(extras);
+        produtosCadastrados.push(novo);
+        atualizarListaProdutos();
+        return "Novo produto aprovado e incluído na lista desta instalação.";
     }
 
     if(sol.tipo === "LIMPAR_HISTORICO"){
@@ -2317,6 +2357,23 @@ function atualizarIndicadorAdmin(){
     const alteracoes=carregarSolicitacoesAlteracoes().filter(function(item){ return item.status==="pendente"; }).length;
     const painel=document.getElementById("painel-admin-usuarios");
     botao.innerText = (acessos+alteracoes)>0 ? "👑 Usuários / 🔔 "+(acessos+alteracoes)+" pendente(s)" : (painel && painel.style.display !== "none" ? "🙈 Ocultar Usuários" : "👑 Usuários Cadastrados");
+}
+
+function solicitarNovoProdutoAdmin(){
+    if(usuarioEhAdmin()){
+        alert("O administrador pode editar diretamente a lista PRODUTOS_CADASTRADOS_HTML no código para produtos permanentes.");
+        return;
+    }
+    const codigo=prompt("Digite o código do novo produto:");
+    if(codigo===null)return;
+    const nome=prompt("Digite o nome do novo produto:");
+    if(nome===null)return;
+    const c=String(codigo).trim();
+    const n=String(nome).trim();
+    if(!n){ alert("Informe o nome do produto."); return; }
+    if(produtosCadastrados.some(function(p){ return (p.codigo||"").toLowerCase()===c.toLowerCase() || p.nome.toLowerCase()===n.toLowerCase(); })) { alert("Este produto já está cadastrado."); return; }
+    solicitarAlteracaoAdmin("NOVO_PRODUTO", {codigo:c,nome:n}, "Solicitação de inclusão de novo produto feita pelo operador.");
+    alert("📨 Solicitação enviada ao administrador para aprovação do novo produto.");
 }
 
 window.addEventListener("storage",function(evento){
@@ -2812,6 +2869,27 @@ title="Remover produto"
 }
 
 
+function cadastrarProduto(){
+    alert("O cadastro de produtos agora é feito diretamente no código HTML. Edite PRODUTOS_CADASTRADOS_HTML no início do script.");
+}
+
+
+function removerProdutoCadastrado(index){
+    alert("A lista de produtos é definida diretamente no código HTML e não pode ser alterada pela tela.");
+}
+
+
+function apagarTodosProdutos(){
+    alert("A lista de produtos é definida diretamente no código HTML e não pode ser apagada pela tela.");
+}
+
+
+function toggleImportarProdutos(){}
+
+
+function importarProdutos(){
+    alert("A importação pela tela foi desativada. Edite PRODUTOS_CADASTRADOS_HTML no código.");
+}
 
 
 // ======================================================
@@ -4298,16 +4376,23 @@ async function iniciarAplicativo(){
     criarContainers();
     preencherDataHora();
     garantirIdsEstoque();
+    await iniciarSincronizacaoFirebase();
 
-    // O aplicativo não fica preso na tela de login esperando o banco.
-    // A sincronização é iniciada em segundo plano.
-    iniciarSincronizacaoFirebase().catch(function(erro){
-        console.error("Erro na sincronização Firebase:",erro);
+    const extras = carregarProdutosExtrasAprovados();
+    extras.forEach(function(extra){
+        if(extra && extra.nome && !produtosCadastrados.some(function(p){
+            return (p.codigo||"").toLowerCase()===String(extra.codigo||"").toLowerCase() || p.nome.toLowerCase()===String(extra.nome).toLowerCase();
+        })){
+            produtosCadastrados.push({codigo:String(extra.codigo||"").trim(),nome:String(extra.nome).trim()});
+        }
     });
 
     atualizarListaProdutos();
     mostrarEstoque();
     mostrarHistorico();
+
+    const botaoNovoProduto=document.getElementById("btn-solicitar-novo-produto");
+    if(botaoNovoProduto) botaoNovoProduto.style.display = usuarioEhAdmin() ? "none" : "inline-block";
 
     if(usuarioEhAdmin()){
         renderizarSolicitacoesAlteracoesAdmin();
@@ -4467,82 +4552,40 @@ function atualizarTelaUsuarioLogado(){
     }
 }
 
-async function verificarAutenticacao(userInformado){
-    const user=userInformado || firebaseAuth.currentUser;
+async function verificarAutenticacao(){
+    const user=firebaseAuth.currentUser;
     if(!user){
         usuarioLogadoAtual=null;
-        return false;
+        return;
     }
 
     try{
-        // Carrega somente o perfil do usuário autenticado.
-        // Não bloqueia o login esperando a lista completa de usuários.
-        const perfil=await obterPerfilFirebase(user.uid);
-
-        if(!perfil){
-            // Se o usuário existe no Authentication mas ainda não possui
-            // perfil, cria o perfil automaticamente no Realtime Database.
-            const novoPerfil=await garantirPerfilFirebase(user);
-            return await concluirLoginFirebase(user,novoPerfil);
+        const perfil=await garantirPerfilFirebase(user);
+        if(perfil.ativo === false){
+            await firebaseAuth.signOut();
+            mostrarErroLogin("Este usuário está bloqueado pelo administrador.");
+            return;
         }
 
-        return await concluirLoginFirebase(user,perfil);
+        usuarioLogadoAtual={
+            uid:user.uid,
+            usuario:perfil.usuario || perfil.nome || user.email,
+            nome:perfil.nome || perfil.usuario || user.email,
+            email:user.email || perfil.email,
+            tipo:perfil.tipo === "admin" ? "admin" : "usuario",
+            ativo:perfil.ativo !== false
+        };
+
+        await carregarPerfisUsuariosFirebase();
+        entrarNoApp(usuarioLogadoAtual);
     }catch(erro){
         console.error("Erro ao carregar perfil Firebase:",erro);
-        await firebaseAuth.signOut().catch(function(){});
-        usuarioLogadoAtual=null;
-        const botao=document.getElementById("btn-acao-login");
-        if(botao){botao.disabled=false;botao.innerText="Entrar";}
-        mostrarErroLogin("O login do Firebase foi realizado, mas o perfil não pôde ser carregado. Verifique Realtime Database → Regras.");
-        return false;
+        await firebaseAuth.signOut();
+        mostrarErroLogin("Não foi possível carregar seu perfil no Firebase. Verifique as regras do Realtime Database.");
     }
 }
-
-async function concluirLoginFirebase(user,perfil){
-    if(!perfil) throw new Error("Perfil Firebase não encontrado.");
-
-    perfil.email=perfil.email || emailNormalizado(user.email);
-    perfil.ativo=perfil.ativo !== false;
-
-    if(perfil.ativo === false){
-        await firebaseAuth.signOut().catch(function(){});
-        mostrarErroLogin("Este usuário está bloqueado pelo administrador.");
-        return false;
-    }
-
-    usuarioLogadoAtual={
-        uid:user.uid,
-        usuario:perfil.usuario || perfil.nome || perfil.email || user.email,
-        nome:perfil.nome || perfil.usuario || user.email,
-        email:user.email || perfil.email,
-        tipo:perfil.tipo === "admin" ? "admin" : "usuario",
-        ativo:true
-    };
-
-    perfisUsuariosCache[user.uid]=perfil;
-
-    // Entra imediatamente no aplicativo. A sincronização completa do banco
-    // acontece em segundo plano e não pode deixar o botão "Entrando..." preso.
-    entrarNoApp(usuarioLogadoAtual);
-
-    // Para o painel administrativo, carrega a lista completa depois do login.
-    carregarPerfisUsuariosFirebase().then(function(){
-        if(usuarioEhAdmin()){
-            renderizarUsuariosCadastradosAdmin();
-            renderizarSolicitacoesAlteracoesAdmin();
-            atualizarIndicadorAdmin();
-        }
-    }).catch(function(e){
-        console.error("Erro ao carregar lista de perfis:",e);
-    });
-
-    return true;
-}
-
-let loginEmProcessamento=false;
 
 async function tratarEnvioLogin(){
-    if(loginEmProcessamento)return;
     esconderErroLogin();
 
     const usuarioDigitado=document.getElementById("login-usuario").value.trim();
@@ -4554,49 +4597,21 @@ async function tratarEnvioLogin(){
     }
 
     const botao=document.getElementById("btn-acao-login");
-    loginEmProcessamento=true;
-    if(botao){botao.disabled=true;botao.innerText="Entrando...";}
+    if(botao)botao.disabled=true;
 
     try{
-        const email=emailNormalizado(usuarioParaEmail(usuarioDigitado));
-
-        // Persistência somente em memória desta página.
-        await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.NONE);
-
-        // Usa diretamente a credencial retornada pelo Firebase.
-        const cred=await firebaseAuth.signInWithEmailAndPassword(email,senha);
-        console.log("✅ Firebase Authentication: usuário autenticado",cred.user.uid);
-
-        const sucesso=await verificarAutenticacao(cred.user);
-        if(!sucesso && botao){
-            botao.disabled=false;
-            botao.innerText="Entrar";
-        }
+        const email=usuarioParaEmail(usuarioDigitado);
+        await firebaseAuth.signInWithEmailAndPassword(email,senha);
+        // onAuthStateChanged continua o fluxo e carrega o perfil do Firebase.
     }catch(erro){
         console.error("Erro no login Firebase:",erro);
-        let mensagem="E-mail/usuário ou senha incorretos.";
-        if(erro && erro.code === "auth/invalid-credential"){
-            mensagem="E-mail ou senha incorretos no Firebase Authentication. Confira o usuário em Authentication → Usuários.";
-        }else if(erro && erro.code === "auth/wrong-password"){
-            mensagem="Senha incorreta para este usuário.";
-        }else if(erro && erro.code === "auth/user-not-found"){
-            mensagem="Esse usuário não existe no Firebase Authentication.";
-        }else if(erro && erro.code === "auth/invalid-email"){
-            mensagem="Informe um e-mail válido.";
-        }else if(erro && erro.code === "auth/too-many-requests"){
-            mensagem="Muitas tentativas. Aguarde alguns minutos e tente novamente.";
-        }else if(erro && erro.code === "auth/network-request-failed"){
-            mensagem="Sem conexão com o Firebase. Verifique a internet.";
-        }else if(erro && erro.code === "auth/operation-not-allowed"){
-            mensagem="O login por e-mail e senha está desativado no Firebase Authentication.";
-        }
+        let mensagem="Usuário ou senha incorretos.";
+        if(erro && erro.code === "auth/user-not-found") mensagem="Usuário não encontrado no Firebase.";
+        else if(erro && erro.code === "auth/too-many-requests") mensagem="Muitas tentativas. Aguarde alguns minutos e tente novamente.";
+        else if(erro && erro.code === "auth/network-request-failed") mensagem="Sem conexão com o Firebase. Verifique a internet.";
         mostrarErroLogin(mensagem);
     }finally{
-        loginEmProcessamento=false;
-        if(botao && document.getElementById("tela-login")?.style.display !== "none"){
-            botao.disabled=false;
-            botao.innerText="Entrar";
-        }
+        if(botao)botao.disabled=false;
     }
 }
 
@@ -4867,46 +4882,39 @@ function garantirAdminPadrao(){return carregarUsuariosCadastrados();}
 // ======================================================
 // INICIALIZAÇÃO DA AUTENTICAÇÃO
 // ======================================================
-// O Firebase Authentication usa persistência NONE.
-// Isso impede que uma sessão antiga do navegador seja restaurada.
-// A configuração é concluída antes de registrar o listener de autenticação.
+// A autenticação NÃO será persistida entre páginas/reloads.
+// Assim, sempre que o usuário abrir uma nova página/URL do sistema
+// ou recarregar a página, a tela de login será exibida novamente.
+// Nenhum usuário, senha ou sessão é gravado no localStorage.
 async function configurarAutenticacaoSemPersistencia(){
     try{
+        // NONE = sessão somente em memória nesta página.
+        // Ao navegar para outra página ou recarregar, será necessário logar novamente.
         await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.NONE);
-        // Se uma versão anterior deixou uma sessão persistida, encerra-a.
+
+        // Limpa qualquer sessão antiga que eventualmente tenha sido
+        // restaurada por uma versão anterior do sistema.
         if(firebaseAuth.currentUser){
             await firebaseAuth.signOut();
         }
     }catch(erro){
-        console.error("Erro ao configurar autenticação sem persistência:",erro);
+        console.error("Erro ao configurar autenticação sem persistência:", erro);
     }
 }
 
-async function iniciarAutenticacao(){
-    await configurarAutenticacaoSemPersistencia();
+firebaseAuth.onAuthStateChanged(async function(user){
+    if(!user){
+        usuarioLogadoAtual=null;
+        perfisUsuariosCache={};
+        const app=document.getElementById("app-principal");
+        const login=document.getElementById("tela-login");
+        if(app)app.style.display="none";
+        if(login)login.style.display="block";
+        return;
+    }
 
-    firebaseAuth.onAuthStateChanged(function(user){
-        if(!user){
-            usuarioLogadoAtual=null;
-            perfisUsuariosCache={};
-            firebaseListenersAtivos=false;
-            firebaseSincronizacaoAtiva=false;
-            const app=document.getElementById("app-principal");
-            const login=document.getElementById("tela-login");
-            if(app)app.style.display="none";
-            if(login)login.style.display="flex";
-            return;
-        }
-
-        // Se o usuário já estiver autenticado na memória da página,
-        // carrega o perfil sem usar localStorage.
-        if(!usuarioLogadoAtual){
-            verificarAutenticacao(user);
-        }
-    });
-}
-
-iniciarAutenticacao();
+    await verificarAutenticacao();
+});
 
 // Permite enviar o formulário de login pressionando Enter.
 
@@ -4933,6 +4941,8 @@ setInterval(function(){
     }
     atualizarIndicadorAdmin();
 }, 2000);
+
+configurarAutenticacaoSemPersistencia();
 
 </script>
 
