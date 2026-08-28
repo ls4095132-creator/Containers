@@ -796,12 +796,12 @@ Entrar
 
 <div class="campo">
 <label>👤 Novo usuário:</label>
-<input type="text" id="admin-novo-usuario" placeholder="Nome de usuário" autocomplete="off">
+<input type="text" id="admin-novo-usuario" placeholder="E-mail do usuário" autocomplete="off">
 </div>
 
 <div class="campo">
 <label>🔒 Senha:</label>
-<input type="password" id="admin-nova-senha" placeholder="Senha (mín. 4 caracteres)" autocomplete="off">
+<input type="password" id="admin-nova-senha" placeholder="Senha (mín. 6 caracteres)" autocomplete="off">
 </div>
 
 <div class="campo">
@@ -1135,9 +1135,8 @@ style="margin-top:20px;"
 // ======================================================
 // BANCO DE DADOS - FIREBASE REALTIME DATABASE
 // ======================================================
-// O Firebase passa a ser a fonte central. O localStorage
-// fica apenas como cópia temporária/fallback durante a
-// migração, para não perder dados já existentes no PC.
+// O Firebase é a fonte central de autenticação e perfis. O localStorage
+// continua sendo usado somente para dados locais auxiliares do aplicativo.
 
 let estoque = JSON.parse(localStorage.getItem("estoqueContainers")) || [];
 let historico = JSON.parse(localStorage.getItem("historicoMovimentacoes")) || [];
@@ -3978,11 +3977,6 @@ new Date().toISOString(),
 
 dados:{
 
-usuariosCadastrados:
-JSON.parse(
-localStorage.getItem("usuariosCadastrados")
-) || [],
-
 solicitacoesAcessoAdmin:
 JSON.parse(
 localStorage.getItem("solicitacoesAcessoAdmin")
@@ -4202,9 +4196,6 @@ backup.dados;
 
 if(
 !Array.isArray(
-dados.usuariosCadastrados
-) ||
-!Array.isArray(
 dados.estoqueContainers
 ) ||
 !Array.isArray(
@@ -4258,13 +4249,6 @@ dados.historicoMovimentacoes
 )
 );
 
-localStorage.setItem(
-"usuariosCadastrados",
-JSON.stringify(
-dados.usuariosCadastrados
-)
-);
-
 if(Array.isArray(dados.solicitacoesAcessoAdmin)){
 localStorage.setItem(
 "solicitacoesAcessoAdmin",
@@ -4272,17 +4256,9 @@ JSON.stringify(dados.solicitacoesAcessoAdmin)
 );
 }
 
-localStorage.removeItem(
-"credenciaisLogin"
-);
-
 // A lista de produtos é definida diretamente no código HTML.
 // Portanto, restaurar um backup não altera essa lista.
 
-
-localStorage.removeItem(
-"sessaoAtiva"
-);
 
 alert(
 "✅ Backup restaurado com sucesso!\n\n"+
@@ -4447,957 +4423,472 @@ async function iniciarAplicativo(){
 // recomendado logar com essas credenciais e trocar a senha
 // (e cadastrar seu usuário definitivo) assim que possível.
 
-const USUARIO_ADMIN_PADRAO = "admin";
-const SENHA_ADMIN_PADRAO = "admin123";
-const SENHA_ALTERNATIVA_ADMIN_PADRAO = "recuperar-admin-2026";
+// ======================================================
+// AUTENTICAÇÃO E USUÁRIOS - FIREBASE ONLY
+// ======================================================
+// IMPORTANTE:
+// - Senhas ficam exclusivamente no Firebase Authentication.
+// - Perfis (nome, e-mail, tipo e status) ficam em /perfisUsuarios/<UID>.
+// - Nenhum usuário, senha ou lista de usuários é salvo no localStorage.
+// - A sessão é mantida pelo Firebase Auth, não pelo sessionStorage.
 
 let usuarioLogadoAtual = null;
+let perfisUsuariosCache = {};
+let appFirebaseAdminHelper = null;
+let authFirebaseAdminHelper = null;
 
+const EMAILS_ADMIN_INICIAIS = [
+    "leandro@gmail.com",
+    "admin@controlecontainers.com"
+];
 
-// ======================================================
-// USUÁRIOS CADASTRADOS (MULTIUSUÁRIO)
-// ======================================================
-// Guarda um ARRAY de usuários em vez de um único objeto.
-// Cada usuário: { usuario, senhaHash, senhaAlternativaHash, tipo }
-// tipo é "admin" ou "usuario".
-
-function carregarUsuariosCadastrados(){
-
-const lista =
-JSON.parse(
-localStorage.getItem("usuariosCadastrados")
-);
-
-if(Array.isArray(lista))return lista;
-
-
-// Migração automática do formato antigo (um único usuário
-// guardado em "credenciaisLogin"), que vira o primeiro admin.
-
-const antigo =
-JSON.parse(
-localStorage.getItem("credenciaisLogin")
-);
-
-if(antigo && antigo.usuario){
-
-const migrado =
-[{
-usuario:antigo.usuario,
-senhaHash:antigo.senhaHash,
-senhaAlternativaHash:antigo.senhaAlternativaHash || null,
-tipo:"admin"
-}];
-
-localStorage.setItem(
-"usuariosCadastrados",
-JSON.stringify(migrado)
-);
-
-localStorage.removeItem("credenciaisLogin");
-
-return migrado;
-
+function emailNormalizado(valor){
+    return String(valor || "").trim().toLowerCase();
 }
-
-
-return [];
-
-}
-
-
-function salvarUsuariosCadastrados(lista){
-
-localStorage.setItem(
-"usuariosCadastrados",
-JSON.stringify(lista)
-);
-
-}
-
-
-function hashTexto(texto){
-
-const encoder =
-new TextEncoder();
-
-const dados =
-encoder.encode(texto);
-
-return crypto.subtle.digest("SHA-256",dados)
-.then(function(hashBuffer){
-
-const hashArray =
-Array.from(new Uint8Array(hashBuffer));
-
-return hashArray.map(function(b){
-
-return b.toString(16).padStart(2,"0");
-
-}).join("");
-
-});
-
-}
-
-
-function mostrarErroLogin(mensagem){
-
-const erro =
-document.getElementById("erro-login");
-
-if(!erro)return;
-
-erro.innerText = mensagem;
-
-erro.style.display = "block";
-
-}
-
-
-function esconderErroLogin(){
-
-const erro =
-document.getElementById("erro-login");
-
-if(!erro)return;
-
-erro.style.display = "none";
-
-}
-
-
-// ======================================================
-// GARANTIR QUE EXISTE UM ADMIN (SEM TELA PÚBLICA)
-// ======================================================
-// Só cria o admin padrão se a lista de usuários estiver
-// realmente vazia. Uma vez que exista qualquer usuário
-// cadastrado (mesmo que só o admin padrão), essa função
-// não cria mais ninguém — o cadastro passa a ser exclusivo
-// do painel de admin, dentro do app.
-
-async function garantirAdminPadrao(){
-
-const usuarios =
-carregarUsuariosCadastrados();
-
-if(usuarios.length > 0){
-
-return usuarios;
-
-}
-
-const hashes =
-await Promise.all([
-hashTexto(SENHA_ADMIN_PADRAO),
-hashTexto(SENHA_ALTERNATIVA_ADMIN_PADRAO)
-]);
-
-const usuariosComAdminPadrao =
-[{
-usuario:USUARIO_ADMIN_PADRAO,
-senhaHash:hashes[0],
-senhaAlternativaHash:hashes[1],
-tipo:"admin"
-}];
-
-salvarUsuariosCadastrados(usuariosComAdminPadrao);
-
-return usuariosComAdminPadrao;
-
-}
-
-
-async function verificarAutenticacao(){
-
-const usuarios =
-await garantirAdminPadrao();
-
-const alternar =
-document.getElementById("alternar-login");
-
-const botao =
-document.getElementById("btn-acao-login");
-
-
-botao.innerText = "Entrar";
-
-alternar.innerHTML =
-'Esqueceu a senha? <a onclick="mostrarRecuperarSenha()">Solicitar acesso ao administrador</a>';
-
-alternar.style.display = "block";
-
-
-const sessao =
-JSON.parse(
-sessionStorage.getItem("sessaoAtiva")
-);
-
-if(sessao && sessao.usuario){
-
-const usuarioSessao =
-usuarios.find(function(item){
-
-return item.usuario.toLowerCase() ===
-sessao.usuario.toLowerCase();
-
-});
-
-if(usuarioSessao){
-
-entrarNoApp(usuarioSessao);
-
-}
-
-else{
-
-sessionStorage.removeItem("sessaoAtiva");
-
-}
-
-}
-
-}
-
 
 function usuarioParaEmail(usuario){
-    const valor = (usuario || "").trim().toLowerCase();
+    const valor = emailNormalizado(usuario);
     if(valor.includes("@")) return valor;
     return valor + "@controlecontainers.com";
+}
+
+function mostrarErroLogin(mensagem){
+    const erro=document.getElementById("erro-login");
+    if(!erro)return;
+    erro.innerText=mensagem;
+    erro.style.display="block";
+}
+
+function esconderErroLogin(){
+    const erro=document.getElementById("erro-login");
+    if(!erro)return;
+    erro.style.display="none";
+}
+
+function mostrarErroAdminUsuarios(mensagem){
+    const erro=document.getElementById("erro-admin-usuarios");
+    if(!erro)return;
+    erro.innerText=mensagem;
+    erro.style.display="block";
+}
+
+function esconderErroAdminUsuarios(){
+    const erro=document.getElementById("erro-admin-usuarios");
+    if(!erro)return;
+    erro.style.display="none";
+}
+
+// Retorna os perfis que já foram carregados do Firebase.
+// Não usa localStorage.
+function carregarUsuariosCadastrados(){
+    return Object.keys(perfisUsuariosCache).map(function(uid){
+        const p=perfisUsuariosCache[uid] || {};
+        return {
+            uid:uid,
+            usuario:p.usuario || p.nome || p.email || "",
+            nome:p.nome || p.usuario || "",
+            email:p.email || "",
+            tipo:p.tipo === "admin" ? "admin" : "usuario",
+            ativo:p.ativo !== false,
+            criadoEm:p.criadoEm || null
+        };
+    });
+}
+
+async function carregarPerfisUsuariosFirebase(){
+    if(!firebaseAuth.currentUser) return [];
+
+    const snap=await firebaseDB.ref("perfisUsuarios").once("value");
+    perfisUsuariosCache=snap.exists() ? (snap.val() || {}) : {};
+    return carregarUsuariosCadastrados();
+}
+
+async function obterPerfilFirebase(uid){
+    const snap=await firebaseDB.ref("perfisUsuarios/"+uid).once("value");
+    return snap.exists() ? snap.val() : null;
+}
+
+async function garantirPerfilFirebase(user){
+    const uid=user.uid;
+    let perfil=await obterPerfilFirebase(uid);
+
+    if(perfil){
+        perfil.email=perfil.email || emailNormalizado(user.email);
+        perfil.ativo=perfil.ativo !== false;
+        perfisUsuariosCache[uid]=perfil;
+        return perfil;
+    }
+
+    const email=emailNormalizado(user.email);
+    const tipo=EMAILS_ADMIN_INICIAIS.includes(email) ? "admin" : "usuario";
+
+    perfil={
+        uid:uid,
+        email:email,
+        usuario:email,
+        nome:user.displayName || email,
+        tipo:tipo,
+        ativo:true,
+        criadoEm:firebase.database.ServerValue.TIMESTAMP
+    };
+
+    await firebaseDB.ref("perfisUsuarios/"+uid).set(perfil);
+    perfisUsuariosCache[uid]=perfil;
+    return perfil;
+}
+
+function atualizarTelaUsuarioLogado(){
+    const usuario=usuarioLogadoAtual;
+    const texto=document.getElementById("texto-usuario-logado");
+    if(texto){
+        texto.innerText=(usuario && usuario.tipo === "admin" ? "👑 " : "👤 ")+
+            ((usuario && (usuario.nome || usuario.usuario || usuario.email)) || "Usuário")+
+            (usuario && usuario.tipo === "admin" ? " (admin)" : "");
+    }
+
+    const botaoAdmin=document.getElementById("btn-abrir-painel-admin");
+    if(botaoAdmin){
+        botaoAdmin.style.display=usuario && usuario.tipo === "admin" ? "inline-block" : "none";
+    }
+}
+
+async function verificarAutenticacao(){
+    const user=firebaseAuth.currentUser;
+    if(!user){
+        usuarioLogadoAtual=null;
+        return;
+    }
+
+    try{
+        const perfil=await garantirPerfilFirebase(user);
+        if(perfil.ativo === false){
+            await firebaseAuth.signOut();
+            mostrarErroLogin("Este usuário está bloqueado pelo administrador.");
+            return;
+        }
+
+        usuarioLogadoAtual={
+            uid:user.uid,
+            usuario:perfil.usuario || perfil.nome || user.email,
+            nome:perfil.nome || perfil.usuario || user.email,
+            email:user.email || perfil.email,
+            tipo:perfil.tipo === "admin" ? "admin" : "usuario",
+            ativo:perfil.ativo !== false
+        };
+
+        await carregarPerfisUsuariosFirebase();
+        entrarNoApp(usuarioLogadoAtual);
+    }catch(erro){
+        console.error("Erro ao carregar perfil Firebase:",erro);
+        await firebaseAuth.signOut();
+        mostrarErroLogin("Não foi possível carregar seu perfil no Firebase. Verifique as regras do Realtime Database.");
+    }
 }
 
 async function tratarEnvioLogin(){
     esconderErroLogin();
 
-    const usuarioDigitado = document.getElementById("login-usuario").value.trim();
-    const senha = document.getElementById("login-senha").value;
+    const usuarioDigitado=document.getElementById("login-usuario").value.trim();
+    const senha=document.getElementById("login-senha").value;
 
     if(!usuarioDigitado || !senha){
         mostrarErroLogin("Preencha usuário e senha.");
         return;
     }
 
-    const botao = document.getElementById("btn-acao-login");
-    if(botao) botao.disabled = true;
+    const botao=document.getElementById("btn-acao-login");
+    if(botao)botao.disabled=true;
 
-    try {
-        // A partir de agora, a senha é validada pelo Firebase Authentication.
-        const email = usuarioParaEmail(usuarioDigitado);
-        const credencial = await firebaseAuth.signInWithEmailAndPassword(email, senha);
-        const emailAutenticado = (credencial.user.email || "").toLowerCase();
-
-        let usuarios = carregarUsuariosCadastrados();
-        let usuarioEncontrado = usuarios.find(function(item){
-            return item.usuario.toLowerCase() === usuarioDigitado.toLowerCase();
-        });
-
-        // Compatibilidade: se o administrador ainda não estiver no cadastro local,
-        // reconhecemos o administrador Firebase pelo e-mail oficial.
-        if(!usuarioEncontrado && emailAutenticado === "admin@controlecontainers.com"){
-            usuarioEncontrado = {
-                usuario: "admin",
-                senhaHash: null,
-                senhaAlternativaHash: null,
-                tipo: "admin"
-            };
-            usuarios.push(usuarioEncontrado);
-            salvarUsuariosCadastrados(usuarios);
-        }
-
-        if(!usuarioEncontrado){
-            await firebaseAuth.signOut();
-            mostrarErroLogin("Login do Firebase realizado, mas este usuário ainda não possui perfil no sistema.");
-            return;
-        }
-
-        sessionStorage.setItem("sessaoAtiva", JSON.stringify({
-            usuario: usuarioEncontrado.usuario,
-            uid: credencial.user.uid
-        }));
-
-        entrarNoApp(usuarioEncontrado);
-
-    } catch(erro){
-        console.error("Erro no login Firebase:", erro);
-
-        let mensagem = "Usuário ou senha incorretos.";
-
-        if(erro && erro.code === "auth/invalid-credential"){
-            mensagem = "Usuário ou senha incorretos.";
-        } else if(erro && erro.code === "auth/user-not-found"){
-            mensagem = "Usuário não encontrado no Firebase.";
-        } else if(erro && erro.code === "auth/too-many-requests"){
-            mensagem = "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
-        } else if(erro && erro.code === "auth/network-request-failed"){
-            mensagem = "Sem conexão com o Firebase. Verifique a internet.";
-        }
-
+    try{
+        const email=usuarioParaEmail(usuarioDigitado);
+        await firebaseAuth.signInWithEmailAndPassword(email,senha);
+        // onAuthStateChanged continua o fluxo e carrega o perfil do Firebase.
+    }catch(erro){
+        console.error("Erro no login Firebase:",erro);
+        let mensagem="Usuário ou senha incorretos.";
+        if(erro && erro.code === "auth/user-not-found") mensagem="Usuário não encontrado no Firebase.";
+        else if(erro && erro.code === "auth/too-many-requests") mensagem="Muitas tentativas. Aguarde alguns minutos e tente novamente.";
+        else if(erro && erro.code === "auth/network-request-failed") mensagem="Sem conexão com o Firebase. Verifique a internet.";
         mostrarErroLogin(mensagem);
-    } finally {
-        if(botao) botao.disabled = false;
+    }finally{
+        if(botao)botao.disabled=false;
     }
 }
+
 function entrarNoApp(usuarioObjeto){
-
-usuarioLogadoAtual = usuarioObjeto;
-
-document.getElementById("tela-login").style.display =
-"none";
-
-document.getElementById("app-principal").style.display =
-"block";
-
-document.getElementById("texto-usuario-logado").innerText =
-(usuarioObjeto.tipo === "admin" ? "👑 " : "👤 ")+
-usuarioObjeto.usuario+
-(usuarioObjeto.tipo === "admin" ? " (admin)" : "");
-
-const botaoAdmin =
-document.getElementById("btn-abrir-painel-admin");
-
-if(botaoAdmin){
-
-botaoAdmin.style.display =
-usuarioObjeto.tipo === "admin" ? "inline-block" : "none";
-
+    usuarioLogadoAtual=usuarioObjeto;
+    const login=document.getElementById("tela-login");
+    const app=document.getElementById("app-principal");
+    if(login)login.style.display="none";
+    if(app)app.style.display="block";
+    atualizarTelaUsuarioLogado();
+    iniciarAplicativo();
 }
 
-iniciarAplicativo();
-
+async function sairDoSistema(){
+    try{
+        await firebaseAuth.signOut();
+    }catch(erro){
+        console.error(erro);
+    }
+    usuarioLogadoAtual=null;
+    perfisUsuariosCache={};
+    const app=document.getElementById("app-principal");
+    const login=document.getElementById("tela-login");
+    if(app)app.style.display="none";
+    if(login)login.style.display="block";
 }
 
-
-function sair(){
-
-sessionStorage.removeItem("sessaoAtiva");
-
-location.reload();
-
-}
-
-
-// ======================================================
-// SOLICITAÇÃO DE ACESSO AO ADMINISTRADOR
-// ======================================================
-// O usuário comum apenas registra uma solicitação. A senha
-// nunca é alterada nesta tela. O administrador decide, dentro
-// do painel, se irá alterar a senha ou refazer o usuário.
-
+// ------------------------------------------------------
+// Solicitação de acesso: continua separada dos dados de
+// autenticação. A senha nunca é armazenada aqui.
+// ------------------------------------------------------
 function carregarSolicitacoesAcesso(){
-
-const lista =
-JSON.parse(
-localStorage.getItem("solicitacoesAcessoAdmin")
-);
-
-return Array.isArray(lista) ? lista : [];
-
+    const lista=JSON.parse(localStorage.getItem("solicitacoesAcessoAdmin"));
+    return Array.isArray(lista) ? lista : [];
 }
 
 function salvarSolicitacoesAcesso(lista){
-
-localStorage.setItem(
-"solicitacoesAcessoAdmin",
-JSON.stringify(lista)
-);
-
+    localStorage.setItem("solicitacoesAcessoAdmin",JSON.stringify(lista));
 }
 
 function mostrarRecuperarSenha(){
-
-esconderErroLogin();
-
-const bloco = document.getElementById("bloco-login-normal");
-const painel = document.getElementById("painel-recuperar-senha");
-
-if(bloco) bloco.style.display = "none";
-if(painel) painel.style.display = "block";
-
-const campoUsuario = document.getElementById("recuperar-usuario");
-const campoMensagem = document.getElementById("recuperar-mensagem");
-
-if(campoUsuario) campoUsuario.value = "";
-if(campoMensagem) campoMensagem.value = "";
-
-esconderErroRecuperar();
-
+    esconderErroLogin();
+    const bloco=document.getElementById("bloco-login-normal");
+    const painel=document.getElementById("painel-recuperar-senha");
+    if(bloco)bloco.style.display="none";
+    if(painel)painel.style.display="block";
+    const campo=document.getElementById("recuperar-usuario");
+    const mensagem=document.getElementById("recuperar-mensagem");
+    if(campo)campo.value="";
+    if(mensagem)mensagem.value="";
+    esconderErroRecuperar();
 }
 
 function esconderRecuperarSenha(){
-
-const painel = document.getElementById("painel-recuperar-senha");
-const bloco = document.getElementById("bloco-login-normal");
-
-if(painel) painel.style.display = "none";
-if(bloco) bloco.style.display = "block";
-
-esconderErroRecuperar();
-
+    const painel=document.getElementById("painel-recuperar-senha");
+    const bloco=document.getElementById("bloco-login-normal");
+    if(painel)painel.style.display="none";
+    if(bloco)bloco.style.display="block";
+    esconderErroRecuperar();
 }
 
-function solicitarAcessoAdmin(){
-
-esconderErroRecuperar();
-
-const campoUsuario = document.getElementById("recuperar-usuario");
-const campoMensagem = document.getElementById("recuperar-mensagem");
-
-const usuario = campoUsuario ? campoUsuario.value.trim() : "";
-const mensagem = campoMensagem ? campoMensagem.value.trim() : "";
-
-if(!usuario){
-
-mostrarErroRecuperar("Informe seu nome de usuário.");
-return;
-
-}
-
-const solicitacoes = carregarSolicitacoesAcesso();
-
-const existentePendente = solicitacoes.find(function(item){
-return item.usuario.toLowerCase() === usuario.toLowerCase() &&
-item.status === "pendente";
-});
-
-if(existentePendente){
-
-mostrarErroRecuperar("Já existe uma solicitação pendente para este usuário. Aguarde o administrador.");
-return;
-
-}
-
-solicitacoes.push({
- id: Date.now(),
- usuario: usuario,
- mensagem: mensagem,
- data: new Date().toISOString(),
- status: "pendente"
-});
-
-salvarSolicitacoesAcesso(solicitacoes);
-
-alert("Solicitação enviada ao administrador. Aguarde a liberação do seu acesso.");
-
-esconderRecuperarSenha();
-
-document.getElementById("login-usuario").value = usuario;
-document.getElementById("login-senha").value = "";
-
-}
-
-function mostrarErroRecuperar(mensagem){
-
-const erro =
-document.getElementById("erro-recuperar");
-
-if(!erro)return;
-
-erro.innerText = mensagem;
-erro.style.display = "block";
-
-}
-
-function esconderErroRecuperar(){
-
-const erro =
-document.getElementById("erro-recuperar");
-
-if(!erro)return;
-
-erro.style.display = "none";
-
-}
-
-// ======================================================
-// PAINEL ADMIN: USUÁRIOS CADASTRADOS
-// ======================================================
-
-function toggleAdminUsuarios(){
-
-const painel =
-document.getElementById("painel-admin-usuarios");
-
-if(!painel)return;
-
-const oculto =
-painel.style.display === "none" ||
-painel.style.display === "";
-
-painel.style.display =
-oculto ? "block" : "none";
-
-const botao =
-document.getElementById("btn-abrir-painel-admin");
-
-if(botao){
-
-botao.innerText =
-oculto ? "🙈 Ocultar Usuários" : "👑 Usuários Cadastrados";
-
-}
-
-if(oculto){
-    renderizarSolicitacoesAcessoAdmin();
-    renderizarSolicitacoesAlteracoesAdmin();
-    renderizarUsuariosCadastradosAdmin();
-}
-
-atualizarIndicadorAdmin();
-
-}
-
-
-function mostrarErroAdminUsuarios(mensagem){
-
-const erro =
-document.getElementById("erro-admin-usuarios");
-
-if(!erro)return;
-
-erro.innerText = mensagem;
-
-erro.style.display = "block";
-
-}
-
-
-function esconderErroAdminUsuarios(){
-
-const erro =
-document.getElementById("erro-admin-usuarios");
-
-if(!erro)return;
-
-erro.style.display = "none";
-
-}
-
-
-function escaparHtmlSolicitacao(texto){
-return String(texto || "")
-.replace(/&/g,"&amp;")
-.replace(/</g,"&lt;")
-.replace(/>/g,"&gt;")
-.replace(/"/g,"&quot;")
-.replace(/'/g,"&#039;");
-}
-
-function formatarDataSolicitacaoAdmin(iso){
-
-const data = new Date(iso);
-
-if(Number.isNaN(data.getTime()))return iso || "";
-
-return data.toLocaleString("pt-BR");
-
+async function enviarSolicitacaoAcesso(){
+    esconderErroRecuperar();
+    const campo=document.getElementById("recuperar-usuario");
+    const campoMensagem=document.getElementById("recuperar-mensagem");
+    const usuario=campo ? campo.value.trim() : "";
+    const mensagem=campoMensagem ? campoMensagem.value.trim() : "";
+    if(!usuario){
+        mostrarErroRecuperar("Informe seu usuário ou e-mail.");
+        return;
+    }
+    const lista=carregarSolicitacoesAcesso();
+    lista.push({id:Date.now()+Math.floor(Math.random()*1000),usuario:usuario,mensagem:mensagem,data:new Date().toISOString(),status:"pendente"});
+    salvarSolicitacoesAcesso(lista);
+    alert("Solicitação enviada ao administrador.");
+    esconderRecuperarSenha();
 }
 
 function renderizarSolicitacoesAcessoAdmin(){
-
-const area = document.getElementById("lista-solicitacoes-admin");
-const contador = document.getElementById("contador-solicitacoes-admin");
-
-if(!area)return;
-
-const solicitacoes = carregarSolicitacoesAcesso().filter(function(item){
-return item.status === "pendente";
-});
-
-if(contador){
-contador.innerText = solicitacoes.length ? "("+solicitacoes.length+" pendente(s))" : "(nenhuma pendente)";
-}
-
-if(solicitacoes.length === 0){
-
-area.innerHTML = `
-<div class="vazio" style="margin-top:10px;">
-✅ Nenhuma solicitação de acesso pendente.
-</div>`;
-atualizarIndicadorAdmin();
-return;
-
-}
-
-area.innerHTML = solicitacoes.map(function(item){
-
-const usuarioHtml = escaparHtmlSolicitacao(item.usuario);
-const mensagemHtml = item.mensagem ? `<br><span style="font-size:12px;">📝 ${escaparHtmlSolicitacao(item.mensagem)}</span>` : "";
-
-return `
-<div class="produto-item" style="padding-right:0;margin-bottom:10px;background:var(--bg-painel-2);border:1px solid var(--borda);border-radius:8px;padding:12px;">
-<strong>👤 ${usuarioHtml}</strong>
-<br>
-<span style="font-size:11.5px;color:var(--texto-fraco);">🕒 ${formatarDataSolicitacaoAdmin(item.data)}</span>
-${mensagemHtml}
-<div class="container-botoes" style="margin-top:10px;">
-<button type="button" class="btn-salvar" onclick="atenderSolicitacaoAcesso(${item.id}, 'senha')">🔑 Alterar senha</button>
-<button type="button" class="btn-produto" onclick="atenderSolicitacaoAcesso(${item.id}, 'refazer')">♻️ Refazer usuário</button>
-<button type="button" class="btn-cancelar" onclick="atenderSolicitacaoAcesso(${item.id}, 'recusar')">❌ Recusar</button>
-</div>
-</div>`;
-
-}).join("");
-atualizarIndicadorAdmin();
-
+    const area=document.getElementById("lista-solicitacoes-admin");
+    const contador=document.getElementById("contador-solicitacoes-admin");
+    if(!area)return;
+    const solicitacoes=carregarSolicitacoesAcesso().filter(function(item){return item.status === "pendente";});
+    if(contador)contador.innerText=solicitacoes.length ? "("+solicitacoes.length+" pendente(s))" : "(nenhuma pendente)";
+    if(!solicitacoes.length){
+        area.innerHTML='<div class="vazio" style="margin-top:10px;">✅ Nenhuma solicitação de acesso pendente.</div>';
+        atualizarIndicadorAdmin();
+        return;
+    }
+    area.innerHTML=solicitacoes.map(function(item){
+        return '<div class="produto-item" style="padding-right:0;margin-bottom:10px;background:var(--bg-painel-2);border:1px solid var(--borda);border-radius:8px;padding:12px;">'+
+            '<strong>👤 '+escaparHtmlSolicitacao(item.usuario)+'</strong><br>'+
+            '<span style="font-size:11.5px;color:var(--texto-fraco);">🕒 '+formatarDataSolicitacaoAdmin(item.data)+'</span>'+
+            (item.mensagem ? '<br><span style="font-size:12px;">📝 '+escaparHtmlSolicitacao(item.mensagem)+'</span>' : '')+
+            '<div class="container-botoes" style="margin-top:10px;">'+
+            '<button type="button" class="btn-salvar" onclick="atenderSolicitacaoAcesso('+item.id+', \'senha\')">🔑 Enviar redefinição</button>'+
+            '<button type="button" class="btn-cancelar" onclick="atenderSolicitacaoAcesso('+item.id+', \'recusar\')">❌ Recusar</button>'+
+            '</div></div>';
+    }).join("");
+    atualizarIndicadorAdmin();
 }
 
 function atualizarSolicitacao(id,status){
+    const solicitacoes=carregarSolicitacoesAcesso();
+    const item=solicitacoes.find(function(registro){return registro.id === id;});
+    if(!item)return;
+    item.status=status;
+    item.atendidoEm=new Date().toISOString();
+    item.atendidoPor=usuarioLogadoAtual ? usuarioLogadoAtual.email : "admin";
+    salvarSolicitacoesAcesso(solicitacoes);
+    renderizarSolicitacoesAcessoAdmin();
+}
 
-const solicitacoes = carregarSolicitacoesAcesso();
-const item = solicitacoes.find(function(registro){
-return registro.id === id;
+async function atenderSolicitacaoAcesso(id,acao){
+    if(!usuarioEhAdmin()){
+        alert("Apenas o administrador pode atender solicitações de acesso.");
+        return;
+    }
+    const solicitacoes=carregarSolicitacoesAcesso();
+    const solicitacao=solicitacoes.find(function(item){return item.id === id && item.status === "pendente";});
+    if(!solicitacao)return;
+    if(acao === "recusar"){
+        if(confirm("Recusar a solicitação de \""+solicitacao.usuario+"\"?")){
+            atualizarSolicitacao(id,"recusada");
+            alert("Solicitação recusada.");
+        }
+        return;
+    }
+    if(acao === "senha"){
+        const email=usuarioParaEmail(solicitacao.usuario);
+        try{
+            await firebaseAuth.sendPasswordResetEmail(email);
+            atualizarSolicitacao(id,"atendida");
+            alert("E-mail de redefinição enviado para "+email+".");
+        }catch(erro){
+            console.error(erro);
+            alert("Não foi possível enviar a redefinição. Verifique se o e-mail existe no Firebase.");
+        }
+    }
+}
+
+function escaparHtmlSolicitacao(texto){
+    return String(texto || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+}
+function formatarDataSolicitacaoAdmin(iso){
+    const data=new Date(iso);
+    return Number.isNaN(data.getTime()) ? (iso || "") : data.toLocaleString("pt-BR");
+}
+
+// ------------------------------------------------------
+// Criação/gestão de usuários Firebase
+// ------------------------------------------------------
+function obterAuthAdminHelper(){
+    if(!appFirebaseAdminHelper){
+        appFirebaseAdminHelper=firebase.initializeApp(firebaseConfig,"AuthAdminHelper");
+        authFirebaseAdminHelper=appFirebaseAdminHelper.auth();
+    }
+    return authFirebaseAdminHelper;
+}
+
+async function cadastrarUsuarioAdmin(){
+    esconderErroAdminUsuarios();
+    if(!usuarioEhAdmin()){
+        mostrarErroAdminUsuarios("Apenas o administrador pode cadastrar usuários.");
+        return;
+    }
+    const campoUsuario=document.getElementById("admin-novo-usuario");
+    const campoSenha=document.getElementById("admin-nova-senha");
+    const campoTipo=document.getElementById("admin-novo-tipo");
+    const novoUsuario=campoUsuario.value.trim();
+    const novaSenha=campoSenha.value;
+    const novoTipo=campoTipo.value === "admin" ? "admin" : "usuario";
+
+    if(!novoUsuario){mostrarErroAdminUsuarios("Informe o e-mail do novo usuário.");return;}
+    const email=usuarioParaEmail(novoUsuario);
+    if(novaSenha.length < 6){mostrarErroAdminUsuarios("A senha do Firebase deve ter pelo menos 6 caracteres.");return;}
+
+    try{
+        const authHelper=obterAuthAdminHelper();
+        const cred=await authHelper.createUserWithEmailAndPassword(email,novaSenha);
+        const perfil={uid:cred.user.uid,email:email,usuario:email,nome:email,tipo:novoTipo,ativo:true,criadoEm:firebase.database.ServerValue.TIMESTAMP};
+        await firebaseDB.ref("perfisUsuarios/"+cred.user.uid).set(perfil);
+        await authHelper.signOut();
+        await carregarPerfisUsuariosFirebase();
+        renderizarUsuariosCadastradosAdmin();
+        campoUsuario.value="";
+        campoSenha.value="";
+        campoTipo.value="usuario";
+        alert("✅ Usuário criado no Firebase Authentication e perfil salvo no Firebase Database.");
+    }catch(erro){
+        console.error("Erro ao cadastrar usuário Firebase:",erro);
+        let mensagem="Não foi possível cadastrar o usuário.";
+        if(erro && erro.code === "auth/email-already-in-use") mensagem="Este e-mail já existe no Firebase Authentication.";
+        else if(erro && erro.code === "auth/invalid-email") mensagem="Informe um e-mail válido.";
+        else if(erro && erro.code === "auth/weak-password") mensagem="A senha precisa ter pelo menos 6 caracteres.";
+        mostrarErroAdminUsuarios(mensagem);
+    }
+}
+
+async function renderizarUsuariosCadastradosAdmin(){
+    const area=document.getElementById("lista-usuarios-cadastrados");
+    if(!area || !usuarioEhAdmin())return;
+    try{await carregarPerfisUsuariosFirebase();}catch(e){console.error(e);}
+    const usuarios=carregarUsuariosCadastrados();
+    if(!usuarios.length){area.innerHTML='<div class="vazio">Nenhum perfil encontrado no Firebase.</div>';return;}
+    area.innerHTML=usuarios.map(function(item,index){
+        const status=item.ativo === false ? "🚫 Bloqueado" : "✅ Ativo";
+        return '<div class="produto-item">'+
+            '<strong>'+escaparHtmlSolicitacao(item.email || item.usuario)+'</strong> — '+
+            (item.tipo === "admin" ? "👑 Administrador" : "👤 Usuário comum")+'<br>'+
+            '<span style="font-size:11px;color:var(--texto-fraco);">'+status+'</span>'+
+            '<div class="acoes-item">'+
+            '<button class="btn-acao" onclick="redefinirSenhaUsuarioAdmin('+index+')" title="Enviar redefinição de senha">🔑</button>'+
+            '<button class="btn-acao" onclick="alternarBloqueioUsuarioAdmin('+index+')" title="Bloquear/ativar usuário">'+(item.ativo === false ? "🔓" : "🚫")+'</button>'+
+            '</div></div>';
+    }).join("");
+}
+
+async function redefinirSenhaUsuarioAdmin(index,aoConcluir){
+    if(!usuarioEhAdmin())return;
+    const usuarios=carregarUsuariosCadastrados();
+    const alvo=usuarios[index];
+    if(!alvo)return;
+    try{
+        await firebaseAuth.sendPasswordResetEmail(alvo.email);
+        alert("E-mail de redefinição enviado para "+alvo.email+".");
+        if(typeof aoConcluir === "function")aoConcluir();
+    }catch(erro){
+        console.error(erro);
+        alert("Não foi possível enviar a redefinição de senha.");
+    }
+}
+
+async function alternarBloqueioUsuarioAdmin(index){
+    if(!usuarioEhAdmin())return;
+    const usuarios=carregarUsuariosCadastrados();
+    const alvo=usuarios[index];
+    if(!alvo)return;
+    if(alvo.uid === firebaseAuth.currentUser.uid){alert("Você não pode bloquear o usuário com o qual está logado.");return;}
+    const novoStatus=alvo.ativo === false;
+    if(!confirm((novoStatus ? "Ativar" : "Bloquear")+" o usuário "+alvo.email+"?"))return;
+    try{
+        await firebaseDB.ref("perfisUsuarios/"+alvo.uid+"/ativo").set(novoStatus);
+        await carregarPerfisUsuariosFirebase();
+        renderizarUsuariosCadastradosAdmin();
+    }catch(erro){
+        console.error(erro);
+        alert("Não foi possível alterar o status. Verifique as regras do Firebase.");
+    }
+}
+
+// A exclusão definitiva do usuário do Authentication precisa ser feita
+// por Admin SDK/Cloud Function. O painel oferece bloqueio para impedir
+// o acesso imediatamente, sem colocar uma credencial privilegiada no HTML.
+async function excluirUsuarioAdmin(index){
+    await alternarBloqueioUsuarioAdmin(index);
+}
+
+// Compatibilidade com chamadas antigas do painel.
+function garantirAdminPadrao(){return carregarUsuariosCadastrados();}
+
+// ======================================================
+// INICIALIZAÇÃO DA AUTENTICAÇÃO
+// ======================================================
+firebaseAuth.onAuthStateChanged(async function(user){
+    if(!user){
+        usuarioLogadoAtual=null;
+        perfisUsuariosCache={};
+        const app=document.getElementById("app-principal");
+        const login=document.getElementById("tela-login");
+        if(app)app.style.display="none";
+        if(login)login.style.display="block";
+        return;
+    }
+
+    await verificarAutenticacao();
 });
-
-if(!item)return;
-
-item.status = status;
-item.atendidoEm = new Date().toISOString();
-item.atendidoPor = usuarioLogadoAtual ? usuarioLogadoAtual.usuario : "admin";
-
-salvarSolicitacoesAcesso(solicitacoes);
-renderizarSolicitacoesAcessoAdmin();
-
-}
-
-function atenderSolicitacaoAcesso(id,acao){
-
-if(!usuarioLogadoAtual || usuarioLogadoAtual.tipo !== "admin"){
-alert("Apenas o administrador pode atender solicitações de acesso.");
-return;
-}
-
-const solicitacoes = carregarSolicitacoesAcesso();
-const solicitacao = solicitacoes.find(function(item){
-return item.id === id && item.status === "pendente";
-});
-
-if(!solicitacao)return;
-
-const usuarios = carregarUsuariosCadastrados();
-const indiceUsuario = usuarios.findIndex(function(item){
-return item.usuario.toLowerCase() === solicitacao.usuario.toLowerCase();
-});
-
-if(acao === "recusar"){
-
-if(confirm("Recusar a solicitação de \""+solicitacao.usuario+"\"?")){
-
-atualizarSolicitacao(id,"recusada");
-alert("Solicitação recusada.");
-}
-return;
-
-}
-
-if(acao === "senha"){
-
-if(indiceUsuario < 0){
-alert("O usuário \""+solicitacao.usuario+"\" não foi encontrado. Use \"Refazer usuário\" para cadastrá-lo novamente.");
-return;
-}
-
-redefinirSenhaUsuarioAdmin(indiceUsuario,function(){
-atualizarSolicitacao(id,"atendida");
-});
-return;
-
-}
-
-if(acao === "refazer"){
-
-const alvo = indiceUsuario >= 0 ? usuarios[indiceUsuario] : null;
-
-if(alvo && alvo.usuario.toLowerCase() === usuarioLogadoAtual.usuario.toLowerCase()){
-alert("Você não pode refazer o usuário com o qual está logado agora.");
-return;
-}
-
-if(alvo && alvo.tipo === "admin"){
-
-const totalAdmins = usuarios.filter(function(item){
-return item.tipo === "admin";
-}).length;
-
-if(totalAdmins <= 1){
-alert("Não é possível refazer o único administrador restante.");
-return;
-}
-}
-
-if(!confirm("Refazer o usuário \""+solicitacao.usuario+"\"? O cadastro atual será removido e você deverá definir uma nova senha.")){
-return;
-}
-
-if(indiceUsuario >= 0){
-usuarios.splice(indiceUsuario,1);
-salvarUsuariosCadastrados(usuarios);
-}
-
-const campoUsuario = document.getElementById("admin-novo-usuario");
-const campoSenha = document.getElementById("admin-nova-senha");
-const campoTipo = document.getElementById("admin-novo-tipo");
-
-if(campoUsuario) campoUsuario.value = solicitacao.usuario;
-if(campoSenha) campoSenha.value = "";
-if(campoTipo) campoTipo.value = (alvo && alvo.tipo === "admin") ? "admin" : "usuario";
-
-renderizarUsuariosCadastradosAdmin();
-atualizarSolicitacao(id,"refazendo");
-
-alert("O usuário foi removido e preparado para novo cadastro. Defina a nova senha e clique em \"Cadastrar Usuário\".");
-
-}
-
-}
-
-function renderizarUsuariosCadastradosAdmin(){
-
-const area =
-document.getElementById("lista-usuarios-cadastrados");
-
-if(!area)return;
-
-const usuarios =
-carregarUsuariosCadastrados();
-
-if(usuarios.length === 0){
-
-area.innerHTML =
-`
-<div class="vazio">
-Nenhum usuário cadastrado.
-</div>
-`;
-
-return;
-
-}
-
-
-area.innerHTML =
-usuarios.map(function(item,index){
-
-return `
-<div class="produto-item">
-<strong>${item.usuario}</strong>
-—
-${item.tipo === "admin" ? "👑 Administrador" : "👤 Usuário comum"}
-<div class="acoes-item">
-<button
-class="btn-acao"
-onclick="redefinirSenhaUsuarioAdmin(${index})"
-title="Redefinir senha"
->
-🔑
-</button>
-<button
-class="btn-acao"
-onclick="excluirUsuarioAdmin(${index})"
-title="Excluir usuário"
->
-🗑️
-</button>
-</div>
-</div>
-`;
-
-}).join("");
-
-}
-
-
-function cadastrarUsuarioAdmin(){
-
-esconderErroAdminUsuarios();
-
-const campoUsuario =
-document.getElementById("admin-novo-usuario");
-
-const campoSenha =
-document.getElementById("admin-nova-senha");
-
-const campoTipo =
-document.getElementById("admin-novo-tipo");
-
-const novoUsuario =
-campoUsuario.value.trim();
-
-const novaSenha =
-campoSenha.value;
-
-const novoTipo =
-campoTipo.value;
-
-if(!novoUsuario){
-
-mostrarErroAdminUsuarios("Informe o nome do novo usuário.");
-
-return;
-
-}
-
-if(novaSenha.length < 4){
-
-mostrarErroAdminUsuarios("A senha deve ter pelo menos 4 caracteres.");
-
-return;
-
-}
-
-
-
-const usuarios =
-carregarUsuariosCadastrados();
-
-const jaExiste =
-usuarios.some(function(item){
-
-return item.usuario.toLowerCase() ===
-novoUsuario.toLowerCase();
-
-});
-
-if(jaExiste){
-
-mostrarErroAdminUsuarios("Já existe um usuário com esse nome.");
-
-return;
-
-}
-
-
-hashTexto(novaSenha).then(function(senhaHash){
-
-usuarios.push({
-usuario:novoUsuario,
-senhaHash:senhaHash,
-senhaAlternativaHash:null,
-tipo:novoTipo
-});
-
-salvarUsuariosCadastrados(usuarios);
-
-renderizarUsuariosCadastradosAdmin();
-
-campoUsuario.value = "";
-
-campoSenha.value = "";
-
-
-campoTipo.value = "usuario";
-
-alert("Usuário cadastrado com sucesso!");
-
-});
-
-}
-
-
-function excluirUsuarioAdmin(index){
-
-const usuarios =
-carregarUsuariosCadastrados();
-
-const alvo =
-usuarios[index];
-
-if(!alvo)return;
-
-const totalAdmins =
-usuarios.filter(function(item){
-
-return item.tipo === "admin";
-
-}).length;
-
-if(alvo.tipo === "admin" && totalAdmins <= 1){
-
-alert(
-"Não é possível excluir o único administrador restante. "+
-"Cadastre outro admin antes de excluir este."
-);
-
-return;
-
-}
-
-if(
-usuarioLogadoAtual &&
-alvo.usuario.toLowerCase() === usuarioLogadoAtual.usuario.toLowerCase()
-){
-
-alert("Você não pode excluir o usuário com o qual está logado agora.");
-
-return;
-
-}
-
-if(
-!confirm(
-"Excluir o usuário \""+alvo.usuario+"\"? Essa ação não pode ser desfeita."
-)
-){
-return;
-}
-
-usuarios.splice(index,1);
-
-salvarUsuariosCadastrados(usuarios);
-
-renderizarUsuariosCadastradosAdmin();
-
-}
-
-
-function redefinirSenhaUsuarioAdmin(index,aoConcluir){
-
-const usuarios =
-carregarUsuariosCadastrados();
-
-const alvo =
-usuarios[index];
-
-if(!alvo)return;
-
-const novaSenha =
-prompt(
-"Digite a nova senha para o usuário \""+alvo.usuario+
-"\" (mínimo 4 caracteres):"
-);
-
-if(novaSenha === null)return;
-
-if(novaSenha.length < 4){
-
-alert("A senha deve ter pelo menos 4 caracteres.");
-
-return;
-
-}
-
-hashTexto(novaSenha).then(function(senhaHash){
-
-alvo.senhaHash = senhaHash;
-
-salvarUsuariosCadastrados(usuarios);
-
-renderizarUsuariosCadastradosAdmin();
-
-alert("Senha do usuário \""+alvo.usuario+"\" redefinida com sucesso.");
-
-if(typeof aoConcluir === "function"){
-aoConcluir();
-}
-
-}).catch(function(erro){
-
-console.error(erro);
-alert("Não foi possível redefinir a senha. Tente novamente.");
-
-});
-
-}
-
 
 // Permite enviar o formulário de login pressionando Enter.
 
