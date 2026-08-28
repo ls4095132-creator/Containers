@@ -6,7 +6,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Controle de Containers</title>
+<title>Controle de Containers — Firebase V6</title>
+<meta name="app-version" content="Firebase-V6">
 
 <style>
 
@@ -4362,6 +4363,11 @@ setInterval(function(){
     atualizarIndicadorAdmin();
 }, 2000);
 
+// Compatibilidade: garante que os handlers usados pelos botões HTML
+// estejam disponíveis no escopo global do navegador.
+window.tratarEnvioLogin = tratarEnvioLogin;
+window.sairDoSistema = sairDoSistema;
+console.log("✅ CONTROLE DE CONTAINERS — FIREBASE V6 carregado.");
 </script>
 
 </body>
