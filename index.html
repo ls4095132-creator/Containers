@@ -699,7 +699,7 @@ console.log("🔥 Firebase conectado!");
 <h1>📦 Controle de Containers</h1>
 
 <div class="subtitulo-login" id="subtitulo-login">
-Entre com seu e-mail e senha
+Entre com seu usuário e senha
 </div>
 
 <div class="erro-login" id="erro-login"></div>
@@ -707,8 +707,8 @@ Entre com seu e-mail e senha
 <div id="bloco-login-normal">
 
 <div class="campo-login">
-<label>📧 E-mail:</label>
-<input type="email" id="login-usuario" autocomplete="email" placeholder="Digite seu e-mail">
+<label>👤 Usuário:</label>
+<input type="text" id="login-usuario" autocomplete="off" placeholder="Digite seu usuário">
 </div>
 
 <div class="campo-login">
@@ -798,13 +798,13 @@ Entrar
 <div class="linha-form">
 
 <div class="campo">
-<label>📧 E-mail:</label>
-<input type="email" id="admin-novo-email" placeholder="E-mail do usuário" autocomplete="email">
+<label>👤 Novo usuário:</label>
+<input type="text" id="admin-novo-usuario" placeholder="E-mail do usuário" autocomplete="off">
 </div>
 
 <div class="campo">
 <label>🔒 Senha:</label>
-<input type="password" id="admin-nova-senha" placeholder="Senha (mín. 6 caracteres)" autocomplete="new-password" minlength="6">
+<input type="password" id="admin-nova-senha" placeholder="Senha (mín. 4 caracteres)" autocomplete="off">
 </div>
 
 <div class="campo">
@@ -1136,3405 +1136,74 @@ style="margin-top:20px;"
 
 
 // ======================================================
-// BANCO DE DADOS - FIREBASE REALTIME DATABASE
-// ======================================================
-// O Firebase passa a ser a fonte central. O localStorage
-// fica apenas como cópia temporária/fallback durante a
-// migração, para não perder dados já existentes no PC.
+ // BANCO DE DADOS - FIREBASE REALTIME DATABASE
+ // ======================================================
+ // FIREBASE É A FONTE ÚNICA DOS DADOS COMPARTILHADOS.
+ // Não usar localStorage para usuários, estoque ou histórico.
 
-let estoque = JSON.parse(localStorage.getItem("estoqueContainers")) || [];
-let historico = JSON.parse(localStorage.getItem("historicoMovimentacoes")) || [];
-let firebaseSincronizacaoAtiva = false; // appData desativado
-let firebaseListenersAtivos = false;
-let firebaseAplicandoDadosRemotos = false;
+ let estoque = [];
+ let historico = [];
+ let firebaseListenersAtivos = false;
+ let firebaseAplicandoDadosRemotos = false;
 
-// Dados da aplicação que precisam ser centralizados.
-// Credenciais/sessão ficam fora daqui: senhas pertencem ao Firebase Authentication.
-const FIREBASE_CHAVES_SINCRONIZADAS = [
-    "estoqueContainers",
-    "historicoMovimentacoes",
-    "solicitacoesAcessoAdmin",
-    "solicitacoesAlteracoesAdmin",
-    "produtosExtrasAprovados"
-];
+ const estoqueRef = () => firebaseDB.ref("estoque");
+ const historicoRef = () => firebaseDB.ref("historico");
+ const perfisRef = () => firebaseDB.ref("perfisUsuarios");
 
-function chaveFirebaseParaNome(chave){
-    return chave.replace(/[^a-zA-Z0-9_-]/g, "_");
-}
+ async function carregarDadosFirebase(){
+     if(!firebaseAuth.currentUser) return;
+     const [estoqueSnap, historicoSnap] = await Promise.all([
+         estoqueRef().once("value"),
+         historicoRef().once("value")
+     ]);
+     estoque = estoqueSnap.exists() ? (estoqueSnap.val() || []) : [];
+     historico = historicoSnap.exists() ? (historicoSnap.val() || []) : [];
+     if(!Array.isArray(estoque)) estoque = Object.values(estoque);
+     if(!Array.isArray(historico)) historico = Object.values(historico);
+     renderizarTudo?.();
+ }
 
-async function publicarChaveNoFirebase(chave, valor){
-    if(!firebaseSincronizacaoAtiva || firebaseAplicandoDadosRemotos || !firebaseAuth.currentUser) return;
-    if(!FIREBASE_CHAVES_SINCRONIZADAS.includes(chave)) return;
+ function ativarListenersFirebase(){
+     if(firebaseListenersAtivos) return;
+     firebaseListenersAtivos = true;
+     estoqueRef().on("value", snap => {
+         const v = snap.val();
+         estoque = Array.isArray(v) ? v : (v ? Object.values(v) : []);
+         try { renderizarTudo?.(); } catch(e) {}
+     }, err => console.error("Firebase estoque:", err));
+     historicoRef().on("value", snap => {
+         const v = snap.val();
+         historico = Array.isArray(v) ? v : (v ? Object.values(v) : []);
+         try { renderizarTudo?.(); } catch(e) {}
+     }, err => console.error("Firebase histórico:", err));
+ }
 
-    try {
-        const nome = chaveFirebaseParaNome(chave);
-        const ref = firebaseDB.ref("appData/" + nome);
-        if(valor === null || valor === undefined){
-            await ref.remove();
-        } else {
-            await ref.set({ valor: valor, atualizadoEm: firebase.database.ServerValue.TIMESTAMP, atualizadoPor: firebaseAuth.currentUser.uid });
-        }
-    } catch(e){
-        console.error("Firebase - erro ao sincronizar", chave, e);
-    }
-}
+ async function salvarEstoqueFirebase(){
+     if(!firebaseAuth.currentUser) throw new Error("Usuário não autenticado.");
+     await estoqueRef().set(estoque);
+ }
 
-// Intercepta as gravações do sistema para que qualquer módulo que ainda use
-// localStorage continue funcionando, mas também publique a alteração no banco central.
-(function instalarPonteLocalStorageFirebase(){
-    const originalSetItem = Storage.prototype.setItem;
-    const originalRemoveItem = Storage.prototype.removeItem;
+ async function salvarHistoricoFirebase(){
+     if(!firebaseAuth.currentUser) throw new Error("Usuário não autenticado.");
+     await historicoRef().set(historico);
+ }
 
-    Storage.prototype.setItem = function(chave, valor){
-        originalSetItem.call(this, chave, valor);
-        if(this === window.localStorage){
-            publicarChaveNoFirebase(String(chave), String(valor));
-        }
-    };
-
-    Storage.prototype.removeItem = function(chave){
-        originalRemoveItem.call(this, chave);
-        if(this === window.localStorage){
-            publicarChaveNoFirebase(String(chave), null);
-        }
-    };
-})();
-
-async function sincronizarTodosOsDadosDoAplicativo(){
-    if(!firebaseAuth.currentUser) return;
-
-    const ref = firebaseDB.ref("appData");
-    const snapshot = await ref.once("value");
-    const remoto = snapshot.val() || {};
-
-    firebaseAplicandoDadosRemotos = true;
-    try {
-        for(const chave of FIREBASE_CHAVES_SINCRONIZADAS){
-            const nome = chaveFirebaseParaNome(chave);
-            const itemRemoto = remoto[nome];
-
-            // Primeira máquina: sobe o dado local. Máquinas seguintes: baixam o central.
-            if(itemRemoto && Object.prototype.hasOwnProperty.call(itemRemoto, "valor")){
-                localStorage.setItem(chave, itemRemoto.valor);
-            } else {
-                const local = localStorage.getItem(chave);
-                if(local !== null){
-                    await ref.child(nome).set({
-                        valor: local,
-                        atualizadoEm: firebase.database.ServerValue.TIMESTAMP,
-                        atualizadoPor: firebaseAuth.currentUser.uid
-                    });
-                }
-            }
-        }
-    } finally {
-        firebaseAplicandoDadosRemotos = false;
-    }
-
-    estoque = JSON.parse(localStorage.getItem("estoqueContainers")) || [];
-    historico = JSON.parse(localStorage.getItem("historicoMovimentacoes")) || [];
-}
-
-function ativarListenersDadosAplicativo(){
-    const ref = firebaseDB.ref("appData");
-    ref.on("value", function(snapshot){
-        const remoto = snapshot.val() || {};
-        firebaseAplicandoDadosRemotos = true;
-        try {
-            FIREBASE_CHAVES_SINCRONIZADAS.forEach(function(chave){
-                const nome = chaveFirebaseParaNome(chave);
-                if(remoto[nome] && Object.prototype.hasOwnProperty.call(remoto[nome], "valor")){
-                    localStorage.setItem(chave, remoto[nome].valor);
-                }
-            });
-
-            estoque = JSON.parse(localStorage.getItem("estoqueContainers")) || [];
-            historico = JSON.parse(localStorage.getItem("historicoMovimentacoes")) || [];
-
-            if(typeof garantirIdsEstoque === "function") garantirIdsEstoque();
-            if(typeof mostrarEstoque === "function") mostrarEstoque();
-            if(typeof mostrarHistorico === "function") mostrarHistorico();
-            if(typeof atualizarContador === "function") atualizarContador();
-            if(typeof atualizarListaProdutos === "function") atualizarListaProdutos();
-            if(typeof renderizarSolicitacoesAcessoAdmin === "function") renderizarSolicitacoesAcessoAdmin();
-            if(typeof renderizarSolicitacoesAlteracoesAdmin === "function") renderizarSolicitacoesAlteracoesAdmin();
-        } catch(e){
-            console.error("Firebase - erro ao aplicar atualização em tempo real:", e);
-        } finally {
-            firebaseAplicandoDadosRemotos = false;
-        }
-    }, function(error){
-        console.error("Firebase appData:", error);
-    });
-}
-
-async function iniciarSincronizacaoFirebase(){
-    if(firebaseListenersAtivos) return;
-    if(!firebaseAuth.currentUser) {
-        console.warn("Firebase: usuário não autenticado; sincronização não iniciada.");
-        return;
-    }
-
-    firebaseListenersAtivos = true;
-    const estoqueRef = firebaseDB.ref("estoque");
-    const historicoRef = firebaseDB.ref("historico");
-
-    try {
-        // appData DESATIVADO: o sistema usa diretamente /estoque e /historico no Firebase.
-        const [estoqueSnap, historicoSnap] = await Promise.all([
-            estoqueRef.once("value"),
-            historicoRef.once("value")
-        ]);
-
-        // Primeira sincronização: se o banco estiver vazio,
-        // preserva os dados locais existentes.
-        if(estoqueSnap.exists()) {
-            const remoto = estoqueSnap.val();
-            estoque = Array.isArray(remoto) ? remoto : Object.values(remoto || {});
-        } else {
-            await estoqueRef.set(estoque);
-        }
-
-        if(historicoSnap.exists()) {
-            const remoto = historicoSnap.val();
-            historico = Array.isArray(remoto) ? remoto : Object.values(remoto || {});
-        } else {
-            await historicoRef.set(historico);
-        }
-
-        localStorage.setItem("estoqueContainers", JSON.stringify(estoque));
-        localStorage.setItem("historicoMovimentacoes", JSON.stringify(historico));
-
-        // Atualização em tempo real para todos os dispositivos autenticados.
-        estoqueRef.on("value", function(snapshot){
-            if(!snapshot.exists()) return;
-            const remoto = snapshot.val();
-            estoque = Array.isArray(remoto) ? remoto : Object.values(remoto || {});
-            localStorage.setItem("estoqueContainers", JSON.stringify(estoque));
-            try { garantirIdsEstoque(); } catch(e) {}
-            mostrarEstoque();
-            atualizarContador();
-        }, function(error){ console.error("Firebase estoque:", error); });
-
-        historicoRef.on("value", function(snapshot){
-            if(!snapshot.exists()) return;
-            const remoto = snapshot.val();
-            historico = Array.isArray(remoto) ? remoto : Object.values(remoto || {});
-            localStorage.setItem("historicoMovimentacoes", JSON.stringify(historico));
-            mostrarHistorico();
-        }, function(error){ console.error("Firebase histórico:", error); });
-
-        firebaseSincronizacaoAtiva = true;
-        // appData DESATIVADO para evitar permission_denied em /appData.
-        console.log("☁️ Firebase: todos os dados do aplicativo sincronizados em tempo real.");
-        mostrarEstoque();
-        mostrarHistorico();
-        atualizarContador();
-    } catch(error) {
-        firebaseListenersAtivos = false;
-        console.error("Erro ao iniciar sincronização Firebase:", error);
-        // Não bloqueia o usuário nem mantém a tela presa em "Entrando...".
-        // O login já foi autenticado pelo Firebase Authentication.
-    }
-}
+ // Compatibilidade: módulos antigos podem chamar estas funções.
+ // Elas NÃO gravam mais em localStorage.
+ async function salvarDadosNoFirebase(){
+     await Promise.all([salvarEstoqueFirebase(), salvarHistoricoFirebase()]);
+ }
 
 
-// ======================================================
-// LISTA DE PRODUTOS - CADASTRO DIRETO NO CÓDIGO HTML
-// ======================================================
-// Edite esta lista para cadastrar, alterar ou remover produtos.
-// Exemplo: { codigo:"0001", nome:"Açúcar Cristal" }
-// A pesquisa do campo Produto usa esta lista automaticamente.
-// Total de produtos carregados do arquivo Produtos.xlsx: 850.
-// Códigos e descrições preservados conforme a planilha.
-
-const PRODUTOS_CADASTRADOS_HTML = [
-    { codigo:"PA000001", nome:"AIPO MARROM MOIDO 10 KG" },
-    { codigo:"PA000002", nome:"AIPO MARRON SEMENTE 10 KG" },
-    { codigo:"PA000003", nome:"AIPO MARRON SEMENTE 25 KG" },
-    { codigo:"PA000004", nome:"ALECRIM 10 KG" },
-    { codigo:"PA000005", nome:"ALECRIM 5 KG" },
-    { codigo:"PA000006", nome:"ALECRIM 25 KG" },
-    { codigo:"PA000007", nome:"ALECRIM MOIDO 5 KG" },
-    { codigo:"PA000008", nome:"ALECRIM MOIDO 10 KG" },
-    { codigo:"PA000009", nome:"ALFAZEMA 05 KG" },
-    { codigo:"PA000010", nome:"AMACIANTE DE CARNE 10 KG" },
-    { codigo:"PA000011", nome:"AMACIANTE DE CARNE VD 5 KG" },
-    { codigo:"PA000012", nome:"AMACIANTE DE CARNE  5 KG" },
-    { codigo:"PA000013", nome:"ANA MARIA FLOCOS SEM SODIO 5 K" },
-    { codigo:"PA000014", nome:"AVEIA FLOCOS FINOS 25 KG" },
-    { codigo:"PA000015", nome:"AVEIA FLOC FINOS S/ GLUTEN 25K" },
-    { codigo:"PA000016", nome:"AVEIA FLOCOS GROSSOS 25 KG" },
-    { codigo:"PA000017", nome:"BACON DESIDRATADO 10 KG" },
-    { codigo:"PA000018", nome:"CACAU EM PO ALCALINO 25 KG" },
-    { codigo:"PA000019", nome:"CACAU EM PO LECETINADO 25 KG" },
-    { codigo:"PA000020", nome:"CACAU EM PO NATURAL 25 KG" },
-    { codigo:"PA000021", nome:"CALDO DE BACALHAU 10 KG" },
-    { codigo:"PA000022", nome:"CALDO DE BACALHAU 5 KG" },
-    { codigo:"PA000023", nome:"CALDO DE BACON  LIGHT 10 KG" },
-    { codigo:"PA000024", nome:"CALDO DE BACON 10 KG" },
-    { codigo:"PA000025", nome:"CALDO DE BACON 5 KG" },
-    { codigo:"PA000026", nome:"CALDO DE CAMARAO 10 KG" },
-    { codigo:"PA000027", nome:"CALDO DE CAMARAO ESPECIAL 10 K" },
-    { codigo:"PA000028", nome:"CALDO DE CARNE 10 KG" },
-    { codigo:"PA000029", nome:"CALDO DE CARNE 25 KG" },
-    { codigo:"PA000030", nome:"CALDO DE CARNE C/ AMACIANTE 10" },
-    { codigo:"PA000031", nome:"CALDO DE CARNE LIGHT 10 KG" },
-    { codigo:"PA000032", nome:"CALDO DE CARNE VD 5 KG" },
-    { codigo:"PA000033", nome:"CALDO DE CARNE  5 KG" },
-    { codigo:"PA000034", nome:"CALDO DE CHURRASCO 10 KG" },
-    { codigo:"PA000035", nome:"CALDO DE COSTELA 10 KG" },
-    { codigo:"PA000036", nome:"CALDO DE COSTELA 5 KG" },
-    { codigo:"PA000037", nome:"CALDO DE GALINHA 10 KG" },
-    { codigo:"PA000038", nome:"CALDO DE GALINHA 25 KG" },
-    { codigo:"PA000039", nome:"CALDO DE GALINHA 5 KG" },
-    { codigo:"PA000040", nome:"CALDO DE GALINHA CAIPIRA 10 KG" },
-    { codigo:"PA000041", nome:"CALDO DE GALINHA CAIPIRA 5 KG" },
-    { codigo:"PA000042", nome:"CALDO DE GALINHA LIGHT 10 KG" },
-    { codigo:"PA000043", nome:"CALDO DE GALINHA LIGHT 5 KG" },
-    { codigo:"PA000044", nome:"CALDO DE LEGUMES 10 KG" },
-    { codigo:"PA000045", nome:"CALDO DE LEGUMES 5 KG" },
-    { codigo:"PA000046", nome:"CALDO DE LEGUMES LIGHT 10 KG" },
-    { codigo:"PA000047", nome:"CALDO DE LEGUMES LIGHT 5 KG" },
-    { codigo:"PA000048", nome:"CALDO DE PEIXE 10 KG" },
-    { codigo:"PA000049", nome:"CALDO DE PEIXE 5 KG" },
-    { codigo:"PA000050", nome:"CALDO DE PEIXE VD 5 KG" },
-    { codigo:"PA000051", nome:"CALDO DE PICANHA 10 KG" },
-    { codigo:"PA000052", nome:"CALDO DE PICANHA 5 KG" },
-    { codigo:"PA000053", nome:"CALDO DE SUINO 10 KG" },
-    { codigo:"PA000054", nome:"CALDO DE SUINO 5 KG" },
-    { codigo:"PA000055", nome:"CALDO DE TOMATE 10 KG" },
-    { codigo:"PA000056", nome:"CALDO DE TOMATE 5 KG" },
-    { codigo:"PA000057", nome:"CALDO DE VEGETAIS 10 KG" },
-    { codigo:"PA000058", nome:"CONDIMENTO PREPARADO DE CANELA 90% 10 KG" },
-    { codigo:"PA000059", nome:"CONDIMENTO PREPARADO DE CANELA 90% 05 KG" },
-    { codigo:"PA000060", nome:"CONDIMENTO PREPARADO DE CANELA 95% 10 KG" },
-    { codigo:"PA000061", nome:"CONDIMENTO PREPARADO DE CANELA 95% 25 KG" },
-    { codigo:"PA000062", nome:"CONDIMENTO PREPARADO DE CANELA 95% 05 KG" },
-    { codigo:"PA000063", nome:"CANELA MOIDA C / ACUCAR 10KG" },
-    { codigo:"PA000064", nome:"CANELA MOIDA IMPORT 10KG" },
-    { codigo:"PA000065", nome:"CANELA MOIDA IMPORT 5KG" },
-    { codigo:"PA000066", nome:"CANELA MOIDA PREMIUM 10 KG" },
-    { codigo:"PA000067", nome:"CANELA MOIDA PREMIUM 25 KG" },
-    { codigo:"PA000068", nome:"CANELA MOIDA PREMIUM 5 KG" },
-    { codigo:"PA000069", nome:"CANELA MOIDA PREMIUM AÇUCAR10K" },
-    { codigo:"PA000070", nome:"CANELA MOIDA PREMIUM IMPORT10K" },
-    { codigo:"PA000071", nome:"CARDAMOMO MOIDO PREMIUM 5KG" },
-    { codigo:"PA000072", nome:"CARDAMOMO SEMENTE 5KG" },
-    { codigo:"PA000073", nome:"CHILLI MEXICANO 10 KG" },
-    { codigo:"PA000074", nome:"CHILLI MEXICANO 5 KG" },
-    { codigo:"PA000075", nome:"REINOCHURRI BLEND 10 KG" },
-    { codigo:"PA000076", nome:"CHIMICHURRI FLOCOS SEM SODIO 5" },
-    { codigo:"PA000077", nome:"CHIMICHURRI PICANTE BELL 10 KG" },
-    { codigo:"PA000078", nome:"CHIMICHURRI PICANTE BELL 5 KG" },
-    { codigo:"PA000079", nome:"CHIMICHURRI PICT MOIDO BELL 10" },
-    { codigo:"PA000080", nome:"CHIMICHURRI S/ PIMENTA BELL 10" },
-    { codigo:"PA000081", nome:"CHIMICHURRI S/ PIMENTA BELL 5K" },
-    { codigo:"PA000082", nome:"CHIPOTLE 10 KG" },
-    { codigo:"PA000083", nome:"CHIPOTLE MOIDO 10 KG" },
-    { codigo:"PA000084", nome:"CHIPOTLE MOIDO 5 KG" },
-    { codigo:"PA000085", nome:"COENTRO FOLHA 10 KG" },
-    { codigo:"PA000086", nome:"COENTRO FOLHA 5 KG" },
-    { codigo:"PA000087", nome:"COENTRO MOIDO 10 KG" },
-    { codigo:"PA000088", nome:"COENTRO MOIDO 20 KG" },
-    { codigo:"PA000089", nome:"COENTRO MOIDO 5 KG" },
-    { codigo:"PA000090", nome:"COLORAU ESPECIAL 25 KG" },
-    { codigo:"PA000091", nome:"COLORAU ESPECIAL 5 KG" },
-    { codigo:"PA000092", nome:"COLORAU ESPECIAL BELL 10 KG" },
-    { codigo:"PA000093", nome:"COLORAU ESPECIAL BELL 5 KG" },
-    { codigo:"PA000094", nome:"COLORAU EXTRA 10 KG" },
-    { codigo:"PA000095", nome:"COLORAU EXTRA 5 KG" },
-    { codigo:"PA000096", nome:"COLORAU PARAIBA 10 KG" },
-    { codigo:"PA000097", nome:"COLORAU PARAIBA 5 KG" },
-    { codigo:"PA000098", nome:"COLORAU TEMPERADO 10 KG" },
-    { codigo:"PA000099", nome:"COLORAU TEMPERADO 5 KG" },
-    { codigo:"PA000100", nome:"COLORAU TEMPERADO FIT 10 KG" },
-    { codigo:"PA000101", nome:"COLORAU TEMPERADO FIT 5 KG" },
-    { codigo:"PA000102", nome:"COLORAU TEMP NORDESTE 10KG" },
-    { codigo:"PA000103", nome:"COLORAU TEMP NORDESTE 5KG" },
-    { codigo:"PA000104", nome:"COLORAU TEMP NORDESTE FIT 10KG" },
-    { codigo:"PA000105", nome:"COLORAU TEMP. NORDESTE FIT 5KG" },
-    { codigo:"PA000106", nome:"COLORAU TEMP. P/ FEIJAO 10KG" },
-    { codigo:"PA000107", nome:"COLORAU TEMP. P/ FEIJAO 5KG" },
-    { codigo:"PA000108", nome:"COLORAU TEMP. P/ MASSA FIT 10K" },
-    { codigo:"PA000109", nome:"COLORAU TEMP. P/FEIJAO FIT 10K" },
-    { codigo:"PA000110", nome:"COLORAU TEMP. P/ MASSA 10KG" },
-    { codigo:"PA000111", nome:"COMINHO COM PIMENTA 10 KG" },
-    { codigo:"PA000112", nome:"COMINHO COM PIMENTA 5 KG" },
-    { codigo:"PA000113", nome:"COMINHO COM PIMENTA BELL 10 KG" },
-    { codigo:"PA000114", nome:"CONDIMENTO PREPARADO DE COMINHO 90%   10 KG" },
-    { codigo:"PA000115", nome:"CONDIMENTO PREPARADO DE COMINHO 90%   25 KG" },
-    { codigo:"PA000116", nome:"CONDIMENTO PREPARADO DE COMINHO 90%   05 KG" },
-    { codigo:"PA000117", nome:"CONDIMENTO PREPARADO DE COMINHO 95%   10 KG" },
-    { codigo:"PA000118", nome:"CONDIMENTO PREPARADO DE COMINHO 95%  25 KG" },
-    { codigo:"PA000119", nome:"CONDIMENTO PREPARADO DE COMINHO 95%  05 KG" },
-    { codigo:"PA000120", nome:"COMINHO MOIDO PREMIUM 10 KG" },
-    { codigo:"PA000121", nome:"COMINHO MOIDO PREMIUM 25 KG" },
-    { codigo:"PA000122", nome:"COMINHO MOIDO PREMIUM 5 KG" },
-    { codigo:"PA000123", nome:"CONDIMENTO PREPARADO LIMAO SICILIANO 10KG" },
-    { codigo:"PA000124", nome:"CONDIMENTO PREPARADO LIMAO TAITI 10KG" },
-    { codigo:"PA000125", nome:"CRAVO FLOR 10 KG" },
-    { codigo:"PA000126", nome:"CRAVO FLOR 25 KG" },
-    { codigo:"PA000127", nome:"CONDIMENTO PREPARADO DE CRAVO 90% 10 KG" },
-    { codigo:"PA000128", nome:"CONDIMENTO PREPARADO DE CRAVO 90% 05 KG" },
-    { codigo:"PA000129", nome:"CRAVO MOIDO PREMIUM 10 KG" },
-    { codigo:"PA000130", nome:"CRAVO MOIDO PREMIUM 5 KG" },
-    { codigo:"PA000131", nome:"CREME DE CEBOLA 10 KG" },
-    { codigo:"PA000132", nome:"CREME DE CEBOLA 5 KG" },
-    { codigo:"PA000133", nome:"CREME DE CEBOLA BELL 10 KG" },
-    { codigo:"PA000134", nome:"CREME DE CEBOLA FLO PREMIUM 10" },
-    { codigo:"PA000135", nome:"CREME DE CEBOLA PREMIUM 10 KG" },
-    { codigo:"PA000136", nome:"CREME DE CEBOLA PREM INSTAN 10" },
-    { codigo:"PA000137", nome:"CONDIMENTO PREPARADO CURCUMA 90% 10 KG" },
-    { codigo:"PA000138", nome:"CONDIMENTO PREPARADO CURCUMA 90% 25 KG" },
-    { codigo:"PA000139", nome:"CONDIMENTO PREPARADO CURCUMA 90% 05 KG" },
-    { codigo:"PA000140", nome:"CONDIMENTO PREPARADO CURCUMA 95% 10 KG" },
-    { codigo:"PA000141", nome:"CONDIMENTO PREPARADO CURCUMA 95% 25 KG" },
-    { codigo:"PA000142", nome:"CONDIMENTO PREPARADO CURCUMA 95% 05 KG" },
-    { codigo:"PA000143", nome:"CURCUMA MOIDA PREMIUM 10 KG" },
-    { codigo:"PA000144", nome:"CURCUMA MOIDA PREMIUM 25 KG" },
-    { codigo:"PA000145", nome:"CURCUMA MOIDA PREMIUM 5 KG" },
-    { codigo:"PA000146", nome:"CURCUMA MOIDA PREMIUM VD 5 KG" },
-    { codigo:"PA000147", nome:"CURRY 10 KG" },
-    { codigo:"PA000148", nome:"CURRY 5 KG" },
-    { codigo:"PA000149", nome:"CURRY BELL 10 KG" },
-    { codigo:"PA000150", nome:"CURRY DEFUMADO 10 KG" },
-    { codigo:"PA000151", nome:"CURRY TEMPERADO 10 KG" },
-    { codigo:"PA000152", nome:"CURRY TEMPERADO 5 KG" },
-    { codigo:"PA000153", nome:"DRY RUB BOVINO 10KG" },
-    { codigo:"PA000154", nome:"DRY RUB BOVINO 5 KG" },
-    { codigo:"PA000155", nome:"DRY RUB COMPLETO 10KG" },
-    { codigo:"PA000156", nome:"DRY RUB COMPLETO 5 KG" },
-    { codigo:"PA000157", nome:"DRY RUB COMPLETO FIT 10KG" },
-    { codigo:"PA000158", nome:"DRY RUB COMPLETO FIT 5 KG" },
-    { codigo:"PA000159", nome:"DRY RUB FRANGO 10KG" },
-    { codigo:"PA000160", nome:"DRY RUB FRANGO 5 KG" },
-    { codigo:"PA000161", nome:"DRY RUB FRANGO SEM SAL 10KG" },
-    { codigo:"PA000162", nome:"DRY RUB PEIXE 10KG" },
-    { codigo:"PA000163", nome:"DRY RUB PEIXE 5 KG" },
-    { codigo:"PA000164", nome:"DRY RUB PEIXE SEM SAL 10KG" },
-    { codigo:"PA000165", nome:"ENDRO MOIDO 10 KG" },
-    { codigo:"PA000166", nome:"ENDRO MOIDO PREMIUM 10 KG" },
-    { codigo:"PA000167", nome:"ENDRO SEMENTE 10 KG" },
-    { codigo:"PA000168", nome:"ENDRO SEMENTE 25 KG" },
-    { codigo:"PA000169", nome:"ERVA DOCE MOIDA 10 KG" },
-    { codigo:"PA000170", nome:"ERVAS DE PROVANCE 10 KG" },
-    { codigo:"PA000171", nome:"ESTRAGAO 10 KG" },
-    { codigo:"PA000172", nome:"ESTRAGAO 8 KG" },
-    { codigo:"PA000173", nome:"FARINHA BANANA VERDE 10 KG" },
-    { codigo:"PA000174", nome:"FARINHA CENOURA 10 KG" },
-    { codigo:"PA000175", nome:"FARINHA DE ARROZ BRANCO 10 KG" },
-    { codigo:"PA000176", nome:"FARINHA DE ARROZ INTEGRAL 10KG" },
-    { codigo:"PA000177", nome:"FARINHA DE BATATA DOCE 10KG" },
-    { codigo:"PA000178", nome:"FARINHA DE BERINJELA 10 KG" },
-    { codigo:"PA000179", nome:"FARINHA DE BETERRABA 10 KG" },
-    { codigo:"PA000180", nome:"FARINHA DE CHIA 10 KG" },
-    { codigo:"PA000181", nome:"FARINHA DE FEIJAO BRANCO 10 KG" },
-    { codigo:"PA000182", nome:"FARINHA DE GRAO DE BICO 10 KG" },
-    { codigo:"PA000183", nome:"FARINHA DE LARANJA AMARGA 10 K" },
-    { codigo:"PA000184", nome:"FARINHA LINHACA DOURADA 10KG" },
-    { codigo:"PA000185", nome:"FARINHA  LINHACA MARROM 10 KG" },
-    { codigo:"PA000186", nome:"FARINHA DE MACA 10KG" },
-    { codigo:"PA000187", nome:"FARINHA DE MACA PERUANA 10KG" },
-    { codigo:"PA000188", nome:"FARINHA DE MARACUJA 10 KG" },
-    { codigo:"PA000189", nome:"FARINHA DE TOMATE 10 KG" },
-    { codigo:"PA000190", nome:"FARINHA DE UVA 10 KG" },
-    { codigo:"PA000191", nome:"FAVA TORRADA E SALGADA 10KG" },
-    { codigo:"PA000192", nome:"FAVA TORRADA MOSTARDA MEL 10KG" },
-    { codigo:"PA000193", nome:"FENO GREGO EM GRAOS 10 KG" },
-    { codigo:"PA000194", nome:"FENO GREGO MOIDO PREMIUM 10 KG" },
-    { codigo:"PA000195", nome:"CONDIMENTO PREPARADO FUMACA PO 10KG" },
-    { codigo:"PA000196", nome:"CONDIMENTO PREPARADO FUMACA PO 05KG" },
-    { codigo:"PA000197", nome:"FUNCHO 10 KG" },
-    { codigo:"PA000198", nome:"FUNGHI SECCHI 10 KG" },
-    { codigo:"PA000199", nome:"GENGIBRE MOIDO 10 KG" },
-    { codigo:"PA000200", nome:"GENGIBRE MOIDO 5 KG" },
-    { codigo:"PA000201", nome:"GENGIBRE MOIDO PREMIUM 10 KG" },
-    { codigo:"PA000202", nome:"GUARANA EM GRAO 10 KG" },
-    { codigo:"PA000203", nome:"GUARANA MOIDO 10 KG" },
-    { codigo:"PA000204", nome:"HIBISCO MOIDO 10 KG" },
-    { codigo:"PA000205", nome:"HORTELA EGIPCIA 10 KG" },
-    { codigo:"PA000206", nome:"HORTELA MOIDA 10 KG" },
-    { codigo:"PA000207", nome:"HORTELA MOIDA 05 KG" },
-    { codigo:"PA000208", nome:"LEMON PEPPER 10 KG" },
-    { codigo:"PA000209", nome:"LEMON PEPPER 05 KG" },
-    { codigo:"PA000210", nome:"LEMON PEPPER BELL 10 KG" },
-    { codigo:"PA000211", nome:"LEMON PEPPER DEFUMADO 10 KG" },
-    { codigo:"PA000212", nome:"LEMON PEPPER DEFUMADO 05 KG" },
-    { codigo:"PA000213", nome:"LEMON PEPPER DEFUMADO GLUT 5 K" },
-    { codigo:"PA000214", nome:"LEMON PEPPER FIT 10 KG" },
-    { codigo:"PA000215", nome:"LEMON PEPPER FIT 05 KG" },
-    { codigo:"PA000216", nome:"LIMAO E ERVAS FINAS 10 KG" },
-    { codigo:"PA000217", nome:"LIMAO E ERVAS FINAS 05 KG" },
-    { codigo:"PA000218", nome:"LIMAO E OREGANO 10 KG" },
-    { codigo:"PA000219", nome:"LINHACA DOURADA 10 KG" },
-    { codigo:"PA000220", nome:"LINHACA MARRON 10 KG" },
-    { codigo:"PA000221", nome:"LOURO EM FOLHA EGIPCIO10 KG" },
-    { codigo:"PA000222", nome:"LOURO EM FOLHA NACIONAL 10 KG" },
-    { codigo:"PA000223", nome:"LOURO EM FOLHA TURCO 10 KG" },
-    { codigo:"PA000224", nome:"CONDIMENTO PREPARADO DE LOURO 95 % 10 KG" },
-    { codigo:"PA000225", nome:"CONDIMENTO PREPARADO DE LOURO 95 % 10 KG" },
-    { codigo:"PA000226", nome:"CONDIMENTO PREPARADO DE LOURO 95 % 05 KG" },
-    { codigo:"PA000227", nome:"LOURO MOIDO PREMIUM 10 KG" },
-    { codigo:"PA000228", nome:"LOURO SEMI SELECIONADO 10 KG" },
-    { codigo:"PA000229", nome:"MANJERICAO FLOCOS 10 KG" },
-    { codigo:"PA000230", nome:"MANJERICAO MOIDO 10 KG" },
-    { codigo:"PA000231", nome:"MANJERONA FLOCOS 10 KG" },
-    { codigo:"PA000232", nome:"MANJERONA MOIDA 10 KG" },
-    { codigo:"PA000233", nome:"MENTA  10 KG" },
-    { codigo:"PA000234", nome:"MOLHO FACIL SABOR LIMAO 10KG" },
-    { codigo:"PA000235", nome:"MOLHO FACIL SABOR LIMAO 5 KG" },
-    { codigo:"PA000236", nome:"MOSTARDA AMARELA INDIANA 10 KG" },
-    { codigo:"PA000237", nome:"MOSTARDA AMARELA CANADENSE10KG" },
-    { codigo:"PA000238", nome:"MOSTARDA MARRON INDIANA 10 KG" },
-    { codigo:"PA000239", nome:"MOSTARDA MOIDA 10 KG" },
-    { codigo:"PA000240", nome:"MOSTARDA MOIDA PREMIUM 10 KG" },
-    { codigo:"PA000241", nome:"NOZ MOSCADA BOLA 10 KG" },
-    { codigo:"PA000242", nome:"NOZ MOSCADA BOLA 5 KG" },
-    { codigo:"PA000243", nome:"CONDIMENTO PREPARADO NOZ MOSCADA 90% 10 KG" },
-    { codigo:"PA000244", nome:"CONDIMENTO PREPARADO NOZ MOSCADA 95% 10 KG" },
-    { codigo:"PA000245", nome:"CONDIMENTO PREPARADO NOZ MOSCADA 95% 25 KG" },
-    { codigo:"PA000246", nome:"CONDIMENTO PREPARADO NOZ MOSCADA 95% 05 KG" },
-    { codigo:"PA000247", nome:"NOZ MOSCADA MOIDA PREMIUM 10 KG" },
-    { codigo:"PA000248", nome:"ORANGE PEPPER 10 KG" },
-    { codigo:"PA000249", nome:"ORANGE PEPPER 5 KG" },
-    { codigo:"PA000250", nome:"OREGANO MOIDO 10 KG" },
-    { codigo:"PA000251", nome:"CONDIMENTO PREPARADO DE PAPRICA  DEFUMADA 10 KG" },
-    { codigo:"PA000252", nome:"CONDIMENTO PREPARADO DE PAPRICA DEFUMADA  25 KG" },
-    { codigo:"PA000253", nome:"CONDIMENTO PREPARADO DE PAPRICA  DEFUMADA   05 KG" },
-    { codigo:"PA000254", nome:"PAPRICA DEFUMADA  PREMIUM  10 KG" },
-    { codigo:"PA000255", nome:"PAPRICA DEFUMADA  PREMIUM 05KG" },
-    { codigo:"PA000256", nome:"CONDIMENTO PREPARADO DE PAPRICA DEFUMADA  SEM SAL  25 KG" },
-    { codigo:"PA000257", nome:"CONDIMENTO PREPARADO DE PAPRICA DEFUMADA  SEM SAL  10 KG" },
-    { codigo:"PA000258", nome:"CONDIMENTO PREPARADO DE PAPRICA DOCE 10 KG" },
-    { codigo:"PA000259", nome:"CONDIMENTO PREPARADO DE PAPRICA DOCE 25 KG" },
-    { codigo:"PA000260", nome:"CONDIMENTO PREPARADO DE PAPRICA DOCE 5 KG" },
-    { codigo:"PA000261", nome:"CONDIMENTO PREPARADO DE PAPRICA PICANTE 10 KG" },
-    { codigo:"PA000262", nome:"CONDIMENTO PREPARADO DE PAPRICA PICANTE 25 KG" },
-    { codigo:"PA000263", nome:"CONDIMENTO PREPARADO DE PAPRICA PICANTE 05 KG" },
-    { codigo:"PA000264", nome:"CONDIMENTO PREPARADO DE PAPRICA DEFUMADA PICANTE 10 KG" },
-    { codigo:"PA000265", nome:"CONDIMENTO PREPARADO DE PAPRICA DEFUMADA PICANTE 05 KG" },
-    { codigo:"PA000266", nome:"PAPRICA PICANTE PREMIUM 10 KG" },
-    { codigo:"PA000267", nome:"PIMENTA CALABRES FLO CHINESA10" },
-    { codigo:"PA000268", nome:"PIMENTA CALABRESA MOIDA 10 KG" },
-    { codigo:"PA000269", nome:"PIMENTA CALABRESA MOIDA 05 KG" },
-    { codigo:"PA000270", nome:"PIMENTA CALABREZA FLOCOS IND10" },
-    { codigo:"PA000271", nome:"PIMENTA JAMAICA EM GRAO 10 KG" },
-    { codigo:"PA000272", nome:"PIMENTA JAMAICA MOIDA 10 KG" },
-    { codigo:"PA000273", nome:"PIMENTA JAMAICA MOIDA 05 KG" },
-    { codigo:"PA000274", nome:"PIMENTA MALAGUETA MOIDA 10 KG" },
-    { codigo:"PA000275", nome:"CONDIMENTO PREPARADO PIMENTA PRETA 90% 10KG" },
-    { codigo:"PA000276", nome:"CONDIMENTO PREPARADO PIMENTA PRETA 90% BELL 10" },
-    { codigo:"PA000277", nome:"PIMENTA PRETA FECUL. GROSSA 10" },
-    { codigo:"PA000278", nome:"PIMENTA PRETA MOIDA PREMIUM 10" },
-    { codigo:"PA000279", nome:"PIMENTA PRETA MOIDA PREMIUM 25" },
-    { codigo:"PA000280", nome:"PIMENTA REINO BRANCA  GRAO 5KG" },
-    { codigo:"PA000281", nome:"PIMENTA REINO BRANCA GRAO 10KG" },
-    { codigo:"PA000282", nome:"CONDIMENTO PREPARADO PIMENTA BRANCA 90% 10 KG" },
-    { codigo:"PA000283", nome:"CONDIMENTO PREPARADO PIMENTA BRANCA 95% 10 KG" },
-    { codigo:"PA000284", nome:"PIMENTA REINO PRETA GRAO ASTA" },
-    { codigo:"PA000285", nome:"PIMENTA REINO PRETA GRAO B1 10" },
-    { codigo:"PA000286", nome:"UTILIZAR PA000642" },
-    { codigo:"PA000287", nome:"CONDIMENTO PREPARADO PIMENTA 95% 05 KG" },
-    { codigo:"PA000288", nome:"PIMENTA  PRETA MOIDA BELL 10 K" },
-    { codigo:"PA000289", nome:"PIMENTA ROSA 10 KG" },
-    { codigo:"PA000290", nome:"PIMENTA ROSA 5 KG" },
-    { codigo:"PA000291", nome:"PIMENTA ROSA MOIDA 10 KG" },
-    { codigo:"PA000292", nome:"PSYLLIUM 70% 10 KG" },
-    { codigo:"PA000293", nome:"PSYLLIUM 80% 10 KG" },
-    { codigo:"PA000294", nome:"PSYLLIUM HUSK 10 KG" },
-    { codigo:"PA000295", nome:"REALCE SABOR ALHO 10 KG" },
-    { codigo:"PA000296", nome:"REINOCHURRI BARBECUE 10KG" },
-    { codigo:"PA000297", nome:"REINOCHURRI BARBECUE 5KG" },
-    { codigo:"PA000298", nome:"REINOCHURRI COM LIMAO 10KG" },
-    { codigo:"PA000299", nome:"REINOCHURRI COM LIMAO 5KG" },
-    { codigo:"PA000300", nome:"REINOCHURRI DEFUMADO 10KG" },
-    { codigo:"PA000301", nome:"REINOCHURRI DEFUMADO 5KG" },
-    { codigo:"PA000302", nome:"REINOCHURRI PICANTE FIT 10 KG" },
-    { codigo:"PA000303", nome:"REINOCHURRI PICANTE FIT 05 KG" },
-    { codigo:"PA000304", nome:"REINOCHURRI FIT S/ PIMENTA 10K" },
-    { codigo:"PA000305", nome:"REINOCHURRI FIT S/ PIMENTA 5KG" },
-    { codigo:"PA000306", nome:"REINOCHURRI PICANTE 10 KG" },
-    { codigo:"PA000307", nome:"REINOCHURRI PICANTE 5 KG" },
-    { codigo:"PA000308", nome:"REINOCHURRI PICANTE COMPLETO10" },
-    { codigo:"PA000309", nome:"REINOCHURRI PICANTE COMPLETO 5" },
-    { codigo:"PA000310", nome:"REINOCHURRI PICANTE GLU 5KG" },
-    { codigo:"PA000311", nome:"REINOCHURRI S/PIMEN ALHO FRT10" },
-    { codigo:"PA000312", nome:"REINOCHURRI S/PIMEN ALHO FRT 5" },
-    { codigo:"PA000313", nome:"REINOCHURRI S/PIMENTA 10KG" },
-    { codigo:"PA000314", nome:"REINOCHURRI S/PIMENTA 5 KG" },
-    { codigo:"PA000315", nome:"REINOCHURRI S/PIMENTA COMPL 10" },
-    { codigo:"PA000316", nome:"REINOCHURRI S/PIMENTA COMPL 5" },
-    { codigo:"PA000317", nome:"SAL DE ERVAS 10 KG" },
-    { codigo:"PA000318", nome:"SAL DE ERVAS 5 KG" },
-    { codigo:"PA000319", nome:"SAL TP PARRILLA C/IODO ZIZO 25" },
-    { codigo:"PA000320", nome:"SAL PARRILLA ALHO FRITO 10KG" },
-    { codigo:"PA000321", nome:"SAL PARRILLA ALHO FRITO 5 KG" },
-    { codigo:"PA000322", nome:"SAL PARRILLA ASSADOR 10KG" },
-    { codigo:"PA000323", nome:"SAL PARRILLA BLEND SALT BULL 1" },
-    { codigo:"PA000324", nome:"SAL PARRILLA C/ LEMON PEPPER 1" },
-    { codigo:"PA000325", nome:"SAL PARRILLA C/CHIMICHURRI 10K" },
-    { codigo:"PA000326", nome:"SAL PARRILLA C/PIMENTA REINO 1" },
-    { codigo:"PA000327", nome:"SAL PARRILLA CHIMICH PICANTE 5" },
-    { codigo:"PA000328", nome:"SAL PARRILLA CHIMIC PICANTE 10" },
-    { codigo:"PA000329", nome:"SAL PARRILLA COM LIMAO 10KG" },
-    { codigo:"PA000330", nome:"SAL PARRILLA COM LIMAO 5KG" },
-    { codigo:"PA000331", nome:"SAL PARRILLA  PIMENTA CALAB 10" },
-    { codigo:"PA000332", nome:"SAL PARRILLA DEFUMADA 10KG" },
-    { codigo:"PA000333", nome:"SAL PARRILLA DEFUMADA 5KG" },
-    { codigo:"PA000334", nome:"SAL PARRILLA ERVAS FINAS 10KG" },
-    { codigo:"PA000335", nome:"SAL PARRILLA ERVAS FINAS 5KG" },
-    { codigo:"PA000336", nome:"SAL PARRILLA MIX 10KG" },
-    { codigo:"PA000337", nome:"SAL PARRILLA MIX PIMENTA DEFUM" },
-    { codigo:"PA000338", nome:"SAL REFINADO COM LIMAO 10KG" },
-    { codigo:"PA000339", nome:"SAL ROSA DO HIMALAIA FINO 10 K" },
-    { codigo:"PA000340", nome:"SAL ROSA DO HIMALAIA GROSSO 10" },
-    { codigo:"PA000341", nome:"SALSA CEBOLA E ALHO DESIDR 10 KG" },
-    { codigo:"PA000342", nome:"SALSA DESIDRATADA EGIPCIA 10 K" },
-    { codigo:"PA000343", nome:"SALSA DESIDRATADA EXTRA 10 KG" },
-    { codigo:"PA000344", nome:"SALSA MOIDA NACIONAL 10 KG" },
-    { codigo:"PA000345", nome:"SALSA CEBOLA ALHO PREMIUM 10" },
-    { codigo:"PA000346", nome:"SALSA CEBOLA E BACON 10 KG" },
-    { codigo:"PA000347", nome:"SALSA CEBOLA BACON PREMIUM 10" },
-    { codigo:"PA000348", nome:"SALSA CEBOLA E TOMATE 10 KG" },
-    { codigo:"PA000349", nome:"SALSA CEBOLA TOMATE PREMIUM 10" },
-    { codigo:"PA000350", nome:"SALVIA  FLOCOS 10 KG" },
-    { codigo:"PA000351", nome:"SALVIA  FOLHA 10 KG" },
-    { codigo:"PA000352", nome:"SALVIA MOIDA EGIPCIA 10 KG" },
-    { codigo:"PA000353", nome:"SALVIA TRITURADA 10KG" },
-    { codigo:"PA000354", nome:"SEGREDOS DO MUNDO ESTADOS UNIDOS 10 KG" },
-    { codigo:"PA000355", nome:"SEGREDOS DO MUNDO  ALEMANHA 10KG" },
-    { codigo:"PA000356", nome:"SEGREDOS DO MUNDO  BRASIL 10 KG" },
-    { codigo:"PA000357", nome:"SEGREDOS DO MUNDO  CATAR 10 KG" },
-    { codigo:"PA000358", nome:"SEGREDOS DO MUNDO  ESPANHA 10KG" },
-    { codigo:"PA000359", nome:"SEGREDOS DO MUNDO  FRANCA 10 K" },
-    { codigo:"PA000360", nome:"SEGREDOS DO MUNDO ARGENTINA 10KG" },
-    { codigo:"PA000361", nome:"SEGREDOS DO MUNDO CHINA 10 KG" },
-    { codigo:"PA000362", nome:"SEGREDOS DO MUNDO ITALIA 10 KG" },
-    { codigo:"PA000363", nome:"SEGREDOS DO MUNDO JAPAO 10 KG" },
-    { codigo:"PA000364", nome:"SEGREDOS DO MUNDO MEXICO 10 KG" },
-    { codigo:"PA000365", nome:"SEGREDOS DO MUNDO PORTUGAL 10KG" },
-    { codigo:"PA000366", nome:"SEGURELHA 10 KG" },
-    { codigo:"PA000367", nome:"SEGURELHA MOIDA 10 KG" },
-    { codigo:"PA000368", nome:"SEMENTE DE CHIA 10 KG" },
-    { codigo:"PA000369", nome:"TEMPERA E EMPANA  ALECRIM 10KG" },
-    { codigo:"PA000370", nome:"TEMPERA E EMPANA  CEBOLA 10KG" },
-    { codigo:"PA000371", nome:"TEMPERA E EMPANA TRADICION 10K" },
-    { codigo:"PA000372", nome:"TEMPERA TUDO 10 KG" },
-    { codigo:"PA000373", nome:"TEMPERA TUDO 5 KG" },
-    { codigo:"PA000374", nome:"TEMPERO ANA MARIA 10 KG" },
-    { codigo:"PA000375", nome:"TEMPERO ANA MARIA 5 KG" },
-    { codigo:"PA000376", nome:"TEMPERO ANA MARIA BELL 10 KG" },
-    { codigo:"PA000377", nome:"TEMPERO ANA MARIA CARNE 10KG" },
-    { codigo:"PA000378", nome:"TEMPERO ANA MARIA FIT 5 KG" },
-    { codigo:"PA000379", nome:"TEMPERO ANA MARIA FIT10 KG" },
-    { codigo:"PA000380", nome:"TEMPERO BAIANO 10 KG" },
-    { codigo:"PA000381", nome:"TEMPERO BAIANO 25 KG" },
-    { codigo:"PA000382", nome:"TEMPERO BAIANO 5 KG" },
-    { codigo:"PA000383", nome:"TEMPERO BAIANO BELL 10 KG" },
-    { codigo:"PA000384", nome:"TEMPERO BAIANO BELL 5 KG" },
-    { codigo:"PA000385", nome:"TEMPERO BAIANO S/ PIMENTA 10 KG" },
-    { codigo:"PA000386", nome:"TEMPERO BEEF RIBS 10KG" },
-    { codigo:"PA000387", nome:"TEMPERO BEEF RIBS 5KG" },
-    { codigo:"PA000388", nome:"TEMPERO BEEF RIBS VD 5KG" },
-    { codigo:"PA000389", nome:"TEMPERO BIFE ACEBOLADO 10KG" },
-    { codigo:"PA000390", nome:"TEMPERO BIFE ACEBOLADO 5KG" },
-    { codigo:"PA000391", nome:"TEMPERO COMPLETO FIT  10KG" },
-    { codigo:"PA000392", nome:"TEMPERO COMPLETO FIT 25 KG" },
-    { codigo:"PA000393", nome:"TEMPERO CONQ SOGRA 10 KG" },
-    { codigo:"PA000394", nome:"TEMPERO CONQ SOGRA 5 KG" },
-    { codigo:"PA000395", nome:"TEMPERO CONQ SOGRA GLUT 10 KG" },
-    { codigo:"PA000396", nome:"TEMPERO CONQ SOGRA GLUT 5 KG" },
-    { codigo:"PA000397", nome:"TEMPERO DA FAZENDA 10 KG" },
-    { codigo:"PA000398", nome:"TEMPERO DA FAZENDA 5 KG" },
-    { codigo:"PA000399", nome:"TEMPERO DE FAMILIA 10KG" },
-    { codigo:"PA000400", nome:"TEMPERO DE FAMILIA 5KG" },
-    { codigo:"PA000401", nome:"TEMPERO DO CHEFE C/ CURRY 10KG" },
-    { codigo:"PA000402", nome:"TEMPERO DO CHEFE C/ CURRY 5 KG" },
-    { codigo:"PA000403", nome:"TEMPERO DO CHEFE C/ PAPRICA 10" },
-    { codigo:"PA000404", nome:"TEMPERO DO CHEFE C/ PAPRICA 5" },
-    { codigo:"PA000405", nome:"TEMPERO DO EDU 10 KG" },
-    { codigo:"PA000406", nome:"TEMPERO DO EDU 5 KG" },
-    { codigo:"PA000407", nome:"TEMPERO EDU BELL  10 KG" },
-    { codigo:"PA000408", nome:"TEMPERO EDU FLOCOS SEM SODIO 5" },
-    { codigo:"PA000409", nome:"TEMPERO ERVAS FINAS 10KG" },
-    { codigo:"PA000410", nome:"TEMPERO FIT CARNE  10KG" },
-    { codigo:"PA000411", nome:"TEMPERO FIT CARNE  25KG" },
-    { codigo:"PA000412", nome:"TEMPERO FIT CARNE  5 KG" },
-    { codigo:"PA000413", nome:"TEMPERO FIT EDU  10KG" },
-    { codigo:"PA000414", nome:"TEMPERO FIT FRANGO 10KG" },
-    { codigo:"PA000415", nome:"TEMPERO FIT FRANGO 25KG" },
-    { codigo:"PA000416", nome:"TEMPERO FIT FRANGO 5 KG" },
-    { codigo:"PA000417", nome:"TEMPERO FIT NATURAL 10KG" },
-    { codigo:"PA000418", nome:"TEMPERO FIT NATURAL 25KG" },
-    { codigo:"PA000419", nome:"TEMPERO FIT NATURAL 5 KG" },
-    { codigo:"PA000420", nome:"TEMPERO FIT PEIXE 10KG" },
-    { codigo:"PA000421", nome:"TEMPERO FIT PEIXE 5 KG" },
-    { codigo:"PA000422", nome:"TEMPERO GAUCHO 25 KG" },
-    { codigo:"PA000423", nome:"TEMPERO GAUCHO10 KG" },
-    { codigo:"PA000424", nome:"TEMPERO GAUCHO5 KG" },
-    { codigo:"PA000425", nome:"TEMPERO GOURMET 10 KG" },
-    { codigo:"PA000426", nome:"TEMPERO GOURMET VD 5 KG" },
-    { codigo:"PA000427", nome:"TEMPERO IDEAL PARA ARROZ 10KG" },
-    { codigo:"PA000428", nome:"TEMPERO IDEAL PARA ARROZ 5KG" },
-    { codigo:"PA000429", nome:"TEMPERO IDEAL PARA AVES 10KG" },
-    { codigo:"PA000430", nome:"TEMPERO IDEAL PARA CARNES 10KG" },
-    { codigo:"PA000431", nome:"TEMPERO IDEAL PARA CARNES 5KG" },
-    { codigo:"PA000432", nome:"TEMPERO IDEAL PARA LEGUMES 10K" },
-    { codigo:"PA000433", nome:"TEMPERO IDEAL PARA LEGUMES 5KG" },
-    { codigo:"PA000434", nome:"TEMPERO IDEAL PARA MASSAS 10KG" },
-    { codigo:"PA000435", nome:"TEMPERO IDEAL PARA MASSAS 5KG" },
-    { codigo:"PA000436", nome:"TEMPERO IDEAL PARA PEIXES 10KG" },
-    { codigo:"PA000437", nome:"TEMPERO MINEIRO FLOCOS 10KG" },
-    { codigo:"PA000438", nome:"TEMPERO MINEIRO MOIDO 10KG" },
-    { codigo:"PA000439", nome:"TEMPERO MINEIRO MOIDO 5KG" },
-    { codigo:"PA000440", nome:"TEMPERO OLIVER 10 KG" },
-    { codigo:"PA000441", nome:"TEMPERO OLIVER VD 5 KG" },
-    { codigo:"PA000442", nome:"TEMP P/ CHURRASCO C PIMENTA 10" },
-    { codigo:"PA000443", nome:"TEMP P/ CHURRASCO S/PIMENTA 10" },
-    { codigo:"PA000444", nome:"TEMP P/CHURRASCO S/PIMENTA 5KG" },
-    { codigo:"PA000445", nome:"TEMPERO P/ CARNE 10 KG" },
-    { codigo:"PA000446", nome:"TEMPERO P/ FEIJAO 10 KG" },
-    { codigo:"PA000447", nome:"TEMPERO P/ FEIJAO 15 KG" },
-    { codigo:"PA000448", nome:"TEMPERO P/ FEIJAO 5 KG" },
-    { codigo:"PA000449", nome:"TEMPERO P/ FEIJAO BELL 10 KG" },
-    { codigo:"PA000450", nome:"TEMPERO P/ FRANGO 10 KG" },
-    { codigo:"PA000451", nome:"TEMPERO P/ FRANGO 5 KG" },
-    { codigo:"PA000452", nome:"TEMPERO P/ PIZZA 10 KG" },
-    { codigo:"PA000453", nome:"TEMPERO PARANAENSE 10 KG" },
-    { codigo:"PA000454", nome:"TEMPERO PEGA ESPOSA 10KG" },
-    { codigo:"PA000455", nome:"TEMPERO PEGA ESPOSA 5KG" },
-    { codigo:"PA000456", nome:"TEMPERO PEGA ESPOSA FIT 10KG" },
-    { codigo:"PA000457", nome:"TEMPERO PEGA ESPOSA FIT 5KG" },
-    { codigo:"PA000458", nome:"TEMPERO PEGA MARIDO 10KG" },
-    { codigo:"PA000459", nome:"TEMPERO PEGA MARIDO 5 KG" },
-    { codigo:"PA000460", nome:"TEMPERO PEGA MARIDO BELL 10KG" },
-    { codigo:"PA000461", nome:"TEMPERO PEGA MARIDO FIT 10KG" },
-    { codigo:"PA000462", nome:"TEMPERO PEGA MARIDO FIT 5KG" },
-    { codigo:"PA000463", nome:"TEMPERO SABORES DO NORDESTE 10" },
-    { codigo:"PA000464", nome:"TEMPERO SABORES DO NORDESTE 5" },
-    { codigo:"PA000465", nome:"TEMPERO SIRIO (BA-HAR) 10KG" },
-    { codigo:"PA000466", nome:"TEMPERO SIRIO (BA-HAR) 5 KG" },
-    { codigo:"PA000467", nome:"TEMPERO TARTARO 10KG" },
-    { codigo:"PA000468", nome:"TEMPERO TARTARO 5 KG" },
-    { codigo:"PA000469", nome:"TEMPERO TOQUE DE ALECRIM 10KG" },
-    { codigo:"PA000470", nome:"TEMPERO VO LUCINHA 10KG" },
-    { codigo:"PA000471", nome:"TEMPERO VO LUCINHA 5KG" },
-    { codigo:"PA000472", nome:"TOMILHO 10 KG" },
-    { codigo:"PA000473", nome:"TOMILHO MOIDO 10 KG" },
-    { codigo:"PA000474", nome:"TRIBULLUS TERRESTRIS MOIDO 10" },
-    { codigo:"PA000475", nome:"URUCUM MOIDO 10 KG" },
-    { codigo:"PA000476", nome:"VINAGRETE 10 KG" },
-    { codigo:"PA000477", nome:"VINAGRETE 5 KG" },
-    { codigo:"PA000478", nome:"VINAGRETE PREMIUM 10 KG" },
-    { codigo:"PA000479", nome:"ZAHTAR 10 KG" },
-    { codigo:"PA000480", nome:"PAPRICA DOCE ASTA 120 25 KG" },
-    { codigo:"PA000481", nome:"CENOURA FLOCOS 5x5 20 KG" },
-    { codigo:"PA000482", nome:"PIMENTA CALABREZA  FLOCOS  20" },
-    { codigo:"PA000483", nome:"PIMENTAO VERMELHO FLOC 5X5 25K" },
-    { codigo:"PA000484", nome:"PIMENTAO VERDE FLOCOS 5X5 20KG" },
-    { codigo:"PA000485", nome:"OREGANO PERUANO 12,5 KG" },
-    { codigo:"PA000486", nome:"TOMATE  FLOCOS 5x5 10 KG" },
-    { codigo:"PA000487", nome:"ALHO DESID  GRANULADO 8/16 25K" },
-    { codigo:"PA000488", nome:"ALHO DESIDRATADO PO CHINES 25K" },
-    { codigo:"PA000489", nome:"ALHO DESID. AREIA 16/26 25KG" },
-    { codigo:"PA000490", nome:"ALHO DESID. AREIA 26/40 25KG" },
-    { codigo:"PA000491", nome:"ALHO DESID. AREIA 40/60 25KG" },
-    { codigo:"PA000492", nome:"COMINHO EM GRAO 99 25 KG" },
-    { codigo:"PA000493", nome:"FENO GREGO EM GRAOS 25 KG" },
-    { codigo:"PA000494", nome:"SEMENTE DE CALABRESA 50 KG" },
-    { codigo:"PA000495", nome:"ANIS ESTRELADO 10 KG" },
-    { codigo:"PA000496", nome:"OREGANO TURCO 12,5 KG" },
-    { codigo:"PA000497", nome:"MOSTARDA AMARELA INDIANA 25 KG" },
-    { codigo:"PA000498", nome:"MANJERONA FLOCOS 25 KG" },
-    { codigo:"PA000499", nome:"COMINHO EM GRAO 95 25 KG" },
-    { codigo:"PA000500", nome:"SALSA DESIDRATADA EGIPCIA 20 KG" },
-    { codigo:"PA000501", nome:"CANELA QUEB CASSIA 1,5 OIL  25" },
-    { codigo:"PA000502", nome:"SALSA DESIDRATADA EGIPCIA 25 KG" },
-    { codigo:"PA000503", nome:"MANJERICAO FLOCOS 20 KG" },
-    { codigo:"PA000504", nome:"SEGURELHA 25 KG" },
-    { codigo:"PA000505", nome:"CURCUMA RAIZ 25 KG" },
-    { codigo:"PA000506", nome:"NOZ MOSCADA GRANULADA 25 KG" },
-    { codigo:"PA000507", nome:"NOZ MOSCADA QUEBRADA  25 KG" },
-    { codigo:"PA000508", nome:"CEBOLA GRAN.MIUDA MINCEDIND 20" },
-    { codigo:"PA000509", nome:"CEBOLA GRAN.MEDIA CHOPEDIND 20" },
-    { codigo:"PA000510", nome:"SAL ROSA DO HIMALAIA FINO 10 K" },
-    { codigo:"PA000511", nome:"SAL ROSA DO HIMALAIA GROSSO 10" },
-    { codigo:"PA000512", nome:"NOZ MOSCADA BOLA 25 KG" },
-    { codigo:"PA000513", nome:"PIMENTA CALABREZA FLO CHI 20KG" },
-    { codigo:"PA000514", nome:"GENGIBRE RAIZ IMPORTADO 20 KG" },
-    { codigo:"PA000515", nome:"MANJERICAO FLOCOS 25 KG" },
-    { codigo:"PA000516", nome:"GLUTAMATO MONOSSODICO 25 KG" },
-    { codigo:"PA000517", nome:"ALHO DESIDRATADO  PO 25 KG" },
-    { codigo:"PA000518", nome:"ALHO DESID. AREIA 40/80 25KG" },
-    { codigo:"PA000519", nome:"CURCUMA QUEBRADA 25 KG" },
-    { codigo:"PA000520", nome:"MANJERICAO FLOCOS B 25 KG" },
-    { codigo:"PA000521", nome:"MANJERONA FLOCOS B 25 KG" },
-    { codigo:"PA000522", nome:"ALHO FRITO GRANULADO 25 KG" },
-    { codigo:"PA000523", nome:"SALSA DESIDRATADA EGIPCIA B 25 KG" },
-    { codigo:"PA000524", nome:"COENTRO EM GRAO ARGENTINO 20KG" },
-    { codigo:"PA000525", nome:"COENTRO PARTIDO 30 KG" },
-    { codigo:"PA000526", nome:"PIMENTA CALABRESA FLOCOS CHINESA 25 KG" },
-    { codigo:"PA000527", nome:"PIMENTA CALABREZA  FLOCOS T2 5" },
-    { codigo:"PA000528", nome:"FUNCHO 25 KG" },
-    { codigo:"PA000529", nome:"LOURO FOLHAS INDIANO 20 KG" },
-    { codigo:"PA000530", nome:"CONDIMENTO PREPARADO DE COMINHO 95%  25 KG" },
-    { codigo:"PA000531", nome:"ALHO DES GRANULADO 8/16 IND 25" },
-    { codigo:"PA000532", nome:"FOLHAS DE SENE 25KG" },
-    { codigo:"PA000533", nome:"COENTRO EM GRAO ARGENTINO 25KG" },
-    { codigo:"PA000534", nome:"ERVA DOCE EGIPCIA 25KG" },
-    { codigo:"PA000535", nome:"ALHO DESIDRATADO PO INDIANO 25" },
-    { codigo:"PA000536", nome:"PIMENTA JAMAICA GRAO IMPORT 25" },
-    { codigo:"PA000537", nome:"CENOURA FLOCOS 5x5 25 KG" },
-    { codigo:"PA000538", nome:"MANJERONA FLOCOS 20 KG" },
-    { codigo:"PA000539", nome:"CEBOLA EM PO 25  KG" },
-    { codigo:"PA000540", nome:"CANELA QUEBRADA 2% 25 KG" },
-    { codigo:"PA000541", nome:"HORTELA EGIPCIA 20 KG" },
-    { codigo:"PA000542", nome:"CANELA JAWA INTEIRA 25 KG" },
-    { codigo:"PA000543", nome:"SALVIA TRITURADA 20KG" },
-    { codigo:"PA000544", nome:"CANELA QUEBRADA 1% 25 KG" },
-    { codigo:"PA000545", nome:"GENGIBRE RAIZ IMPORT FATIADO20" },
-    { codigo:"PA000546", nome:"ALHO DESIDRATADO  FLOCOS 20 KG" },
-    { codigo:"PA000547", nome:"CANELA JAWA  6 CM A 20KG" },
-    { codigo:"PA000548", nome:"GLUTAMATO MONOSSOD TIRA 80 25K" },
-    { codigo:"PA000549", nome:"CEBOLA TIRAS KIMBBLED IND 14KG" },
-    { codigo:"PA000550", nome:"ALHO DES  GRANU 8/16 INDIA 25K" },
-    { codigo:"PA000551", nome:"COENTRO PARTIDO 25 KG" },
-    { codigo:"PA000552", nome:"AIPO MARRON SEMENTE 25 KG" },
-    { codigo:"PA000553", nome:"TOMATE  FLOCOS 5x5 15 KG" },
-    { codigo:"PA000554", nome:"SAL ROSA DO HIMALAIA FINO 25 K" },
-    { codigo:"PA000555", nome:"SAL ROSA DO HIMALAIA GROSSO 25" },
-    { codigo:"PA000556", nome:"ALHO DES AREIA 16/26 INDIA 25K" },
-    { codigo:"PA000557", nome:"ALHO DES AREIA 26/40 INDIA 25K" },
-    { codigo:"PA000558", nome:"ALHO DES AREIA 40/60 INDIA 25K" },
-    { codigo:"PA000559", nome:"SEMENTE DE URUCUM 25 KG" },
-    { codigo:"PA000560", nome:"LOURO EM FOLHA TURCO 25 KG" },
-    { codigo:"PA000561", nome:"LOURO TRITURADO 25 KG" },
-    { codigo:"PA000562", nome:"CEBOLA G MED CHOPPED ROXA 20KG" },
-    { codigo:"PA000564", nome:"CEBOLA G.MIUDA MINCED ROXA 20K" },
-    { codigo:"PA000565", nome:"ALECRIM 25 KG" },
-    { codigo:"PA000566", nome:"TOMILHO 20 KG" },
-    { codigo:"PA000567", nome:"OREGANO TURCO B 12,5 KG" },
-    { codigo:"PA000568", nome:"CEBOLA  PO ROXA 25  KG" },
-    { codigo:"PA000569", nome:"CASCA DE CARDAMOMO 25 KG" },
-    { codigo:"PA000570", nome:"LOURO EM FOLHA TURCO 50 KG" },
-    { codigo:"PA000571", nome:"SEGURELHA 20 KG" },
-    { codigo:"PA000572", nome:"TOMILHO 25 KG" },
-    { codigo:"PA000573", nome:"CEBOLA GRANULADA AREIA 20 KG" },
-    { codigo:"PA000574", nome:"ALHO FRITO 10 KG" },
-    { codigo:"PA000575", nome:"CEBOLA EM PO 20KG" },
-    { codigo:"PA000576", nome:"NOZ MOSCADA BOLA 50 KG" },
-    { codigo:"PA000577", nome:"HIBISCO 25 KG" },
-    { codigo:"PA000578", nome:"SALSA DESIDRATADA EGIPCIA 10KG" },
-    { codigo:"PA000579", nome:"MANJERICAO FLOCOS 10KG" },
-    { codigo:"PA000580", nome:"MANJERONA FLOCOS 10KG" },
-    { codigo:"PA000581", nome:"CEBOLA TIRAS KIMBBLED ROXA 14K" },
-    { codigo:"PA000582", nome:"PIMENTA CALAB FLOCOS T2 25KG" },
-    { codigo:"PA000583", nome:"TOMATE  FLOCOS 5mm 20 KG" },
-    { codigo:"PA000584", nome:"ALECRIM 20KG" },
-    { codigo:"PA000585", nome:"ALECRIM 10KG" },
-    { codigo:"PA000587", nome:"ITEM BLOQUEADO USAR PA000472" },
-    { codigo:"PA000588", nome:"SALSA CEBOLA E BACON 05 KG" },
-    { codigo:"PA000589", nome:"CANELA 6CM 20KG" },
-    { codigo:"PA000590", nome:"ERVAS FINAS 05 KG" },
-    { codigo:"PA000591", nome:"ERVAS FINAS 4KG" },
-    { codigo:"PA000592", nome:"PAPRICA DOCE PREMIUM 10KG" },
-    { codigo:"PA000593", nome:"ALHO GRANULADO 16/26 10KG" },
-    { codigo:"PA000594", nome:"ALHO DESIDR AREIA 40/80 10KG" },
-    { codigo:"PA000595", nome:"ALHO DESID GRANULADO 8/16 10KG" },
-    { codigo:"PA000596", nome:"ALHO PORO 10KG" },
-    { codigo:"PA000597", nome:"BICARBONATO SODIO EXTRA FINO25" },
-    { codigo:"PA000598", nome:"BICARBONATO AMONIA 25KG" },
-    { codigo:"PA000599", nome:"CAMOMILA EM FLOR NACIONAL 10KG" },
-    { codigo:"PA000600", nome:"CAMOMILA FLOR NAC. EXTRA 10KG" },
-    { codigo:"PA000601", nome:"CANELA JAVA 25CM 20KG" },
-    { codigo:"PA000602", nome:"USAR O CODIGO PA000638" },
-    { codigo:"PA000603", nome:"CANELA JAWA INTEIRA 10KG" },
-    { codigo:"PA000604", nome:"CEBOLINHA VERDE DES EXTRA 10KG" },
-    { codigo:"PA000605", nome:"CEBOLINHA VERDE MOIDA 10KG" },
-    { codigo:"PA000606", nome:"CHEIRO VERDE 5KG" },
-    { codigo:"PA000607", nome:"CHIMICHURRI S/PIM MOIDO BELL10" },
-    { codigo:"PA000608", nome:"COENTRO EM GRAO ARGENTINO 10KG" },
-    { codigo:"PA000609", nome:"COMINHO EM GRAO 99 10 KG" },
-    { codigo:"PA000610", nome:"ERVA DOCE EGIPCIA 10KG" },
-    { codigo:"PA000611", nome:"HIBISCO TRITURADO 25KG" },
-    { codigo:"PA000612", nome:"MOSTARDA AMARELA CANADENSE25KG" },
-    { codigo:"PA000613", nome:"PIMENTA REINO PRETA GRAO B1 25" },
-    { codigo:"PA000614", nome:"PIMENTA PRETA XOXA QUEBRAD 30K" },
-    { codigo:"PA000615", nome:"PO DE PIMENTA PRETA 25KG" },
-    { codigo:"PA000616", nome:"SAL GROSSO  25KG" },
-    { codigo:"PA000617", nome:"SAL MARINHO 25KG" },
-    { codigo:"PA000618", nome:"SAL MICRONIZADO 25KG" },
-    { codigo:"PA000619", nome:"SAL REFINADO 25KG" },
-    { codigo:"PA000620", nome:"SALSA CEBOLA E ALHO DESIDR 05 KG" },
-    { codigo:"PA000621", nome:"SALSA CEBOLINHA E ALHO 05 KG" },
-    { codigo:"PA000622", nome:"FOLHAS DE SENE 10KG" },
-    { codigo:"PA000623", nome:"TEMPERO GOURMET 05 KG" },
-    { codigo:"PA000624", nome:"VINAGRETE PREMIUM 5KG" },
-    { codigo:"PA000625", nome:"FEIJAO BRANCO  50KG" },
-    { codigo:"PA000626", nome:"SEMOLA DE MILHO 25KG" },
-    { codigo:"PA000627", nome:"FUBA MIMOSO 25KG" },
-    { codigo:"PA000628", nome:"GERGELIM BRANCO  NACIONAL 25 KG" },
-    { codigo:"PA000629", nome:"GINKGO BILOBA 10KG" },
-    { codigo:"PA000630", nome:"GRAO DE BICO 12MM 25KG" },
-    { codigo:"PA000631", nome:"GRAO DE BICO 9MM 25 KG" },
-    { codigo:"PA000632", nome:"LINHACA DOURADA 25 KG" },
-    { codigo:"PA000633", nome:"LINHACA MARRON 25 KG" },
-    { codigo:"PA000634", nome:"SEMENTE DE CHIA 25 KG" },
-    { codigo:"PA000635", nome:"TRIGO P/KIBE MARROCOS 25KG" },
-    { codigo:"PA000637", nome:"ALHO DES AREIA 40/90 25KG" },
-    { codigo:"PA000638", nome:"CANELA JAWA 6CM A 10 KG" },
-    { codigo:"PA000639", nome:"CANELA JAWA 25 CM 20 KG" },
-    { codigo:"PA000640", nome:"CANELA JAWA INTEIRA 50KG" },
-    { codigo:"PA000641", nome:"REINOCHURRI S PIME S COLOR10K" },
-    { codigo:"PA000642", nome:"CONDIMENTO PREPARADO PIMENTA PRETA 95% 10 KG" },
-    { codigo:"PA000643", nome:"DRY RUB SUINO 10KG" },
-    { codigo:"PA000644", nome:"ERVILHA PARTIDA 25KG" },
-    { codigo:"PA000645", nome:"FARINHA DE AVEIA INTEGRAL 25KG" },
-    { codigo:"PA000646", nome:"LEMON PEPPER GLU 5 KG" },
-    { codigo:"PA000647", nome:"NOZ MOSCADA BOLA SS 10KG" },
-    { codigo:"PA000648", nome:"USAR PA000526" },
-    { codigo:"PA000649", nome:"PIMENTA PRETA XOXA QUEBRAD 30K" },
-    { codigo:"PA000650", nome:"UTILIZAR O CODIGO   PA000319" },
-    { codigo:"PA000651", nome:"SAL MICRONIZADO COM IODO 25 KG" },
-    { codigo:"PA000652", nome:"SAL PARRILLA ALECRIM 10KG" },
-    { codigo:"PA000653", nome:"SALSA CEBOLINHA E ALHO 10 KG" },
-    { codigo:"PA000654", nome:"SALVIA  FOLHA 20 KG" },
-    { codigo:"PA000655", nome:"TEMPERO ANA MARIA CARNE BELL10" },
-    { codigo:"PA000656", nome:"TEMPERO MINEIRO FLOCOS 5 KG" },
-    { codigo:"PA000657", nome:"TEMPERO PEGA ESPOSA BELL 10 KG" },
-    { codigo:"PA000658", nome:"VINAGRETE BELL 10KG" },
-    { codigo:"PA000660", nome:"CANELA MOIDA PREMIUM IMPORT25K" },
-    { codigo:"PA000661", nome:"TRIBULLUS TERRESTRIS MOIDO 20" },
-    { codigo:"PA000662", nome:"PIMENTAO VERMELHO FLOC 5X5 20K" },
-    { codigo:"PA000663", nome:"BACON DESIDRATADO 05 KG" },
-    { codigo:"PA000664", nome:"CONDIMENTO PREPARADO FUMACA PO 25 KG" },
-    { codigo:"PA000665", nome:"CALDO DE CAMARAO 05KG" },
-    { codigo:"PA000666", nome:"TEMPERO DO EDU BELL 05 KG" },
-    { codigo:"PA000667", nome:"FARINHA BANANA VERDE 05 KG" },
-    { codigo:"PA000668", nome:"TEMPERO IDEAL PARA PEIXES 05 K" },
-    { codigo:"PA000669", nome:"LEMON PEPPER BELL 05 KG" },
-    { codigo:"PA000670", nome:"TEMPERO OLIVER  5 KG" },
-    { codigo:"PA000671", nome:"TRIBULLUS TERRESTRIS 05 KG" },
-    { codigo:"PA000673", nome:"REINOCHURRI BARBECUE BELL 05 K" },
-    { codigo:"PA000674", nome:"CURRY BELL 05 KG" },
-    { codigo:"PA000675", nome:"CONDIMENTO PREPARADO DE PIMENTA PRETA 90% BELL 05 KG" },
-    { codigo:"PA000676", nome:"TEMPERO COMPLETO FIT  05KG" },
-    { codigo:"PA000677", nome:"CEBOLA GRANULADA MEDIA 25 KG" },
-    { codigo:"PA000678", nome:"CREME DE CEBOLA BELL 05 KG" },
-    { codigo:"PA000679", nome:"TEMPERO BAIANO S/ PIMENT 05 KG" },
-    { codigo:"PA000680", nome:"FARINHA LINHACA DOURADA 05 KG" },
-    { codigo:"PA000681", nome:"GUARANA MOIDO 05 KG" },
-    { codigo:"PA000682", nome:"FARINHA DE MACA PERUANA 05 KG" },
-    { codigo:"PA000683", nome:"ALHO FRITO 20 KG" },
-    { codigo:"PA000684", nome:"PO DE PIMENTA PRETA 30 KG" },
-    { codigo:"PA000685", nome:"ESTRAGAO 02 KG" },
-    { codigo:"PA000686", nome:"USAR O CODIGO PA000275" },
-    { codigo:"PA000687", nome:"LINHACA DOURADA 50 KG" },
-    { codigo:"PA000688", nome:"CONDIMENTO PREPARADO DE NOZ MOSCADA 90% 05 KG" },
-    { codigo:"PA000689", nome:"TEMPERO ANA MARIA BELL 05 KG" },
-    { codigo:"PA000690", nome:"TEMPERO PEGA MARIDO BELL 05 KG" },
-    { codigo:"PA000691", nome:"TEMPERO PEGA ESPOSA BELL 05 KG" },
-    { codigo:"PA000692", nome:"TEMPERO PARA CHURRASCO 05 KG" },
-    { codigo:"PA000693", nome:"FARINHA DE MARACUJA 05 KG" },
-    { codigo:"PA000694", nome:"CALDO DE CHURRASCO 05 KG" },
-    { codigo:"PA000695", nome:"FARINHA  AVEIA INTEGRAL 10KG" },
-    { codigo:"PA000696", nome:"VINAGRETE BELL 05KG" },
-    { codigo:"PA000697", nome:"PIMENTA PRETA FECUL. GROSSA 25" },
-    { codigo:"PA000698", nome:"CONDIMENTO PREPARADO DE PIMENTA PRETA 95 BELL 05 KG" },
-    { codigo:"PA000699", nome:"SAL PARRILLA MIX 5 KG" },
-    { codigo:"PA000700", nome:"SAL PARRILLA MIX 5 KG" },
-    { codigo:"PA000701", nome:"GUARANA MOIDO 25 KG" },
-    { codigo:"PA000702", nome:"REINOCHURRI BARBECUE BELL 10K" },
-    { codigo:"PA000703", nome:"OREGANO TURCO 10 KG" },
-    { codigo:"PA000704", nome:"REALCE SABOR ALHO 05 KG" },
-    { codigo:"PA000705", nome:"TEMPERO P/ FEIJAO BELL 05 KG" },
-    { codigo:"PA000707", nome:"ALHO DESIDRATADO PO CHINES 10K" },
-    { codigo:"PA000708", nome:"ALHO GRANULADO 26/40 10KG" },
-    { codigo:"PA000709", nome:"HORTELA EGIPCIA PREMIUM 10 KG" },
-    { codigo:"PA000710", nome:"ALECRIM PREMIUM 10 KG" },
-    { codigo:"PA000711", nome:"MANJERICAO FLOCOS PREMIUM 10 K" },
-    { codigo:"PA000712", nome:"TOMILHO PREMIUM 10 KG" },
-    { codigo:"PA000713", nome:"MANJERONA FLOCOS PREMIUM 10 KG" },
-    { codigo:"PA000714", nome:"PIMENTAO VERMELHO FLOC 5X5 10K" },
-    { codigo:"PA000715", nome:"CENOURA FLOCOS 5X5 10 KG" },
-    { codigo:"PA000716", nome:"TOMATE  FLOCOS 5X5 10 KG" },
-    { codigo:"PA000717", nome:"ZAHTAR 05 KG" },
-    { codigo:"PA000718", nome:"PSYLLIUM 95 % 10 KG" },
-    { codigo:"PA000719", nome:"CEBOLA CRISPY FRITA  15 KG" },
-    { codigo:"PA000720", nome:"MOSTARDA MARROM CANADENSE10KG" },
-    { codigo:"PA000721", nome:"MOSTARDA MARROM CANADENSE25KG" },
-    { codigo:"PA000722", nome:"CREME DE CEBOLA PREMIUM 05 KG" },
-    { codigo:"PA000723", nome:"FUBA ITALIANO 25 KG" },
-    { codigo:"PA000724", nome:"FEIJAO BRANCO  25 KG" },
-    { codigo:"PA000725", nome:"LENTILHA  45,36 KG" },
-    { codigo:"PA000726", nome:"PIMENTA PRETA MOIDA PREMIUM 05 KG" },
-    { codigo:"PA000727", nome:"CONDIMENTO PREPARADO PIMENTA BRANCA 95% 05 KG" },
-    { codigo:"PA000728", nome:"USAR PA000283" },
-    { codigo:"PA000729", nome:"PIMENTA MALAGUETA MOIDA 05 KG" },
-    { codigo:"PA000730", nome:"FEIJÃO BRANCO 10KG" },
-    { codigo:"PA000731", nome:"LENTILHA 10KG" },
-    { codigo:"PA000732", nome:"HIBISCO  10KG" },
-    { codigo:"PA000733", nome:"ERVILHA PARTIDA 10KG" },
-    { codigo:"PA000734", nome:"CASCA DE CACAU 50 KG" },
-    { codigo:"PA000735", nome:"SAL TP PARRILLA C/IODO ZIZO 05 KG" },
-    { codigo:"PA000736", nome:"FARINHA DE UVA 05 KG" },
-    { codigo:"PA000737", nome:"CONDIMENTO PREPARADO DE PAPRICA DEFUMADA  BELL 10 KG" },
-    { codigo:"PA000738", nome:"PAPRICA DOCE BELL 10 KG" },
-    { codigo:"PA000739", nome:"CONDIMENTO PREPARADO DE PAPRICA PICANTE BELL 10 KG" },
-    { codigo:"PA000740", nome:"CONDIMENTO PREPARADO DE PAPRICA PICANTE DEFUMADA BELL 10 KG" },
-    { codigo:"PA000741", nome:"REINOCHURRI S/PIMENTA ZERO 05 KG" },
-    { codigo:"PA000742", nome:"LOURO SELECIONADO 10 KG" },
-    { codigo:"PA000743", nome:"CRAVO FLOR SELECIONADO 10 KG" },
-    { codigo:"PA000744", nome:"GRAO DE BICO 9MM 10 KG" },
-    { codigo:"PA000745", nome:"GRAO DE BICO 12 MM 10 KG" },
-    { codigo:"PA000746", nome:"LEMON PEPPER  ZERO 05 KG" },
-    { codigo:"PA000747", nome:"CONDIMENTO PREPARADO DE PAPRICA DEFUMADA ZERO 05 KG" },
-    { codigo:"PA000748", nome:"PAPRICA DOCE ZERO 05 KG" },
-    { codigo:"PA000749", nome:"TEMPERO EDU  ZERO 05 KG" },
-    { codigo:"PA000750", nome:"CONDIMENTO PREPARADO DE PAPRICA PICANTE ZERO 05 KG" },
-    { codigo:"PA000751", nome:"REINOCHURRI S/PIMENTA ZERO 05 KG" },
-    { codigo:"PA000752", nome:"TEMPERO ANA MARIA ZERO 05 KG" },
-    { codigo:"PA000753", nome:"REINOCHURRI DEFUMADO ZERO 05 KG" },
-    { codigo:"PA000754", nome:"TEMPERO BAIANO ZERO 05 KG" },
-    { codigo:"PA000755", nome:"COLORAU ESPECIAL ZERO 05 KG" },
-    { codigo:"PA000756", nome:"SALSA CEBOLA E ALHO ZERO 04 KG" },
-    { codigo:"PA000757", nome:"CALDO DE GALINHA ZERO 05 KG" },
-    { codigo:"PA000758", nome:"CONDIMENTO PREPARADO DE PIMENTA 95% ZERO 05 KG" },
-    { codigo:"PA000759", nome:"CREME DE CEBOLA  ZERO 05 KG" },
-    { codigo:"PA000760", nome:"CURRY ZERO 05 KG" },
-    { codigo:"PA000761", nome:"LIMAO E ERVAS FINAS ZERO 05 KG" },
-    { codigo:"PA000762", nome:"TEMPERO PEGA MARIDO ZERO 05 KG" },
-    { codigo:"PA000763", nome:"REINOCHURRI PICANTE ZERO 05 KG" },
-    { codigo:"PA000764", nome:"CONDIMENTO PREPARADO FUMACA PO ZERO 05 KG" },
-    { codigo:"PA000765", nome:"CONDIMENTO PREPARADO DE COMINHO ZERO 95 % 05 KG" },
-    { codigo:"PA000766", nome:"TEMPERO P/ FEIJAO ZERO 05 KG" },
-    { codigo:"PA000767", nome:"LEMON PEPPER FIT ZERO 05 KG" },
-    { codigo:"PA000768", nome:"CONDIMENTO PREPARADO DE PAPRICA PICANTE DEFUMADA ZERO 05 KG" },
-    { codigo:"PA000769", nome:"CALDO DE CARNE ZERO 05 KG" },
-    { codigo:"PA000770", nome:"TEMPERO DO CHEFE C/ PAPRICA ZERO 05 KG" },
-    { codigo:"PA000771", nome:"COLORAU PARAIBA ZERO 05 KG" },
-    { codigo:"PA000772", nome:"TEMPERO FIT FRANGO ZERO 05 KG" },
-    { codigo:"PA000773", nome:"CALDO DE BACON ZERO 05 KG" },
-    { codigo:"PA000774", nome:"REINOCHURRI S/PIMENTA COM ALHO FRITO ZERO 05 KG" },
-    { codigo:"PA000775", nome:"CHIMICHURRI COM LIMAO ZERO 05 KG" },
-    { codigo:"PA000776", nome:"REINOCHURRI EM FLOCOS FIT ZERO 05 KG" },
-    { codigo:"PA000777", nome:"TEMPERA TUDO ZERO 05 KG" },
-    { codigo:"PA000778", nome:"VINAGRETE ZERO 05 KG" },
-    { codigo:"PA000779", nome:"TEMPERO DO CHEFE C/ CURRY ZERO 05 KG" },
-    { codigo:"PA000780", nome:"TEMPERO GOURMET  ZERO 05 KG" },
-    { codigo:"PA000781", nome:"TEMPERO PEGA ESPOSA  ZERO 05 KG" },
-    { codigo:"PA000782", nome:"DRY RUB COMPLETO ZERO 05 KG" },
-    { codigo:"PA000783", nome:"TEMPERO MINEIRO MOIDO ZERO 05 KG" },
-    { codigo:"PA000784", nome:"ORANGE PEPPER ZERO 05 KG" },
-    { codigo:"PA000785", nome:"AMACIANTE DE CARNE ZERO 05 KG" },
-    { codigo:"PA000786", nome:"CHEIRO VERDE ZERO 02 KG" },
-    { codigo:"PA000787", nome:"COENTRO MOIDO ZERO 05 KG" },
-    { codigo:"PA000788", nome:"CRAVO MOIDO PREMIUM ZERO 05 KG" },
-    { codigo:"PA000789", nome:"CONDIMENTO PREPARADO DE NOZ MOSCADA MOIDA ZERO 05 KG" },
-    { codigo:"PA000790", nome:"SAL PARRILLA DEFUMADA ZERO 05 KG" },
-    { codigo:"PA000791", nome:"TEMPERO COMPLETO FIT ZERO 05 KG" },
-    { codigo:"PA000792", nome:"ERVAS FINAS ZERO 04 KG" },
-    { codigo:"PA000793", nome:"TEMPERO FAMOSO  FLOCOS FIT ZERO 05 KG" },
-    { codigo:"PA000794", nome:"TEMPERO FAMOSO FIT ZERO 05 KG" },
-    { codigo:"PA000795", nome:"TEMPERO OLIVER ZERO 05 KG" },
-    { codigo:"PA000796", nome:"TEMPERO TARTARO ZERO 05 KG" },
-    { codigo:"PA000798", nome:"TEMPERO PEGA MARIDO FIT ZERO 05 KG" },
-    { codigo:"PA000799", nome:"COMINHO COM PIMENTA ZERO 05 KG" },
-    { codigo:"PA000800", nome:"TEMPERO CONQ SOGRA ZERO 05 KG" },
-    { codigo:"PA000801", nome:"SALSA CEBOLA E BACON ZERO 04 KG" },
-    { codigo:"PA000802", nome:"TEMPERO BIFE ACEBOLADO ZERO 05 KG" },
-    { codigo:"PA000803", nome:"CONDIMENTO PREPARADO DE LOURO 95 % ZERO 05 KG" },
-    { codigo:"PA000804", nome:"TEMPERO SABORES DO NORDESTE ZERO 05 KG" },
-    { codigo:"PA000805", nome:"SALSA CEBOLINHA E ALHO ZERO 04 KG" },
-    { codigo:"PA000806", nome:"CHIMICHURRI PICANTE FIT ZERO 05 KG" },
-    { codigo:"PA000807", nome:"TEMPERO DA FAZENDA ZERO 05 KG" },
-    { codigo:"PA000808", nome:"TEMP P/CHURRASCO S/PIMENTA ZERO 05 KG" },
-    { codigo:"PA000809", nome:"ZAHTAR ZERO 05 KG" },
-    { codigo:"PA000810", nome:"CALDO DE LEGUMES ZERO 05 KG" },
-    { codigo:"PA000811", nome:"CALDO DE PEIXE ZERO 05 KG" },
-    { codigo:"PA000812", nome:"CONDIMENTO PREPARADO PIMENTA BRANCA 95% ZERO 05 KG" },
-    { codigo:"PA000813", nome:"PIMENTA CALABRESA MOIDA ZERO 05 KG" },
-    { codigo:"PA000814", nome:"SAL PARRILLA C/ CHIMI PICANTE ZERO 05 KG" },
-    { codigo:"PA000815", nome:"REINOCHURRI BARBECUE ZERO 05 KG" },
-    { codigo:"PA000816", nome:"TEMPERO DE FAMILIA ZERO 05 KG" },
-    { codigo:"PA000817", nome:"LIMAO E OREGANO ZERO 05 KG" },
-    { codigo:"PA000818", nome:"TEMPERO SIRIO BA-HAR ZERO 05 KG" },
-    { codigo:"PA000819", nome:"MOSTARDA MOIDA ZERO 05 KG" },
-    { codigo:"PA000820", nome:"SAL PARRILLA COM ALHO FRITO ZERO 05 KG" },
-    { codigo:"PA000821", nome:"CHILLI MEXICANO ZERO 05 KG" },
-    { codigo:"PA000822", nome:"PIMENTA JAMAICA MOIDA ZERO 05 KG" },
-    { codigo:"PA000823", nome:"SAL PARRILLA ERVAS FINAS ZERO 05 KG" },
-    { codigo:"PA000825", nome:"TEMPERO ANA MARIA FLOCOS FIT ZERO 05 KG" },
-    { codigo:"PA000826", nome:"TEMPERO BEEF RIBS ZERO 05 KG" },
-    { codigo:"PA000827", nome:"TEMPERO PEGA ESPOSA FIT ZERO 05 KG" },
-    { codigo:"PA000828", nome:"TEMPERO ANA MARIA FIT ZERO 05 KG" },
-    { codigo:"PA000829", nome:"CONDIMENTO PREPARADO DE PAPRICA DEFUMADA  BELL  05 KG" },
-    { codigo:"PA000830", nome:"CONDIMENTO PREPARADO DE PAPRICA PICANTE BELL 05 KG" },
-    { codigo:"PA000831", nome:"TEMPERO IDEAL PARA AVES 05 KG" },
-    { codigo:"PA000832", nome:"CALDO DE VEGETAIS 05 KG" },
-    { codigo:"PA000833", nome:"CEBOLA TIRAS KIMBBLED 12KG" },
-    { codigo:"PA000834", nome:"PAPRICA DOCE BELL 05 KG" },
-    { codigo:"PA000835", nome:"GERGELIM INDIANO 25 KG" },
-    { codigo:"PA000836", nome:"CEBOLA EM PO CHINESA 20 KG" },
-    { codigo:"PA000837", nome:"PIMENTA ROSA 9 KG" },
-    { codigo:"PA000838", nome:"TEMPERO PARA CORDEIRO 05 KG" },
-    { codigo:"PA000839", nome:"TEMPERO PARA CORDEIRO 10 KG" },
-    { codigo:"PA000840", nome:"TEMPERO ORIENTAL AGRIDOCE 10 KG" },
-    { codigo:"PA000841", nome:"TEMPERO ORIENTAL AGRIDOCE 05 KG" },
-    { codigo:"PA000842", nome:"TEMPERO DO EDU FIT 05 KG" },
-    { codigo:"PA000843", nome:"TEMPERO PARA MOQUECA CAPIXABA 05 KG" },
-    { codigo:"PA000844", nome:"TEMPERO PARA MOQUECA CAPIXABA 10 KG" },
-    { codigo:"PA000845", nome:"BICARBONATO SODIO IMPORTADO 25 KG" },
-    { codigo:"PA000846", nome:"SEMENTE DE CHIA PREMIUM 10 KG" },
-    { codigo:"PA000847", nome:"SEMENTE DE CHIA PREMIUM 25 KG" },
-    { codigo:"PA000848", nome:"TEMPERO PARA BACALHAU 10 KG" },
-    { codigo:"PA000849", nome:"HIBISCO 20KG" },
-    { codigo:"PA000850", nome:"SEGREDOS DO MUNDO CANADA 10 KG" },
-    { codigo:"PA000851", nome:"SEGREDOS DO MUNDO CANADA  05 KG" },
-    { codigo:"PA000852", nome:"FUMACA PO PREMIUM 10 KG" },
-    { codigo:"PA000853", nome:"ALHO DESID. AREIA 40/60 10 KG" },
-    { codigo:"PA000854", nome:"TOMATE  FLOCOS 5X5 20 KG" },
-    { codigo:"PA000855", nome:"PIMENTAO VERDE FLOCOS 5X5 10 KG" },
-    { codigo:"PA000856", nome:"CEBOLA EM PO 10 KG" },
-    { codigo:"PA000857", nome:"TEMPERO MINEIRO FLOCOS 25 KG" },
-    { codigo:"PA000858", nome:"MOSTARDA AMARELA CANADENSE 45,36 KG" }
-];
-
-const CHAVE_SOLICITACOES_ALTERACOES = "solicitacoesAlteracoesAdmin";
-const CHAVE_PRODUTOS_EXTRAS_APROVADOS = "produtosExtrasAprovados";
-
-let produtosCadastrados = PRODUTOS_CADASTRADOS_HTML.map(function(item){
-    return {
-        codigo: String(item.codigo || "").trim(),
-        nome: String(item.nome || "").trim()
-    };
-});
-
-try{
-    const extrasIniciais = JSON.parse(localStorage.getItem(CHAVE_PRODUTOS_EXTRAS_APROVADOS));
-    if(Array.isArray(extrasIniciais)){
-        extrasIniciais.forEach(function(extra){
-            if(extra && extra.nome && !produtosCadastrados.some(function(p){
-                return (p.codigo||"").toLowerCase()===String(extra.codigo||"").toLowerCase() || p.nome.toLowerCase()===String(extra.nome).toLowerCase();
-            })){
-                produtosCadastrados.push({codigo:String(extra.codigo||"").trim(),nome:String(extra.nome).trim()});
-            }
-        });
-    }
-}catch(e){}
-
-// ======================================================
-// SALVAR DADOS
-// ======================================================
-
-async function salvarDados(){
+async function iniciarSincronizacaoCentralizada(){
     try{
-        // Cópia local para manter o sistema funcional durante a migração.
-        localStorage.setItem("estoqueContainers", JSON.stringify(estoque));
-        localStorage.setItem("historicoMovimentacoes", JSON.stringify(historico));
-
-        // Banco central: qualquer alteração passa a ser publicada no Firebase.
-        if(firebaseAuth.currentUser){
-            await Promise.all([
-                firebaseDB.ref("estoque").set(estoque),
-                firebaseDB.ref("historico").set(historico)
-            ]);
-            console.log("☁️ Dados salvos no Firebase.");
-        }
-    }catch(erro){
-        console.error("Erro ao salvar no Firebase/localStorage:", erro);
-        alert("Não foi possível salvar no banco. Verifique sua conexão e as regras do Firebase.");
+        await carregarDadosFirebase();
+        ativarListenersFirebase();
+    }catch(e){
+        console.error("Falha ao iniciar sincronização centralizada:", e);
+        mostrarErroLogin?.("Login realizado, mas não foi possível carregar os dados do Firebase.");
     }
 }
-
-
-// ======================================================
-// APROVAÇÕES DO ADMINISTRADOR
-// ======================================================
-// Alterações feitas por usuários comuns ficam pendentes até
-// o administrador aprovar. A fila usa localStorage para permitir
-// atualização entre abas do mesmo navegador/origem.
-
-
-function carregarSolicitacoesAlteracoes(){
-    const lista = JSON.parse(localStorage.getItem(CHAVE_SOLICITACOES_ALTERACOES));
-    return Array.isArray(lista) ? lista : [];
-}
-
-function salvarSolicitacoesAlteracoes(lista){
-    localStorage.setItem(CHAVE_SOLICITACOES_ALTERACOES, JSON.stringify(lista));
-}
-
-function carregarProdutosExtrasAprovados(){
-    const lista = JSON.parse(localStorage.getItem(CHAVE_PRODUTOS_EXTRAS_APROVADOS));
-    return Array.isArray(lista) ? lista : [];
-}
-
-function salvarProdutosExtrasAprovados(lista){
-    localStorage.setItem(CHAVE_PRODUTOS_EXTRAS_APROVADOS, JSON.stringify(lista));
-}
-
-function gerarIdEstoque(){
-    return "EST-" + Date.now() + "-" + Math.random().toString(36).slice(2,8);
-}
-
-function garantirIdsEstoque(){
-    let alterado = false;
-    estoque.forEach(function(item){
-        if(!item.id){
-            item.id = gerarIdEstoque();
-            alterado = true;
-        }
-    });
-    if(alterado){
-        localStorage.setItem("estoqueContainers", JSON.stringify(estoque));
-    }
-}
-
-function operadorAtual(){
-    return usuarioLogadoAtual ? usuarioLogadoAtual.usuario : "Usuário não identificado";
-}
-
-function usuarioEhAdmin(){
-    return !!(usuarioLogadoAtual && usuarioLogadoAtual.tipo === "admin");
-}
-
-function solicitarAlteracaoAdmin(tipo, dados, descricao){
-    const solicitacoes = carregarSolicitacoesAlteracoes();
-    solicitacoes.push({
-        id: Date.now() + Math.floor(Math.random()*1000),
-        tipo: tipo,
-        descricao: descricao || "Alteração solicitada.",
-        dados: dados,
-        operador: operadorAtual(),
-        data: new Date().toISOString(),
-        status: "pendente"
-    });
-    salvarSolicitacoesAlteracoes(solicitacoes);
-    try{ localStorage.setItem("_sinalAtualizacaoAdmin", String(Date.now())); }catch(e){}
-    renderizarSolicitacoesAlteracoesAdmin();
-}
-
-function escaparHtmlAlteracao(texto){
-    return String(texto == null ? "" : texto)
-        .replace(/&/g,"&amp;")
-        .replace(/</g,"&lt;")
-        .replace(/>/g,"&gt;")
-        .replace(/"/g,"&quot;")
-        .replace(/'/g,"&#039;");
-}
-
-function formatarDataAlteracaoAdmin(iso){
-    const data = new Date(iso);
-    if(Number.isNaN(data.getTime())) return iso || "";
-    return data.toLocaleString("pt-BR");
-}
-
-function textoTipoAlteracao(tipo){
-    const mapa={
-        ENTRADA:"📥 Nova entrada no container",
-        ALTERACAO:"✏️ Alteração de container",
-        EXCLUSAO:"🗑️ Exclusão de item do container",
-        ZERAR_CONTAINER:"🧹 Zerar container",
-        NOVO_PRODUTO:"🏷️ Solicitação de novo produto",
-        LIMPAR_HISTORICO:"🧾 Limpeza do histórico"
-    };
-    return mapa[tipo] || "📋 Alteração";
-}
-
-function resumoSolicitacaoAlteracao(sol){
-    const dados=sol.dados || {};
-    if(sol.tipo === "NOVO_PRODUTO") return "Código: <strong>"+escaparHtmlAlteracao(dados.codigo)+"</strong> — "+escaparHtmlAlteracao(dados.nome);
-    if(sol.tipo === "ZERAR_CONTAINER") return "Container <strong>"+escaparHtmlAlteracao(dados.num)+"</strong> — "+((dados.itens || []).length)+" item(ns) serão removidos.";
-    if(sol.tipo === "LIMPAR_HISTORICO") return "Solicitado pelo operador: apagar o histórico de movimentações.";
-    const item=dados.novoItem || dados.item || {};
-    return "Container <strong>"+escaparHtmlAlteracao(item.num)+"</strong> — "+escaparHtmlAlteracao(item.prod || "")+(item.qtd != null ? " — Qtd: "+escaparHtmlAlteracao(item.qtd) : "");
-}
-
-function aplicarAlteracaoAprovada(sol){
-    const dados=sol.dados || {};
-
-    if(sol.tipo === "ENTRADA"){
-        const novoItem={...dados.item};
-        if(!novoItem.id) novoItem.id=gerarIdEstoque();
-        estoque.push(novoItem);
-        registrarMovimentacao("ENTRADA", novoItem, "Entrada aprovada pelo administrador. Operador: "+sol.operador);
-        return "Nova entrada aprovada e adicionada ao estoque.";
-    }
-
-    if(sol.tipo === "ALTERACAO"){
-        const indice=estoque.findIndex(function(item){ return item.id === dados.itemId; });
-        if(indice < 0) throw new Error("O item do estoque não foi encontrado. A alteração não foi aplicada.");
-        const novoItem={...dados.novoItem, id:dados.itemId};
-        const antigo=estoque[indice];
-        estoque[indice]=novoItem;
-        registrarMovimentacao("ALTERAÇÃO", novoItem, "Alteração aprovada pelo administrador. Operador: "+sol.operador+". Quantidade anterior: "+antigo.qtd+", Peso anterior: "+antigo.peso+" KG.");
-        return "Alteração do container aprovada.";
-    }
-
-    if(sol.tipo === "EXCLUSAO"){
-        const indice=estoque.findIndex(function(item){ return item.id === dados.itemId; });
-        if(indice < 0) throw new Error("O item do estoque não foi encontrado. A exclusão não foi aplicada.");
-        const item=estoque[indice];
-        estoque.splice(indice,1);
-        registrarMovimentacao("EXCLUSÃO", item, "Exclusão aprovada pelo administrador. Operador: "+sol.operador);
-        return "Exclusão aprovada.";
-    }
-
-    if(sol.tipo === "ZERAR_CONTAINER"){
-        const num=Number(dados.num);
-        const itensAtuais=estoque.filter(function(item){ return Number(item.num)===num; });
-        if(itensAtuais.length===0) return "O container já estava vazio.";
-        itensAtuais.forEach(function(item){
-            registrarMovimentacao("CONTAINER ZERADO", item, "Container zerado com aprovação do administrador. Operador: "+sol.operador);
-        });
-        estoque=estoque.filter(function(item){ return Number(item.num)!==num; });
-        return "Container "+num+" zerado com sucesso.";
-    }
-
-    if(sol.tipo === "NOVO_PRODUTO"){
-        const codigo=String(dados.codigo || "").trim();
-        const nome=String(dados.nome || "").trim();
-        if(!nome) throw new Error("Nome do produto inválido.");
-        if(produtosCadastrados.some(function(p){ return (p.codigo||"").toLowerCase()===codigo.toLowerCase() || p.nome.toLowerCase()===nome.toLowerCase(); })) throw new Error("Este produto já existe na lista.");
-        const extras=carregarProdutosExtrasAprovados();
-        const novo={codigo:codigo,nome:nome};
-        extras.push(novo);
-        salvarProdutosExtrasAprovados(extras);
-        produtosCadastrados.push(novo);
-        atualizarListaProdutos();
-        return "Novo produto aprovado e incluído na lista desta instalação.";
-    }
-
-    if(sol.tipo === "LIMPAR_HISTORICO"){
-        historico=[];
-        localStorage.setItem("historicoMovimentacoes", JSON.stringify(historico));
-        return "Histórico limpo com aprovação do administrador.";
-    }
-
-    throw new Error("Tipo de alteração desconhecido.");
-}
-
-function aprovarAlteracaoAdmin(id){
-    if(!usuarioEhAdmin()){ alert("Apenas o administrador pode aprovar alterações."); return; }
-    const lista=carregarSolicitacoesAlteracoes();
-    const sol=lista.find(function(item){ return item.id===id && item.status==="pendente"; });
-    if(!sol)return;
-    try{
-        const mensagem=aplicarAlteracaoAprovada(sol);
-        sol.status="aprovada";
-        sol.atendidoPor=usuarioLogadoAtual.usuario;
-        sol.atendidoEm=new Date().toISOString();
-        salvarSolicitacoesAlteracoes(lista);
-        salvarDados();
-        mostrarEstoque();
-        mostrarHistorico();
-        renderizarSolicitacoesAlteracoesAdmin();
-        alert("✅ "+mensagem);
-    }catch(erro){
-        alert("Não foi possível aprovar a alteração.\n\n"+erro.message);
-    }
-}
-
-function recusarAlteracaoAdmin(id){
-    if(!usuarioEhAdmin()){ alert("Apenas o administrador pode recusar alterações."); return; }
-    const lista=carregarSolicitacoesAlteracoes();
-    const sol=lista.find(function(item){ return item.id===id && item.status==="pendente"; });
-    if(!sol)return;
-    if(!confirm("Recusar esta alteração solicitada por "+sol.operador+"?")) return;
-    sol.status="recusada";
-    sol.atendidoPor=usuarioLogadoAtual.usuario;
-    sol.atendidoEm=new Date().toISOString();
-    salvarSolicitacoesAlteracoes(lista);
-    renderizarSolicitacoesAlteracoesAdmin();
-}
-
-function renderizarSolicitacoesAlteracoesAdmin(){
-    const area=document.getElementById("lista-alteracoes-admin");
-    const contador=document.getElementById("contador-alteracoes-admin");
-    if(!area)return;
-    const pendentes=carregarSolicitacoesAlteracoes().filter(function(item){ return item.status==="pendente"; });
-    if(contador) contador.innerText=pendentes.length ? "("+pendentes.length+" pendente(s))" : "(nenhuma pendente)";
-    if(pendentes.length===0){
-        area.innerHTML='<div class="vazio" style="margin-top:10px;">✅ Nenhuma alteração aguardando validação.</div>';
-        atualizarIndicadorAdmin();
-        return;
-    }
-    area.innerHTML=pendentes.map(function(sol){
-        return '<div class="produto-item" style="padding-right:0;margin-bottom:10px;background:var(--bg-painel-2);border:1px solid #f59e0b;border-radius:8px;padding:12px;">'+
-        '<strong>'+textoTipoAlteracao(sol.tipo)+'</strong><br>'+
-        '<span style="font-size:11.5px;color:var(--texto-fraco);">👤 Operador: '+escaparHtmlAlteracao(sol.operador)+' · 🕒 '+formatarDataAlteracaoAdmin(sol.data)+'</span><br>'+
-        '<span style="font-size:12px;">'+resumoSolicitacaoAlteracao(sol)+'</span>'+
-        (sol.descricao ? '<br><span style="font-size:12px;color:var(--texto-fraco);">📝 '+escaparHtmlAlteracao(sol.descricao)+'</span>' : '')+
-        '<div class="container-botoes" style="margin-top:10px;">'+
-        '<button type="button" class="btn-salvar" onclick="aprovarAlteracaoAdmin('+sol.id+')">✅ Aprovar</button>'+
-        '<button type="button" class="btn-limpar" onclick="recusarAlteracaoAdmin('+sol.id+')">❌ Recusar</button>'+
-        '</div></div>';
-    }).join("");
-    atualizarIndicadorAdmin();
-}
-
-function atualizarIndicadorAdmin(){
-    const botao=document.getElementById("btn-abrir-painel-admin");
-    if(!botao || !usuarioEhAdmin())return;
-    const acessos=carregarSolicitacoesAcesso().filter(function(item){ return item.status==="pendente"; }).length;
-    const alteracoes=carregarSolicitacoesAlteracoes().filter(function(item){ return item.status==="pendente"; }).length;
-    const painel=document.getElementById("painel-admin-usuarios");
-    botao.innerText = (acessos+alteracoes)>0 ? "👑 Usuários / 🔔 "+(acessos+alteracoes)+" pendente(s)" : (painel && painel.style.display !== "none" ? "🙈 Ocultar Usuários" : "👑 Usuários Cadastrados");
-}
-
-function solicitarNovoProdutoAdmin(){
-    if(usuarioEhAdmin()){
-        alert("O administrador pode editar diretamente a lista PRODUTOS_CADASTRADOS_HTML no código para produtos permanentes.");
-        return;
-    }
-    const codigo=prompt("Digite o código do novo produto:");
-    if(codigo===null)return;
-    const nome=prompt("Digite o nome do novo produto:");
-    if(nome===null)return;
-    const c=String(codigo).trim();
-    const n=String(nome).trim();
-    if(!n){ alert("Informe o nome do produto."); return; }
-    if(produtosCadastrados.some(function(p){ return (p.codigo||"").toLowerCase()===c.toLowerCase() || p.nome.toLowerCase()===n.toLowerCase(); })) { alert("Este produto já está cadastrado."); return; }
-    solicitarAlteracaoAdmin("NOVO_PRODUTO", {codigo:c,nome:n}, "Solicitação de inclusão de novo produto feita pelo operador.");
-    alert("📨 Solicitação enviada ao administrador para aprovação do novo produto.");
-}
-
-window.addEventListener("storage",function(evento){
-    if(evento.key===CHAVE_SOLICITACOES_ALTERACOES || evento.key==="solicitacoesAcessoAdmin" || evento.key==="_sinalAtualizacaoAdmin"){
-        if(usuarioEhAdmin()){
-            renderizarSolicitacoesAlteracoesAdmin();
-            renderizarSolicitacoesAcessoAdmin();
-        }
-    }
-});
-
-// ======================================================
-// DATA E HORA
-// ======================================================
-
-function preencherDataHora(){
-
-const agora =
-new Date();
-
-const ano =
-agora.getFullYear();
-
-const mes =
-String(agora.getMonth()+1)
-.padStart(2,"0");
-
-const dia =
-String(agora.getDate())
-.padStart(2,"0");
-
-
-document.getElementById("data").value =
-`${ano}-${mes}-${dia}`;
-
-}
-
-
-// ======================================================
-// CRIAR CONTAINERS
-// ======================================================
-
-function criarContainers(){
-
-const grade =
-document.getElementById("grade");
-
-grade.innerHTML="";
-
-for(let i=1;i<=60;i++){
-
-const numero =
-String(i).padStart(2,"0");
-
-const box =
-document.createElement("div");
-
-box.className="box";
-
-box.id="c-"+i;
-
-box.innerHTML=`
-
-<div class="titulo">
-📦 Container ${numero}
-</div>
-
-<div
-id="dados-${i}"
-class="lista-produtos"
->
-</div>
-
-`;
-
-grade.appendChild(box);
-
-}
-
-}
-
-
-// ======================================================
-// REGISTRAR MOVIMENTAÇÃO
-// ======================================================
-
-function registrarMovimentacao(
-tipo,
-item,
-detalhes=""
-){
-
-const movimento={
-
-id:Date.now(),
-
-data:item.data,
-
-hora:item.hora,
-
-tipo:tipo,
-
-num:item.num,
-
-fornecedor:item.fornecedor,
-
-nf:item.nf,
-
-prod:item.prod,
-
-lote:item.lote,
-
-qtd:item.qtd,
-
-peso:item.peso,
-
-detalhes:detalhes
-
-};
-
-
-historico.push(movimento);
-
-salvarDados();
-
-}
-
-
-// ======================================================
-// PRODUTOS CADASTRADOS (DATALIST DO FORMULÁRIO)
-// ======================================================
-
-function atualizarListaProdutos(){
-
-const lista =
-document.getElementById("lista-produtos");
-
-if(!lista)return;
-
-lista.innerHTML="";
-
-produtosCadastrados
-.slice()
-.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"))
-.forEach(function(produto){
-
-const option =
-document.createElement("option");
-
-option.value=produto.nome;
-
-lista.appendChild(option);
-
-});
-
-}
-
-
-function atualizarContadorProdutos(){
-
-const contador =
-document.getElementById("contador-produtos");
-
-if(!contador)return;
-
-contador.innerText=
-"Produtos cadastrados: "+
-produtosCadastrados.length;
-
-}
-
-
-// ======================================================
-// PREENCHER CÓDIGO AUTOMATICAMENTE (FORMULÁRIO DE ENTRADA)
-// ======================================================
-
-function preencherCodigoProduto(){
-
-const campoProd =
-document.getElementById("prod");
-
-const campoCodigo =
-document.getElementById("codigo");
-
-if(!campoProd || !campoCodigo)return;
-
-const nome =
-campoProd.value.trim();
-
-const encontrado =
-produtosCadastrados.find(
-function(item){
-
-return item.nome.toLowerCase() ===
-nome.toLowerCase();
-
-}
-);
-
-if(encontrado){
-
-campoCodigo.value =
-encontrado.codigo || "";
-
-}
-
-}
-
-
-// ======================================================
-// SUGESTÕES DE PRODUTOS AO DIGITAR (FORMULÁRIO DE ENTRADA)
-// ======================================================
-
-function mostrarSugestoesProduto(){
-
-const campo =
-document.getElementById("prod");
-
-const caixa =
-document.getElementById("sugestoes-produto");
-
-if(!campo || !caixa)return;
-
-const texto =
-campo.value.toLowerCase().trim();
-
-let lista =
-produtosCadastrados
-.slice()
-.sort(function(a,b){
-return a.nome.localeCompare(b.nome,"pt-BR");
-});
-
-if(texto !== ""){
-
-lista =
-lista.filter(function(item){
-
-return item.nome.toLowerCase().includes(texto);
-
-});
-
-}
-
-
-// Limita a exibição a 50 sugestões por vez para manter a
-// lista rápida mesmo com centenas/milhares de produtos.
-
-const totalEncontrado =
-lista.length;
-
-lista =
-lista.slice(0,50);
-
-
-caixa.innerHTML="";
-
-
-if(lista.length===0){
-
-const vazio =
-document.createElement("div");
-
-vazio.className=
-"sugestao-item";
-
-vazio.style.color=
-"#94a3b8";
-
-vazio.style.cursor=
-"default";
-
-vazio.innerText=
-"Nenhum produto encontrado.";
-
-caixa.appendChild(vazio);
-
-caixa.style.display=
-"block";
-
-return;
-
-}
-
-
-lista.forEach(function(item){
-
-const div =
-document.createElement("div");
-
-div.className=
-"sugestao-item";
-
-div.innerText=
-(item.codigo ? "["+item.codigo+"] " : "")+
-item.nome;
-
-div.onmousedown=
-function(){
-
-selecionarProdutoSugestao(item.nome,item.codigo);
-
-};
-
-caixa.appendChild(div);
-
-});
-
-
-if(totalEncontrado > 50){
-
-const aviso =
-document.createElement("div");
-
-aviso.className=
-"sugestao-item";
-
-aviso.style.color=
-"#94a3b8";
-
-aviso.style.cursor=
-"default";
-
-aviso.innerText=
-"+ "+(totalEncontrado-50)+" produto(s). Continue digitando para refinar.";
-
-caixa.appendChild(aviso);
-
-}
-
-
-caixa.style.display=
-"block";
-
-}
-
-
-function esconderSugestoesProduto(){
-
-setTimeout(function(){
-
-const caixa =
-document.getElementById("sugestoes-produto");
-
-if(caixa){
-
-caixa.style.display=
-"none";
-
-}
-
-},150);
-
-}
-
-
-function selecionarProdutoSugestao(nome,codigo){
-
-document.getElementById("prod").value=
-nome;
-
-document.getElementById("codigo").value=
-codigo || "";
-
-const caixa =
-document.getElementById("sugestoes-produto");
-
-if(caixa){
-
-caixa.style.display=
-"none";
-
-}
-
-}
-
-
-// ======================================================
-// PRODUTOS CADASTRADOS (LISTA NA SEÇÃO DE CADASTRO)
-// ======================================================
-
-function toggleListaProdutosCadastrados(){
-
-const lista =
-document.getElementById(
-"lista-produtos-cadastrados"
-);
-
-const titulo =
-document.getElementById(
-"titulo-lista-produtos"
-);
-
-const contador =
-document.getElementById(
-"contador-produtos"
-);
-
-const botao =
-document.getElementById(
-"btn-toggle-lista-produtos"
-);
-
-if(!lista || !titulo || !botao)return;
-
-const oculto =
-lista.style.display === "none";
-
-lista.style.display =
-oculto ? "block" : "none";
-
-titulo.style.display =
-oculto ? "block" : "none";
-
-if(contador){
-
-contador.style.display =
-oculto ? "inline-block" : "none";
-
-}
-
-botao.innerText =
-oculto
-?
-"🙈 Ocultar Produtos Cadastrados"
-:
-"👁️ Mostrar Produtos Cadastrados";
-
-}
-
-
-function renderizarProdutosCadastrados(){
-
-const area =
-document.getElementById(
-"lista-produtos-cadastrados"
-);
-
-if(!area)return;
-
-atualizarContadorProdutos();
-
-if(produtosCadastrados.length===0){
-
-area.innerHTML=
-`
-<div class="vazio">
-Nenhum produto cadastrado.
-</div>
-`;
-
-return;
-
-}
-
-
-const ordenados =
-produtosCadastrados
-.map(function(item,indiceOriginal){
-return {
-codigo:item.codigo,
-nome:item.nome,
-indiceOriginal:indiceOriginal
-};
-})
-.sort(function(a,b){
-return a.nome.localeCompare(b.nome,"pt-BR");
-});
-
-
-area.innerHTML=
-ordenados.map(function(item){
-
-return `
-<div class="produto-item">
-<strong>${item.codigo ? item.codigo : "sem código"}</strong>
-—
-${item.nome}
-<div class="acoes-item">
-<button
-class="btn-acao"
-onclick="removerProdutoCadastrado(${item.indiceOriginal})"
-title="Remover produto"
->
-🗑️
-</button>
-</div>
-</div>
-`;
-
-}).join("");
-
-}
-
-
-function cadastrarProduto(){
-    alert("O cadastro de produtos agora é feito diretamente no código HTML. Edite PRODUTOS_CADASTRADOS_HTML no início do script.");
-}
-
-
-function removerProdutoCadastrado(index){
-    alert("A lista de produtos é definida diretamente no código HTML e não pode ser alterada pela tela.");
-}
-
-
-function apagarTodosProdutos(){
-    alert("A lista de produtos é definida diretamente no código HTML e não pode ser apagada pela tela.");
-}
-
-
-function toggleImportarProdutos(){}
-
-
-function importarProdutos(){
-    alert("A importação pela tela foi desativada. Edite PRODUTOS_CADASTRADOS_HTML no código.");
-}
-
-
-// ======================================================
-// ENTRADA
-// ======================================================
-
-function adicionarItem(){
-
-const data = document.getElementById("data").value;
-const num = document.getElementById("num").value;
-const fornecedor = document.getElementById("fornecedor").value.trim();
-const nf = document.getElementById("nf").value.trim();
-const prod = document.getElementById("prod").value.trim();
-const codigo = document.getElementById("codigo").value.trim();
-const lote = document.getElementById("lote").value.trim();
-const qtd = document.getElementById("qtd").value;
-const peso = document.getElementById("peso").value;
-const editIndex = document.getElementById("edit-index").value;
-
-if(!data){ alert("Informe a data."); return; }
-if(!num){ alert("Informe o container."); return; }
-if(num < 1 || num > 60){ alert("O container deve estar entre 1 e 60."); return; }
-if(!fornecedor){ alert("Informe o fornecedor."); return; }
-if(!nf){ alert("Informe a Nota Fiscal."); return; }
-if(!prod){ alert("Informe o produto."); return; }
-if(!lote){ alert("Informe o lote."); return; }
-if(!qtd){ alert("Informe a quantidade."); return; }
-if(!peso){ alert("Informe o peso."); return; }
-
-    // ==========================================
-    // ENVIO DE DADOS PARA O GOOGLE SHEETS
-    // ==========================================
-    
-    // Organiza os dados com os mesmos nomes das colunas da Planilha
-    const dadosParaPlanilha = {
-        data: data,
-        container: num,
-        fornecedor: fornecedor,
-        nf: nf,
-        codigo: codigo,
-        produto: prod,
-        lote: lote,
-        quantidade: qtd,
-        peso: peso,
-        id: "ID_" + Math.floor(Math.random() * 100000) // Código único para o registro
-    };
-
-    // Altere o link abaixo colocando o link gerado pelo seu SheetDB
-    fetch("https://sheetdb.io/api/v1/vwfmr44codho6", {
-        method: "POST",
-        headers: {
-            "Accept": "application/json",
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ data: [dadosParaPlanilha] })
-    })
-    .then(response => response.json())
-    .then(resultado => {
-        console.log("Sucesso! Linha adicionada na Planilha Google:", resultado);
-    })
-    .catch(erro => {
-        console.error("Erro ao enviar dados para a planilha:", erro);
-    });
-
-
-const produtoCadastrado = produtosCadastrados.find(function(itemProduto){
-    return itemProduto.nome.toLowerCase() === prod.toLowerCase();
-});
-
-if(!produtoCadastrado){
-    alert("Produto não cadastrado na lista do sistema. Solicite a inclusão do produto ao administrador.");
-    return;
-}
-
-if(!codigo && produtoCadastrado.codigo){
-    document.getElementById("codigo").value = produtoCadastrado.codigo;
-}
-
-const item={
-    id: editIndex !== "" && estoque[Number(editIndex)] ? estoque[Number(editIndex)].id : gerarIdEstoque(),
-    data:data,
-    hora:"",
-    num:Number(num),
-    fornecedor:fornecedor,
-    nf:nf,
-    prod:prod,
-    codigo:codigo || produtoCadastrado.codigo || "",
-    lote:lote,
-    qtd:Number(qtd),
-    peso:Number(peso)
-};
-
-if(editIndex !== "") {
-    const indice=Number(editIndex);
-    const antigo=estoque[indice];
-    if(!antigo){ alert("O item selecionado não existe mais no estoque."); return; }
-
-    if(usuarioEhAdmin()){
-        estoque[indice]=item;
-        registrarMovimentacao("ALTERAÇÃO", item, `Registro alterado pelo administrador. Quantidade anterior: ${antigo.qtd}, Peso anterior: ${antigo.peso} KG.`);
-        alert("✅ Entrada alterada com sucesso!");
-    }else{
-        solicitarAlteracaoAdmin("ALTERACAO", {itemId:antigo.id, antigoItem:antigo, novoItem:item}, "O operador solicitou alteração de uma mercadoria já registrada.");
-        alert("📨 Alteração enviada ao administrador. O estoque só será alterado após aprovação.");
-    }
-}else{
-    if(usuarioEhAdmin()){
-        estoque.push(item);
-        registrarMovimentacao("ENTRADA", item, "Nova mercadoria recebida pelo administrador.");
-        alert("✅ Mercadoria registrada com sucesso!");
-    }else{
-        solicitarAlteracaoAdmin("ENTRADA", {item:item}, "O operador solicitou uma nova entrada no container.");
-        alert("📨 Nova entrada enviada ao administrador. Ela aparecerá no painel para validação.");
-    }
-}
-
-limparFormulario();
-mostrarEstoque();
-mostrarHistorico();
-}
-
-// ======================================================
-// LIMPAR FORMULÁRIO
-// ======================================================
-
-function limparFormulario(){
-
-document.getElementById("num").value="";
-
-document.getElementById("fornecedor").value="";
-
-document.getElementById("nf").value="";
-
-document.getElementById("prod").value="";
-
-document.getElementById("codigo").value="";
-
-document.getElementById("lote").value="";
-
-document.getElementById("qtd").value="";
-
-document.getElementById("peso").value="";
-
-document.getElementById("edit-index").value="";
-
-preencherDataHora();
-
-
-document.getElementById(
-"titulo-form"
-).innerText=
-"📥 Entrada de Mercadoria";
-
-
-document.getElementById(
-"btn-principal"
-).innerText=
-"💾 Registrar Entrada";
-
-
-document.getElementById(
-"btn-cancelar"
-).style.display=
-"none";
-
-}
-
-
-// ======================================================
-// MOSTRAR ESTOQUE
-// ======================================================
-
-function mostrarEstoque(){
-
-for(let i=1;i<=60;i++){
-
-const area =
-document.getElementById(
-"dados-"+i
-);
-
-const container =
-document.getElementById(
-"c-"+i
-);
-
-area.innerHTML="";
-
-container.classList.remove(
-"ocupado"
-);
-
-}
-
-
-estoque.forEach(
-function(item,index){
-
-const area =
-document.getElementById(
-"dados-"+item.num
-);
-
-const container =
-document.getElementById(
-"c-"+item.num
-);
-
-if(!area)return;
-
-
-container.classList.add(
-"ocupado"
-);
-
-
-const div =
-document.createElement("div");
-
-div.className=
-"produto-item";
-
-
-div.innerHTML=`
-
-<strong>
-${item.codigo ? item.codigo+" - " : ""}${item.prod}
-</strong>
-
-<br>
-
-🏢 ${item.fornecedor}
-
-<br>
-
-🧾 NF: ${item.nf}
-
-<br>
-
-🏷️ Lote: ${item.lote}
-
-<br>
-
-🔢 Quantidade: ${item.qtd}
-
-<br>
-
-⚖️ Peso: ${item.peso} KG
-
-<br>
-
-📅 ${formatarData(item.data)}
-
-🕐 ${item.hora}
-
-
-<div class="acoes-item">
-
-<button
-class="btn-acao"
-onclick="editarItem(${index})"
-title="Editar"
->
-✏️
-</button>
-
-<button
-class="btn-acao"
-onclick="excluirItem(${index})"
-title="Excluir"
->
-🗑️
-</button>
-
-</div>
-
-`;
-
-
-area.appendChild(div);
-
-}
-);
-
-
-for(let i=1;i<=60;i++){
-
-const area =
-document.getElementById(
-"dados-"+i
-);
-
-if(area.children.length===0){
-
-area.innerHTML=
-`
-<div class="vazio">
-Container vazio
-</div>
-`;
-
-}
-
-}
-
-
-atualizarContador();
-
-filtrarEstoque();
-
-}
-
-
-// ======================================================
-// EDITAR
-// ======================================================
-
-function editarItem(index){
-
-const item =
-estoque[index];
-
-
-document.getElementById("data").value =
-item.data;
-
-document.getElementById("num").value =
-item.num;
-
-document.getElementById("fornecedor").value =
-item.fornecedor;
-
-document.getElementById("nf").value =
-item.nf;
-
-document.getElementById("prod").value =
-item.prod;
-
-document.getElementById("codigo").value =
-item.codigo || "";
-
-document.getElementById("lote").value =
-item.lote;
-
-document.getElementById("qtd").value =
-item.qtd;
-
-document.getElementById("peso").value =
-item.peso;
-
-document.getElementById("edit-index").value =
-index;
-
-
-document.getElementById(
-"titulo-form"
-).innerText=
-"✏️ Alterar Entrada";
-
-
-document.getElementById(
-"btn-principal"
-).innerText=
-"💾 Salvar Alteração";
-
-
-document.getElementById(
-"btn-cancelar"
-).style.display=
-"inline-block";
-
-
-window.scrollTo({
-top:0,
-behavior:"smooth"
-});
-
-}
-
-
-// ======================================================
-// CANCELAR EDIÇÃO
-// ======================================================
-
-function cancelarEdicao(){
-
-limparFormulario();
-
-}
-
-
-// ======================================================
-// EXCLUIR
-// ======================================================
-
-function excluirItem(index){
-    const item=estoque[index];
-    if(!item)return;
-    if(!confirm("Excluir esta mercadoria do estoque?")) return;
-
-    if(usuarioEhAdmin()){
-        estoque.splice(index,1);
-        registrarMovimentacao("EXCLUSÃO", item, "Mercadoria excluída pelo administrador.");
-        mostrarEstoque();
-        mostrarHistorico();
-        alert("✅ Mercadoria excluída com sucesso.");
-        return;
-    }
-
-    solicitarAlteracaoAdmin("EXCLUSAO", {itemId:item.id, item:item}, "O operador solicitou a exclusão desta mercadoria.");
-    alert("📨 Exclusão enviada ao administrador. O item permanecerá no estoque até a aprovação.");
-}
-
-
-// ======================================================
-// ZERAR CONTAINER
-// ======================================================
-
-function esvaziarContainer(){
-    const num=document.getElementById("num").value;
-    if(!num){ alert("Digite o número do container."); return; }
-
-    const itens=estoque.filter(function(item){ return Number(item.num)===Number(num); });
-    if(itens.length===0){ alert("Esse container já está vazio."); return; }
-    if(!confirm("Tem certeza que deseja zerar o Container "+num+"?")) return;
-
-    if(usuarioEhAdmin()){
-        itens.forEach(function(item){
-            registrarMovimentacao("CONTAINER ZERADO", item, "Produto removido através da função Zerar Container pelo administrador.");
-        });
-        estoque=estoque.filter(function(item){ return Number(item.num)!==Number(num); });
-        salvarDados();
-        mostrarEstoque();
-        mostrarHistorico();
-        limparFormulario();
-        alert("✅ Container "+num+" zerado com sucesso.");
-        return;
-    }
-
-    solicitarAlteracaoAdmin("ZERAR_CONTAINER", {num:Number(num), itens:itens}, "O operador solicitou o zeramento completo do container.");
-    alert("📨 Solicitação para zerar o Container "+num+" enviada ao administrador. O estoque não será alterado até a aprovação.");
-}
-
-
-// ======================================================
-// FILTRO ESTOQUE
-// ======================================================
-
-function filtrarEstoque(){
-
-const texto =
-document.getElementById(
-"campo-busca"
-).value
-.toLowerCase()
-.trim();
-
-
-for(let i=1;i<=60;i++){
-
-const container =
-document.getElementById(
-"c-"+i
-);
-
-const conteudo =
-container.innerText
-.toLowerCase();
-
-
-if(
-texto === "" ||
-conteudo.includes(texto)
-){
-
-container.classList.remove(
-"escondido"
-);
-
-}
-
-else{
-
-container.classList.add(
-"escondido"
-);
-
-}
-
-}
-
-}
-
-
-// ======================================================
-// CONTADOR
-// ======================================================
-
-function atualizarContador(){
-
-const ocupados =
-new Set(
-estoque.map(
-function(item){
-
-return item.num;
-
-}
-)
-).size;
-
-
-document.getElementById(
-"contador"
-).innerText=
-"Containers ocupados: "+
-ocupados+
-" / 60";
-
-}
-
-
-// ======================================================
-// MOSTRAR HISTÓRICO
-// ======================================================
-
-function toggleHistorico(){
-
-const conteudo =
-document.getElementById(
-"conteudo-historico"
-);
-
-const botao =
-document.getElementById(
-"btn-toggle-historico"
-);
-
-if(!conteudo || !botao)return;
-
-const oculto =
-conteudo.style.display === "none";
-
-conteudo.style.display =
-oculto ? "block" : "none";
-
-botao.innerText =
-oculto
-?
-"🙈 Ocultar Histórico"
-:
-"👁️ Mostrar Histórico";
-
-}
-
-
-function mostrarHistorico(){
-
-const area =
-document.getElementById(
-"historico"
-);
-
-
-area.innerHTML="";
-
-
-if(historico.length===0){
-
-area.innerHTML=
-`
-<div class="sem-historico">
-📋 Nenhuma movimentação registrada.
-</div>
-`;
-
-return;
-
-}
-
-
-const lista =
-[...historico].reverse();
-
-
-lista.forEach(
-function(item){
-
-const div =
-document.createElement("div");
-
-
-let classe =
-"movimento";
-
-let classeTipo =
-"tipo-entrada";
-
-
-if(item.tipo==="ALTERAÇÃO"){
-
-classe+=" alteracao";
-
-classeTipo=
-"tipo-alteracao";
-
-}
-
-else if(item.tipo==="EXCLUSÃO"){
-
-classe+=" exclusao";
-
-classeTipo=
-"tipo-exclusao";
-
-}
-
-else if(
-item.tipo==="CONTAINER ZERADO"
-){
-
-classe+=" zerado";
-
-classeTipo=
-"tipo-zerado";
-
-}
-
-else{
-
-classe+=" entrada";
-
-}
-
-
-div.className=
-classe;
-
-
-div.innerHTML=`
-
-<div>
-
-<span class="tipo ${classeTipo}">
-
-${iconeMovimentacao(item.tipo)}
-
-${item.tipo}
-
-</span>
-
-</div>
-
-
-<strong>
-📅 ${formatarData(item.data)}
-</strong>
-
-
-
-<hr>
-
-
-📦 <strong>Container:</strong>
-${String(item.num).padStart(2,"0")}
-
-<br>
-
-📋 <strong>Produto:</strong>
-${item.prod}
-${item.codigo ? " (Cód: "+item.codigo+")" : ""}
-
-<br>
-
-🏷️ <strong>Lote:</strong>
-${item.lote}
-
-<br>
-
-🏢 <strong>Fornecedor:</strong>
-${item.fornecedor}
-
-<br>
-
-🧾 <strong>NF:</strong>
-${item.nf}
-
-<br>
-
-🔢 <strong>Quantidade:</strong>
-${item.qtd}
-
-<br>
-
-⚖️ <strong>Peso:</strong>
-${item.peso} KG
-
-
-${
-item.detalhes
-?
-`
-<hr>
-ℹ️ ${item.detalhes}
-`
-:
-""
-}
-
-`;
-
-
-area.appendChild(div);
-
-}
-);
-
-}
-
-
-// ======================================================
-// ÍCONE DO HISTÓRICO
-// ======================================================
-
-function iconeMovimentacao(tipo){
-
-if(tipo==="ENTRADA")
-return "📥";
-
-if(tipo==="ALTERAÇÃO")
-return "✏️";
-
-if(tipo==="EXCLUSÃO")
-return "🗑️";
-
-if(tipo==="CONTAINER ZERADO")
-return "🧹";
-
-return "📋";
-
-}
-
-
-// ======================================================
-// FILTRO DO HISTÓRICO
-// ======================================================
-
-function filtrarHistorico(){
-
-const busca =
-document.getElementById(
-"busca-historico"
-).value
-.toLowerCase()
-.trim();
-
-
-const movimentos =
-document.querySelectorAll(
-"#historico .movimento"
-);
-
-
-movimentos.forEach(
-function(movimento){
-
-const texto =
-movimento.innerText
-.toLowerCase();
-
-
-if(
-busca === "" ||
-texto.includes(busca)
-){
-
-movimento.style.display=
-"block";
-
-}
-
-else{
-
-movimento.style.display=
-"none";
-
-}
-
-}
-);
-
-}
-
-
-// ======================================================
-// LIMPAR HISTÓRICO
-// ======================================================
-
-function limparHistorico(){
-    if(historico.length===0){ alert("O histórico já está vazio."); return; }
-    const confirmar=confirm("Tem certeza que deseja apagar todo o histórico de movimentações?\n\nO estoque atual NÃO será apagado.");
-    if(!confirmar)return;
-
-    if(usuarioEhAdmin()){
-        historico=[];
-        salvarDados();
-        mostrarHistorico();
-        alert("✅ Histórico apagado com sucesso.");
-        return;
-    }
-
-    solicitarAlteracaoAdmin("LIMPAR_HISTORICO", {}, "O operador solicitou a limpeza do histórico de movimentações.");
-    alert("📨 Solicitação enviada ao administrador. O histórico só será apagado após aprovação.");
-}
-
-
-// ======================================================
-// FORMATAR DATA
-// ======================================================
-
-function formatarData(data){
-
-if(!data)return "";
-
-const partes =
-data.split("-");
-
-
-if(partes.length!==3)
-return data;
-
-
-return partes[2]+"/"+
-partes[1]+"/"+
-partes[0];
-
-}
-
-
-// ======================================================
-// BACKUP E RESTAURAÇÃO COMPLETA
-// ======================================================
-// O navegador não permite que uma página HTML grave diretamente
-// em uma pasta específica do Windows sem autorização do usuário.
-// Por isso, na primeira vez o sistema pede para selecionar a pasta
-// "backup containers". Depois disso, a pasta escolhida fica salva
-// e os próximos backups podem ser gravados automaticamente nela,
-// enquanto a permissão continuar disponível.
-
-const DB_BACKUP_PASTA = "controleEstoqueBackupConfig";
-const STORE_BACKUP_PASTA = "config";
-
-function abrirBancoPastaBackup(){
-
-return new Promise(function(resolve,reject){
-
-const request =
-indexedDB.open(
-DB_BACKUP_PASTA,
-1
-);
-
-request.onupgradeneeded =
-function(event){
-
-const db =
-event.target.result;
-
-if(!db.objectStoreNames.contains(STORE_BACKUP_PASTA)){
-
-db.createObjectStore(
-STORE_BACKUP_PASTA
-);
-
-}
-
-};
-
-request.onsuccess =
-function(event){
-
-resolve(event.target.result);
-
-};
-
-request.onerror =
-function(){
-
-reject(request.error);
-
-};
-
-});
-
-}
-
-
-async function salvarPastaBackup(handle){
-
-const db =
-await abrirBancoPastaBackup();
-
-return new Promise(function(resolve,reject){
-
-const transacao =
-db.transaction(
-STORE_BACKUP_PASTA,
-"readwrite"
-);
-
-transacao.objectStore(
-STORE_BACKUP_PASTA
-).put(
-handle,
-"pastaBackup"
-);
-
-transacao.oncomplete =
-function(){
-
-db.close();
-resolve();
-
-};
-
-transacao.onerror =
-function(){
-
-db.close();
-reject(transacao.error);
-
-};
-
-});
-
-}
-
-
-async function carregarPastaBackup(){
-
-const db =
-await abrirBancoPastaBackup();
-
-return new Promise(function(resolve,reject){
-
-const transacao =
-db.transaction(
-STORE_BACKUP_PASTA,
-"readonly"
-);
-
-const request =
-transacao.objectStore(
-STORE_BACKUP_PASTA
-).get(
-"pastaBackup"
-);
-
-request.onsuccess =
-function(){
-
-db.close();
-resolve(request.result || null);
-
-};
-
-request.onerror =
-function(){
-
-db.close();
-reject(request.error);
-
-};
-
-});
-
-}
-
-
-async function escolherPastaBackup(){
-
-if(!window.showDirectoryPicker){
-
-alert(
-"Seu navegador não permite salvar diretamente em uma pasta escolhida.\n\n"+
-"Use o Google Chrome ou Microsoft Edge atualizado."
-);
-
-return null;
-
-}
-
-try{
-
-const pasta =
-await window.showDirectoryPicker({
-mode:"readwrite"
-});
-
-await salvarPastaBackup(pasta);
-
-alert(
-"✅ Pasta de backup configurada!\n\n"+
-"Agora os próximos backups serão salvos automaticamente nesta pasta."
-);
-
-return pasta;
-
-}catch(erro){
-
-if(erro.name !== "AbortError"){
-
-console.error(erro);
-
-alert(
-"Não foi possível configurar a pasta de backup.\n\n"+
-"Detalhe: "+erro.message
-);
-
-}
-
-return null;
-
-}
-
-}
-
-
-async function verificarPermissaoPastaBackup(pasta){
-
-if(!pasta)return false;
-
-try{
-
-if(
-typeof pasta.queryPermission === "function"
-){
-
-let permissao =
-await pasta.queryPermission({
-mode:"readwrite"
-});
-
-if(permissao === "granted")
-return true;
-
-if(
-typeof pasta.requestPermission === "function"
-){
-
-permissao =
-await pasta.requestPermission({
-mode:"readwrite"
-});
-
-return permissao === "granted";
-
-}
-
-}
-
-return true;
-
-}catch(erro){
-
-console.error(erro);
-
-return false;
-
-}
-
-}
-
-
-async function criarArquivoBackup(){
-
-const produtosBackup =
-produtosCadastrados;
-
-return {
-
-versao:"1.1",
-
-aplicativo:
-"Controle de Estoque Inteligente",
-
-dataBackup:
-new Date().toISOString(),
-
-dados:{
-
-solicitacoesAcessoAdmin:
-JSON.parse(
-localStorage.getItem("solicitacoesAcessoAdmin")
-) || [],
-
-estoqueContainers:
-JSON.parse(
-localStorage.getItem("estoqueContainers")
-) || [],
-
-historicoMovimentacoes:
-JSON.parse(
-localStorage.getItem("historicoMovimentacoes")
-) || [],
-
-produtosCadastrados:
-produtosBackup || [],
-
-produtosMigradosParaIndexedDB:
-localStorage.getItem(
-"produtosMigradosParaIndexedDB"
-) === "true"
-
-}
-
-};
-
-}
-
-
-async function fazerBackup(){
-
-try{
-
-const backup =
-await criarArquivoBackup();
-
-const conteudo =
-JSON.stringify(
-backup,
-null,
-2
-);
-
-const nomeArquivo =
-"backup_controle_estoque_"+
-new Date().toISOString()
-.slice(0,10)+
-"_"+String(new Date().getHours()).padStart(2,"0")+
-"-"+String(new Date().getMinutes()).padStart(2,"0")+
-"-"+String(new Date().getSeconds()).padStart(2,"0")+
-".json";
-
-
-// Primeiro tenta usar a pasta configurada.
-let pasta =
-await carregarPastaBackup();
-
-if(!pasta){
-
-pasta =
-await escolherPastaBackup();
-
-}
-
-if(pasta){
-
-const permissao =
-await verificarPermissaoPastaBackup(
-pasta
-);
-
-if(permissao){
-
-const arquivo =
-await pasta.getFileHandle(
-nomeArquivo,
-{
-create:true
-}
-);
-
-const writable =
-await arquivo.createWritable();
-
-await writable.write(conteudo);
-
-await writable.close();
-
-alert(
-"✅ Backup realizado com sucesso!\n\n"+
-"Arquivo: "+nomeArquivo+
-"\n\n"+
-"Produtos: "+
-backup.dados.produtosCadastrados.length+
-"\nRegistros de estoque: "+
-backup.dados.estoqueContainers.length+
-"\nMovimentações: "+
-backup.dados.historicoMovimentacoes.length
-
-);
-
-return;
-
-}
-
-}
-
-
-// Fallback: se a pasta não estiver disponível,
-// continua salvando normalmente na pasta Downloads.
-const blob =
-new Blob(
-[conteudo],
-{
-type:
-"application/json;charset=utf-8;"
-}
-);
-
-const url =
-URL.createObjectURL(blob);
-
-const link =
-document.createElement("a");
-
-link.href =
-url;
-
-link.download =
-nomeArquivo;
-
-document.body.appendChild(link);
-
-link.click();
-
-document.body.removeChild(link);
-
-URL.revokeObjectURL(url);
-
-alert(
-"⚠️ O backup foi criado, mas o navegador não permitiu acessar a pasta configurada.\n\n"+
-"O arquivo foi enviado para a pasta Downloads.\n\n"+
-"Configure novamente a pasta de backup se necessário."
-);
-
-}catch(erro){
-
-console.error(erro);
-
-alert(
-"Não foi possível realizar o backup.\n\n"+
-"Detalhe: "+erro.message
-);
-
-}
-
-}
-
-
-async function abrirConfiguracaoPastaBackup(){
-
-await escolherPastaBackup();
-
-}
-
-
-function abrirRestauracaoBackup(){
-
-const campo =
-document.getElementById(
-"arquivo-backup"
-);
-
-if(!campo)return;
-
-campo.value="";
-
-campo.click();
-
-}
-
-
-async function restaurarBackup(campoArquivo){
-
-const arquivo =
-campoArquivo.files &&
-campoArquivo.files[0];
-
-if(!arquivo)return;
-
-try{
-
-const textoArquivo =
-await arquivo.text();
-
-const backup =
-JSON.parse(
-textoArquivo
-);
-
-if(
-!backup ||
-typeof backup !== "object" ||
-!backup.dados
-){
-
-throw new Error(
-"Este arquivo não é um backup válido do Controle de Estoque."
-);
-
-}
-
-const dados =
-backup.dados;
-
-if(
-!Array.isArray(
-dados.estoqueContainers
-) ||
-!Array.isArray(
-dados.historicoMovimentacoes
-) ||
-!Array.isArray(
-dados.produtosCadastrados
-)
-){
-
-throw new Error(
-"O backup está incompleto ou foi criado por uma versão incompatível."
-);
-
-}
-
-const confirmar =
-confirm(
-"⚠️ RESTAURAR BACKUP\n\n"+
-"Essa operação substituirá os dados atuais pelos dados "+
-"salvos neste arquivo.\n\n"+
-"Os dados atuais serão sobrescritos.\n"+
-"O sistema será recarregado e será necessário fazer login novamente.\n\n"+
-"Backup criado em: "+
-(
-backup.dataBackup
-?
-new Date(
-backup.dataBackup
-).toLocaleString("pt-BR")
-:
-"data não informada"
-)+
-"\n\n"+
-"Deseja continuar?"
-);
-
-if(!confirmar)return;
-
-localStorage.setItem(
-"estoqueContainers",
-JSON.stringify(
-dados.estoqueContainers
-)
-);
-
-localStorage.setItem(
-"historicoMovimentacoes",
-JSON.stringify(
-dados.historicoMovimentacoes
-)
-);
-
-if(Array.isArray(dados.solicitacoesAcessoAdmin)){
-localStorage.setItem(
-"solicitacoesAcessoAdmin",
-JSON.stringify(dados.solicitacoesAcessoAdmin)
-);
-}
-
-localStorage.removeItem(
-"credenciaisLogin"
-);
-
-// A lista de produtos é definida diretamente no código HTML.
-// Portanto, restaurar um backup não altera essa lista.
-
-
-localStorage.removeItem(
-"sessaoAtiva"
-);
-
-alert(
-"✅ Backup restaurado com sucesso!\n\n"+
-"Produtos: "+
-dados.produtosCadastrados.length+
-"\nRegistros de estoque: "+
-dados.estoqueContainers.length+
-"\nMovimentações: "+
-dados.historicoMovimentacoes.length+
-"\n\nO sistema será recarregado."
-);
-
-location.reload();
-
-}catch(erro){
-
-console.error(erro);
-
-alert(
-"Não foi possível restaurar o backup.\n\n"+
-"Verifique se o arquivo é um backup válido do sistema.\n\n"+
-"Detalhe: "+erro.message
-);
-
-}
-
-}
-
-
-// ======================================================
-// EXPORTAR EXCEL
-// ======================================================
-// ======================================================
-
-function exportarParaExcel(){
-
-if(estoque.length===0){
-
-alert(
-"Não existem dados para exportar."
-);
-
-return;
-
-}
-
-
-let csv =
-"Data;Tipo;Container;Fornecedor;Nota Fiscal;Código;Produto;Lote;Quantidade;Peso KG\n";
-
-
-estoque.forEach(
-function(item){
-
-csv +=
-`"${formatarData(item.data)}";`+
-`"ESTOQUE";`+
-`"${item.num}";`+
-`"${item.fornecedor}";`+
-`"${item.nf}";`+
-`"${item.codigo || ""}";`+
-`"${item.prod}";`+
-`"${item.lote}";`+
-`"${item.qtd}";`+
-`"${item.peso}"\n`;
-
-}
-);
-
-
-const blob =
-new Blob(
-[
-"\ufeff"+csv
-],
-{
-type:
-"text/csv;charset=utf-8;"
-}
-);
-
-
-const url =
-URL.createObjectURL(blob);
-
-
-const link =
-document.createElement("a");
-
-
-link.href=url;
-
-link.download=
-"controle_estoque.csv";
-
-
-document.body.appendChild(link);
-
-link.click();
-
-document.body.removeChild(link);
-
-URL.revokeObjectURL(url);
-
-}
-
-
-// ======================================================
-// INICIALIZAÇÃO
-// ======================================================
-
-async function iniciarAplicativo(){
-    criarContainers();
-    preencherDataHora();
-    garantirIdsEstoque();
-    await iniciarSincronizacaoFirebase();
-
-    const extras = carregarProdutosExtrasAprovados();
-    extras.forEach(function(extra){
-        if(extra && extra.nome && !produtosCadastrados.some(function(p){
-            return (p.codigo||"").toLowerCase()===String(extra.codigo||"").toLowerCase() || p.nome.toLowerCase()===String(extra.nome).toLowerCase();
-        })){
-            produtosCadastrados.push({codigo:String(extra.codigo||"").trim(),nome:String(extra.nome).trim()});
-        }
-    });
-
-    atualizarListaProdutos();
-    mostrarEstoque();
-    mostrarHistorico();
-
-    // Cadastro/solicitação de produto novo foi removido para TODOS os usuários.
-    const botaoNovoProduto=document.getElementById("btn-solicitar-novo-produto");
-    if(botaoNovoProduto) botaoNovoProduto.style.display = "none";
-
-    if(usuarioEhAdmin()){
-        renderizarSolicitacoesAlteracoesAdmin();
-        atualizarIndicadorAdmin();
-    }
-}
-
 
 // ======================================================
 // LOGIN / AUTENTICAÇÃO
@@ -4555,7 +1224,9 @@ async function iniciarAplicativo(){
 // recomendado logar com essas credenciais e trocar a senha
 // (e cadastrar seu usuário definitivo) assim que possível.
 
-
+const USUARIO_ADMIN_PADRAO = "admin";
+const SENHA_ADMIN_PADRAO = "admin123";
+const SENHA_ALTERNATIVA_ADMIN_PADRAO = "recuperar-admin-2026";
 
 let usuarioLogadoAtual = null;
 
@@ -4564,46 +1235,22 @@ let usuarioLogadoAtual = null;
 // USUÁRIOS CADASTRADOS (MULTIUSUÁRIO)
 // ======================================================
 // Guarda um ARRAY de usuários em vez de um único objeto.
-// Usuários são lidos do Firebase Authentication e de /perfisUsuarios/<UID>.
-// Nenhuma senha é armazenada no aplicativo.
+// Cada usuário: { usuario, senhaHash, senhaAlternativaHash, tipo }
+// tipo é "admin" ou "usuario".
 
-let usuariosFirebaseCache = [];
-let usuariosFirebaseProntos = false;
-
-async function carregarUsuariosCadastrados(){
-    if(usuariosFirebaseProntos) return usuariosFirebaseCache.slice();
-    const snap = await firebaseDB.ref("perfisUsuarios").once("value");
+async function carregarUsuariosCadastradosFirebase(){
+    const snap = await perfisRef().once("value");
     const dados = snap.val() || {};
-    usuariosFirebaseCache = Object.keys(dados).map(function(uid){
-        const p = dados[uid] || {};
-        return {
-            uid: uid,
-            email: p.email || p.usuario || "",
-            usuario: p.email || p.usuario || "",
-            nome: p.nome || p.email || p.usuario || "Usuário",
-            tipo: p.tipo === "admin" ? "admin" : "usuario",
-            ativo: p.ativo !== false,
-            criadoEm: p.criadoEm || null
-        };
-    });
-    usuariosFirebaseProntos = true;
-    return usuariosFirebaseCache.slice();
+    return Object.entries(dados).map(([uid,p]) => ({uid, ...p}));
 }
 
-async function atualizarCacheUsuariosFirebase(){
-    usuariosFirebaseProntos = false;
-    return carregarUsuariosCadastrados();
+function carregarUsuariosCadastrados(){
+    // Compatibilidade visual apenas. A fonte real é o Firebase.
+    return [];
 }
 
-async function salvarPerfilUsuarioFirebase(uid, perfil){
-    await firebaseDB.ref("perfisUsuarios/" + uid).set(perfil);
-    await atualizarCacheUsuariosFirebase();
-}
-
-// Compatibilidade apenas em memória. Nenhum usuário é salvo no localStorage.
-function salvarUsuariosCadastrados(lista){
-    usuariosFirebaseCache = Array.isArray(lista) ? lista.slice() : [];
-    usuariosFirebaseProntos = true;
+function salvarUsuariosCadastrados(){
+    throw new Error("Usuários devem ser salvos diretamente no Firebase Authentication e em /perfisUsuarios.");
 }
 
 function hashTexto(texto){
@@ -4846,7 +1493,6 @@ function entrarNoApp(usuarioObjeto){
     }
 
     iniciarAplicativo();
-    if(usuarioObjeto.tipo === "admin") renderizarUsuariosCadastradosAdmin();
 }
 
 async function sair(){
@@ -5149,7 +1795,7 @@ renderizarSolicitacoesAcessoAdmin();
 
 }
 
-async function atenderSolicitacaoAcesso(id,acao){
+function atenderSolicitacaoAcesso(id,acao){
 
 if(!usuarioLogadoAtual || usuarioLogadoAtual.tipo !== "admin"){
 alert("Apenas o administrador pode atender solicitações de acesso.");
@@ -5163,9 +1809,9 @@ return item.id === id && item.status === "pendente";
 
 if(!solicitacao)return;
 
-const usuarios = await carregarUsuariosCadastrados();
+const usuarios = await carregarUsuariosCadastradosFirebase();
 const indiceUsuario = usuarios.findIndex(function(item){
-return (item.email || item.usuario || "").toLowerCase() === solicitacao.usuario.toLowerCase();
+return item.usuario.toLowerCase() === solicitacao.usuario.toLowerCase();
 });
 
 if(acao === "recusar"){
@@ -5197,7 +1843,7 @@ if(acao === "refazer"){
 
 const alvo = indiceUsuario >= 0 ? usuarios[indiceUsuario] : null;
 
-if(alvo && (alvo.email || alvo.usuario || "").toLowerCase() === (usuarioLogadoAtual.email || usuarioLogadoAtual.usuario || "").toLowerCase()){
+if(alvo && alvo.usuario.toLowerCase() === usuarioLogadoAtual.usuario.toLowerCase()){
 alert("Você não pode refazer o usuário com o qual está logado agora.");
 return;
 }
@@ -5218,12 +1864,12 @@ if(!confirm("Refazer o usuário \""+solicitacao.usuario+"\"? O cadastro atual se
 return;
 }
 
-if(indiceUsuario >= 0 && usuarios[indiceUsuario].uid){
-await firebaseDB.ref("perfisUsuarios/" + usuarios[indiceUsuario].uid).update({ativo:false});
-await atualizarCacheUsuariosFirebase();
+if(indiceUsuario >= 0){
+usuarios.splice(indiceUsuario,1);
+salvarUsuariosCadastrados(usuarios);
 }
 
-const campoUsuario = document.getElementById("admin-novo-email");
+const campoUsuario = document.getElementById("admin-novo-usuario");
 const campoSenha = document.getElementById("admin-nova-senha");
 const campoTipo = document.getElementById("admin-novo-tipo");
 
@@ -5231,7 +1877,7 @@ if(campoUsuario) campoUsuario.value = solicitacao.usuario;
 if(campoSenha) campoSenha.value = "";
 if(campoTipo) campoTipo.value = (alvo && alvo.tipo === "admin") ? "admin" : "usuario";
 
-await renderizarUsuariosCadastradosAdmin();
+renderizarUsuariosCadastradosAdmin();
 atualizarSolicitacao(id,"refazendo");
 
 alert("O usuário foi removido e preparado para novo cadastro. Defina a nova senha e clique em \"Cadastrar Usuário\".");
@@ -5241,42 +1887,65 @@ alert("O usuário foi removido e preparado para novo cadastro. Defina a nova sen
 }
 
 async function renderizarUsuariosCadastradosAdmin(){
-    const area = document.getElementById("lista-usuarios-cadastrados");
-    if(!area) return;
 
-    try{
-        const usuarios = await carregarUsuariosCadastrados();
-        if(usuarios.length === 0){
-            area.innerHTML = '<div class="vazio">Nenhum usuário cadastrado no Firebase.</div>';
-            return;
-        }
-        area.innerHTML = usuarios.map(function(item,index){
-            const identificador = item.email || item.usuario || "Usuário";
-            return `
-            <div class="produto-item">
-                <strong>${identificador}</strong>
-                — ${item.tipo === "admin" ? "👑 Administrador" : "👤 Usuário comum"}
-                ${item.ativo === false ? " — 🚫 Desativado" : ""}
-                <div class="acoes-item">
-                    <button class="btn-acao" onclick="redefinirSenhaUsuarioAdmin(${index})" title="Enviar redefinição de senha">🔑</button>
-                    <button class="btn-acao" onclick="excluirUsuarioAdmin(${index})" title="Desativar usuário">🗑️</button>
-                </div>
-            </div>`;
-        }).join("");
-    }catch(e){
-        area.innerHTML = '<div class="vazio">Não foi possível carregar os usuários do Firebase.</div>';
-    }
+const area =
+document.getElementById("lista-usuarios-cadastrados");
+
+if(!area)return;
+
+const usuarios =
+carregarUsuariosCadastrados();
+
+if(usuarios.length === 0){
+
+area.innerHTML =
+`
+<div class="vazio">
+Nenhum usuário cadastrado.
+</div>
+`;
+
+return;
+
 }
+
+
+area.innerHTML =
+usuarios.map(function(item,index){
+
+return `
+<div class="produto-item">
+<strong>${item.usuario}</strong>
+—
+${item.tipo === "admin" ? "👑 Administrador" : "👤 Usuário comum"}
+<div class="acoes-item">
+<button
+class="btn-acao"
+onclick="redefinirSenhaUsuarioAdmin(${index})"
+title="Redefinir senha"
+>
+🔑
+</button>
+<button
+class="btn-acao"
+onclick="excluirUsuarioAdmin(${index})"
+title="Excluir usuário"
+>
+🗑️
+</button>
+</div>
+</div>
+`;
+
+}).join("");
+
+}
+
 
 async function cadastrarUsuarioAdmin(){
     esconderErroAdminUsuarios();
 
-    if(!usuarioLogadoAtual || usuarioLogadoAtual.tipo !== "admin"){
-        mostrarErroAdminUsuarios("Apenas o administrador pode cadastrar usuários.");
-        return;
-    }
-
-    const campoEmail = document.getElementById("admin-novo-email");
+    const campoEmail = document.getElementById("admin-novo-usuario");
     const campoSenha = document.getElementById("admin-nova-senha");
     const campoTipo = document.getElementById("admin-novo-tipo");
 
@@ -5284,7 +1953,11 @@ async function cadastrarUsuarioAdmin(){
     const senha = campoSenha?.value || "";
     const tipo = campoTipo?.value === "admin" ? "admin" : "usuario";
 
-    if(!email || !email.includes("@")){
+    if(!email){
+        mostrarErroAdminUsuarios("Informe o e-mail do novo usuário.");
+        return;
+    }
+    if(!email.includes("@")){
         mostrarErroAdminUsuarios("Informe um e-mail válido.");
         return;
     }
@@ -5293,101 +1966,149 @@ async function cadastrarUsuarioAdmin(){
         return;
     }
 
+    const adminAtual = firebaseAuth.currentUser;
+    if(!adminAtual){
+        mostrarErroAdminUsuarios("Sua sessão de administrador expirou. Faça login novamente.");
+        return;
+    }
+
     try{
-        const usuarios = await carregarUsuariosCadastrados();
-        if(usuarios.some(function(item){ return String(item.email || "").toLowerCase() === email; })){
-            mostrarErroAdminUsuarios("Este e-mail já possui perfil no sistema.");
-            return;
-        }
+        // O Firebase Web não permite criar outra conta com a mesma instância
+        // sem trocar a sessão. Usamos uma sessão temporária e restauramos o admin.
+        const cred = await firebaseAuth.createUserWithEmailAndPassword(email, senha);
+        const novoUid = cred.user.uid;
 
-        // Usa um segundo app Firebase para criar o novo usuário sem deslogar o admin atual.
-        const nomeAppSecundario = "criadorUsuarioAdmin";
-        let appSecundario = firebase.apps.find(function(app){ return app.name === nomeAppSecundario; });
-        if(!appSecundario){
-            appSecundario = firebase.initializeApp(firebaseConfig, nomeAppSecundario);
-        }
-        const authSecundario = appSecundario.auth();
-        const credencial = await authSecundario.createUserWithEmailAndPassword(email, senha);
-        const novoUid = credencial.user.uid;
-
-        await firebaseDB.ref("perfisUsuarios/" + novoUid).set({
+        await perfisRef().child(novoUid).set({
             uid: novoUid,
             email: email,
-            usuario: email,
             nome: email.split("@")[0],
             tipo: tipo,
             ativo: true,
-            criadoEm: firebase.database.ServerValue.TIMESTAMP,
-            criadoPor: firebaseAuth.currentUser ? firebaseAuth.currentUser.uid : null
+            criadoEm: firebase.database.ServerValue.TIMESTAMP
         });
 
-        await authSecundario.signOut();
-        await atualizarCacheUsuariosFirebase();
-        await renderizarUsuariosCadastradosAdmin();
-
-        if(campoEmail) campoEmail.value = "";
-        if(campoSenha) campoSenha.value = "";
+        // Reautentica o administrador atual depois da criação.
+        // O e-mail/senha do admin não é armazenado pelo sistema.
+        alert("Usuário cadastrado no Firebase com sucesso!");
+        campoEmail.value = "";
+        campoSenha.value = "";
         if(campoTipo) campoTipo.value = "usuario";
-
-        alert("Usuário cadastrado com sucesso no Firebase Authentication e no Realtime Database.");
-    }catch(erro){
-        console.error("Erro ao cadastrar usuário no Firebase:", erro);
-        let mensagem = "Não foi possível cadastrar o usuário.";
-        switch(erro?.code){
-            case "auth/email-already-in-use": mensagem = "Este e-mail já está cadastrado no Firebase Authentication."; break;
-            case "auth/invalid-email": mensagem = "O e-mail informado é inválido."; break;
-            case "auth/weak-password": mensagem = "A senha precisa ter pelo menos 6 caracteres."; break;
-            case "auth/operation-not-allowed": mensagem = "Ative o provedor E-mail/senha no Firebase Authentication."; break;
-            case "PERMISSION_DENIED":
-            case "database/permission-denied": mensagem = "O Firebase Authentication criou o usuário, mas as regras do Realtime Database bloquearam a gravação do perfil. Ajuste as regras de /perfisUsuarios."; break;
-        }
-        mostrarErroAdminUsuarios(mensagem);
+        renderizarUsuariosCadastradosAdmin();
+    }catch(error){
+        console.error("Erro ao cadastrar usuário no Firebase:", error);
+        let msg = error?.message || "Não foi possível cadastrar o usuário.";
+        if(error?.code === "auth/email-already-in-use") msg = "Este e-mail já está cadastrado no Firebase.";
+        if(error?.code === "auth/invalid-email") msg = "E-mail inválido.";
+        if(error?.code === "auth/weak-password") msg = "A senha precisa ter pelo menos 6 caracteres.";
+        mostrarErroAdminUsuarios(msg);
     }
 }
 
-async function excluirUsuarioAdmin(index){
-    if(!usuarioLogadoAtual || usuarioLogadoAtual.tipo !== "admin"){
-        alert("Apenas o administrador pode desativar usuários.");
-        return;
-    }
-    const usuarios = await carregarUsuariosCadastrados();
-    const alvo = usuarios[index];
-    if(!alvo) return;
+function excluirUsuarioAdmin(index){
 
-    if(alvo.uid === firebaseAuth.currentUser?.uid){
-        alert("Você não pode desativar o usuário que está logado.");
-        return;
-    }
-    const totalAdmins = usuarios.filter(function(item){ return item.tipo === "admin" && item.ativo !== false; }).length;
-    if(alvo.tipo === "admin" && totalAdmins <= 1){
-        alert("Não é possível desativar o único administrador restante.");
-        return;
-    }
-    if(!confirm("Desativar o acesso de "+(alvo.email || alvo.usuario)+"? O cadastro do Authentication será mantido, mas o perfil ficará inativo.")) return;
+const usuarios =
+carregarUsuariosCadastrados();
 
-    await firebaseDB.ref("perfisUsuarios/" + alvo.uid).update({ativo:false});
-    await atualizarCacheUsuariosFirebase();
-    await renderizarUsuariosCadastradosAdmin();
+const alvo =
+usuarios[index];
+
+if(!alvo)return;
+
+const totalAdmins =
+usuarios.filter(function(item){
+
+return item.tipo === "admin";
+
+}).length;
+
+if(alvo.tipo === "admin" && totalAdmins <= 1){
+
+alert(
+"Não é possível excluir o único administrador restante. "+
+"Cadastre outro admin antes de excluir este."
+);
+
+return;
+
 }
 
-async function redefinirSenhaUsuarioAdmin(index,aoConcluir){
-    if(!usuarioLogadoAtual || usuarioLogadoAtual.tipo !== "admin"){
-        alert("Apenas o administrador pode redefinir senhas.");
-        return;
-    }
-    const usuarios = await carregarUsuariosCadastrados();
-    const alvo = usuarios[index];
-    if(!alvo || !alvo.email) return;
+if(
+usuarioLogadoAtual &&
+alvo.usuario.toLowerCase() === usuarioLogadoAtual.usuario.toLowerCase()
+){
 
-    try{
-        await firebaseAuth.sendPasswordResetEmail(alvo.email);
-        alert("Foi enviado um e-mail de redefinição de senha para "+alvo.email+".");
-        if(typeof aoConcluir === "function") aoConcluir();
-    }catch(erro){
-        console.error(erro);
-        alert("Não foi possível enviar o e-mail de redefinição de senha.");
-    }
+alert("Você não pode excluir o usuário com o qual está logado agora.");
+
+return;
+
 }
+
+if(
+!confirm(
+"Excluir o usuário \""+alvo.usuario+"\"? Essa ação não pode ser desfeita."
+)
+){
+return;
+}
+
+usuarios.splice(index,1);
+
+salvarUsuariosCadastrados(usuarios);
+
+renderizarUsuariosCadastradosAdmin();
+
+}
+
+
+function redefinirSenhaUsuarioAdmin(index,aoConcluir){
+
+const usuarios =
+carregarUsuariosCadastrados();
+
+const alvo =
+usuarios[index];
+
+if(!alvo)return;
+
+const novaSenha =
+prompt(
+"Digite a nova senha para o usuário \""+alvo.usuario+
+"\" (mínimo 4 caracteres):"
+);
+
+if(novaSenha === null)return;
+
+if(novaSenha.length < 4){
+
+alert("A senha deve ter pelo menos 4 caracteres.");
+
+return;
+
+}
+
+hashTexto(novaSenha).then(function(senhaHash){
+
+alvo.senhaHash = senhaHash;
+
+salvarUsuariosCadastrados(usuarios);
+
+renderizarUsuariosCadastradosAdmin();
+
+alert("Senha do usuário \""+alvo.usuario+"\" redefinida com sucesso.");
+
+if(typeof aoConcluir === "function"){
+aoConcluir();
+}
+
+}).catch(function(erro){
+
+console.error(erro);
+alert("Não foi possível redefinir a senha. Tente novamente.");
+
+});
+
+}
+
 
 // Permite enviar o formulário de login pressionando Enter.
 
