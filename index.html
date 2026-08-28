@@ -1176,42 +1176,113 @@ function normalizarListaFirebase(valor){
 async function iniciarSincronizacaoFirebase(){
     const usuarioFirebase=firebaseAuth.currentUser;
     if(firebaseListenersAtivos || !usuarioFirebase) return;
+
     firebaseListenersAtivos=true;
+    const souAdmin=usuarioLogadoAtual && usuarioLogadoAtual.tipo === "admin";
+
     try{
         const estoqueRef=firebaseDB.ref("estoque");
         const historicoRef=firebaseDB.ref("historico");
         const produtosRef=firebaseDB.ref("produtos");
         const alteracoesRef=firebaseDB.ref("solicitacoesAlteracoes");
         const acessoRef=firebaseDB.ref("solicitacoesAcesso");
-        const ler=async function(ref,nome){
-            try{return await comTimeoutFirebase(ref.once("value"),10000,"Tempo esgotado ao carregar "+nome+".");}
-            catch(e){console.error("Firebase "+nome+":",e);return null;}
-        };
-        const [estoqueSnap,historicoSnap,produtosSnap,alteracoesSnap,acessoSnap]=await Promise.all([
-            ler(estoqueRef,"estoque"),ler(historicoRef,"histórico"),ler(produtosRef,"produtos"),ler(alteracoesRef,"solicitações de alteração"),ler(acessoRef,"solicitações de acesso")
-        ]);
-        estoque=estoqueSnap?normalizarListaFirebase(estoqueSnap.val()):[];
-        historico=historicoSnap?normalizarListaFirebase(historicoSnap.val()):[];
-        solicitacoesAlteracoesCache=alteracoesSnap?normalizarListaFirebase(alteracoesSnap.val()):[];
-        solicitacoesAcessoCache=acessoSnap?normalizarListaFirebase(acessoSnap.val()):[];
-        produtosCadastrados=produtosSnap?normalizarListaFirebase(produtosSnap.val()):[];
 
-        if(produtosSnap && !produtosSnap.exists() && usuarioEhAdmin()){
-            const carga=(typeof PRODUTOS_CADASTRADOS_HTML!=="undefined"?PRODUTOS_CADASTRADOS_HTML:[]).map(function(p){return {codigo:String(p.codigo||"").trim(),nome:String(p.nome||"").trim()};});
-            if(carga.length){try{await produtosRef.set(carga);produtosCadastrados=carga;}catch(e){console.error("Firebase produtos: carga inicial não gravada:",e);}}
+        const ler=async function(ref,nome){
+            try{
+                return await comTimeoutFirebase(ref.once("value"),10000,"Tempo esgotado ao carregar "+nome+".");
+            }catch(e){
+                console.error("Firebase "+nome+":",e);
+                return null;
+            }
+        };
+
+        // Usuários comuns NÃO tentam ler /solicitacoesAcesso, pois essa
+        // área é protegida no Realtime Database e é exclusiva do admin.
+        const resultados=[
+            ler(estoqueRef,"estoque"),
+            ler(historicoRef,"histórico"),
+            ler(produtosRef,"produtos"),
+            ler(alteracoesRef,"solicitações de alteração")
+        ];
+        if(souAdmin) resultados.push(ler(acessoRef,"solicitações de acesso"));
+
+        const valores=await Promise.all(resultados);
+        const estoqueSnap=valores[0];
+        const historicoSnap=valores[1];
+        const produtosSnap=valores[2];
+        const alteracoesSnap=valores[3];
+        const acessoSnap=souAdmin ? valores[4] : null;
+
+        estoque=estoqueSnap ? normalizarListaFirebase(estoqueSnap.val()) : [];
+        historico=historicoSnap ? normalizarListaFirebase(historicoSnap.val()) : [];
+        produtosCadastrados=produtosSnap ? normalizarListaFirebase(produtosSnap.val()) : [];
+        solicitacoesAlteracoesCache=alteracoesSnap ? normalizarListaFirebase(alteracoesSnap.val()) : [];
+        solicitacoesAcessoCache=souAdmin && acessoSnap ? normalizarListaFirebase(acessoSnap.val()) : [];
+
+        if(produtosSnap && !produtosSnap.exists() && souAdmin){
+            const carga=(typeof PRODUTOS_CADASTRADOS_HTML!=="undefined" ? PRODUTOS_CADASTRADOS_HTML : []).map(function(p){
+                return {codigo:String(p.codigo||"").trim(),nome:String(p.nome||"").trim()};
+            });
+            if(carga.length){
+                try{
+                    await produtosRef.set(carga);
+                    produtosCadastrados=carga;
+                }catch(e){console.error("Firebase produtos: carga inicial não gravada:",e);}
+            }
         }
 
-        const registrar=function(ref,evento,callback,erro){ref.on(evento,callback,erro);firebaseRefsAtivos.push({ref:ref,evento:evento,callback:callback});};
-        registrar(estoqueRef,"value",function(snapshot){estoque=normalizarListaFirebase(snapshot.val());garantirIdsEstoque();mostrarEstoque();atualizarContador();},function(e){console.error("Firebase estoque:",e);});
-        registrar(historicoRef,"value",function(snapshot){historico=normalizarListaFirebase(snapshot.val());mostrarHistorico();},function(e){console.error("Firebase histórico:",e);});
-        registrar(produtosRef,"value",function(snapshot){produtosCadastrados=normalizarListaFirebase(snapshot.val());atualizarListaProdutos();atualizarContadorProdutos();},function(e){console.error("Firebase produtos:",e);});
-        registrar(alteracoesRef,"value",function(snapshot){solicitacoesAlteracoesCache=normalizarListaFirebase(snapshot.val());if(typeof renderizarSolicitacoesAlteracoesAdmin==="function")renderizarSolicitacoesAlteracoesAdmin();atualizarIndicadorAdmin();},function(e){console.error("Firebase solicitações de alteração:",e);});
-        registrar(acessoRef,"value",function(snapshot){solicitacoesAcessoCache=normalizarListaFirebase(snapshot.val());if(typeof renderizarSolicitacoesAcessoAdmin==="function")renderizarSolicitacoesAcessoAdmin();atualizarIndicadorAdmin();},function(e){console.error("Firebase solicitações de acesso:",e);});
+        const registrar=function(ref,evento,callback,erro){
+            ref.on(evento,callback,erro);
+            firebaseRefsAtivos.push({ref:ref,evento:evento,callback:callback});
+        };
+
+        registrar(estoqueRef,"value",function(snapshot){
+            estoque=normalizarListaFirebase(snapshot.val());
+            garantirIdsEstoque();
+            mostrarEstoque();
+            atualizarContador();
+        },function(e){console.error("Firebase estoque:",e);});
+
+        registrar(historicoRef,"value",function(snapshot){
+            historico=normalizarListaFirebase(snapshot.val());
+            mostrarHistorico();
+        },function(e){console.error("Firebase histórico:",e);});
+
+        registrar(produtosRef,"value",function(snapshot){
+            produtosCadastrados=normalizarListaFirebase(snapshot.val());
+            atualizarListaProdutos();
+            atualizarContadorProdutos();
+            if(typeof renderizarProdutosCadastrados==="function") renderizarProdutosCadastrados();
+        },function(e){console.error("Firebase produtos:",e);});
+
+        registrar(alteracoesRef,"value",function(snapshot){
+            solicitacoesAlteracoesCache=normalizarListaFirebase(snapshot.val());
+            if(typeof renderizarSolicitacoesAlteracoesAdmin==="function" && souAdmin) renderizarSolicitacoesAlteracoesAdmin();
+            atualizarIndicadorAdmin();
+        },function(e){console.error("Firebase solicitações de alteração:",e);});
+
+        if(souAdmin){
+            registrar(acessoRef,"value",function(snapshot){
+                solicitacoesAcessoCache=normalizarListaFirebase(snapshot.val());
+                if(typeof renderizarSolicitacoesAcessoAdmin==="function") renderizarSolicitacoesAcessoAdmin();
+                atualizarIndicadorAdmin();
+            },function(e){console.error("Firebase solicitações de acesso:",e);});
+        }
+
         firebaseSincronizacaoAtiva=true;
-        atualizarListaProdutos();atualizarContadorProdutos();mostrarEstoque();mostrarHistorico();atualizarContador();
+        atualizarListaProdutos();
+        atualizarContadorProdutos();
+        mostrarEstoque();
+        mostrarHistorico();
+        atualizarContador();
+        atualizarIndicadorAdmin();
         console.log("☁️ Firebase: sincronização em tempo real ativa.");
-    }catch(error){desligarListenersFirebase();console.error("Erro na sincronização Firebase:",error);}
+    }catch(error){
+        desligarListenersFirebase();
+        console.error("Erro na sincronização Firebase:",error);
+    }
 }
+
 async function salvarDados(){
     if(!firebaseAuth.currentUser) throw new Error("Usuário não autenticado.");
     try{
@@ -2828,42 +2899,6 @@ if(!lote){ alert("Informe o lote."); return; }
 if(!qtd){ alert("Informe a quantidade."); return; }
 if(!peso){ alert("Informe o peso."); return; }
 
-    // ==========================================
-    // ENVIO DE DADOS PARA O GOOGLE SHEETS
-    // ==========================================
-    
-    // Organiza os dados com os mesmos nomes das colunas da Planilha
-    const dadosParaPlanilha = {
-        data: data,
-        container: num,
-        fornecedor: fornecedor,
-        nf: nf,
-        codigo: codigo,
-        produto: prod,
-        lote: lote,
-        quantidade: qtd,
-        peso: peso,
-        id: "ID_" + Math.floor(Math.random() * 100000) // Código único para o registro
-    };
-
-    // Altere o link abaixo colocando o link gerado pelo seu SheetDB
-    fetch("https://sheetdb.io/api/v1/vwfmr44codho6", {
-        method: "POST",
-        headers: {
-            "Accept": "application/json",
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ data: [dadosParaPlanilha] })
-    })
-    .then(response => response.json())
-    .then(resultado => {
-        console.log("Sucesso! Linha adicionada na Planilha Google:", resultado);
-    })
-    .catch(erro => {
-        console.error("Erro ao enviar dados para a planilha:", erro);
-    });
-
-
 const produtoCadastrado = produtosCadastrados.find(function(itemProduto){
     return itemProduto.nome.toLowerCase() === prod.toLowerCase();
 });
@@ -3827,7 +3862,7 @@ URL.revokeObjectURL(url);
 // INICIALIZAÇÃO
 // ======================================================
 
-async function iniciarAplicativo(){
+async async function iniciarAplicativo(){
     criarContainers();
     preencherDataHora();
     garantirIdsEstoque();
@@ -4021,7 +4056,7 @@ async function concluirLoginFirebase(user,perfil){
     if(perfil.ativo===false){await firebaseAuth.signOut().catch(function(){});mostrarErroLogin("Este usuário está bloqueado pelo administrador.");return false;}
     usuarioLogadoAtual={uid:user.uid,usuario:perfil.usuario||perfil.nome||perfil.email||user.email,nome:perfil.nome||perfil.usuario||user.email,email:user.email||perfil.email,tipo:perfil.tipo==="admin"?"admin":"usuario",ativo:true};
     perfisUsuariosCache[user.uid]=perfil;
-    entrarNoApp(usuarioLogadoAtual);
+    await entrarNoApp(usuarioLogadoAtual);
     return true;
 }
 
@@ -4062,14 +4097,26 @@ async function tratarEnvioLogin(){
     }
 }
 
-function entrarNoApp(usuarioObjeto){
+async function entrarNoApp(usuarioObjeto){
     usuarioLogadoAtual=usuarioObjeto;
     const login=document.getElementById("tela-login");
     const app=document.getElementById("app-principal");
+
+    // O acesso ao app não depende da leitura de uma coleção que o usuário
+    // comum não pode acessar. Primeiro mostramos o sistema e depois
+    // iniciamos as sincronizações permitidas pelo Firebase.
     if(login)login.style.display="none";
     if(app)app.style.display="block";
     atualizarTelaUsuarioLogado();
-    iniciarAplicativo();
+
+    try{
+        await iniciarAplicativo();
+    }catch(e){
+        console.error("Erro ao iniciar aplicativo:",e);
+    }finally{
+        const botao=document.getElementById("btn-acao-login");
+        if(botao){botao.disabled=false;botao.innerText="Entrar";}
+    }
 }
 
 async function sairDoSistema(){
