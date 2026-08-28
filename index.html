@@ -699,7 +699,7 @@ console.log("🔥 Firebase conectado!");
 <h1>📦 Controle de Containers</h1>
 
 <div class="subtitulo-login" id="subtitulo-login">
-Entre com seu usuário e senha
+Entre com seu e-mail e senha
 </div>
 
 <div class="erro-login" id="erro-login"></div>
@@ -707,8 +707,8 @@ Entre com seu usuário e senha
 <div id="bloco-login-normal">
 
 <div class="campo-login">
-<label>👤 Usuário:</label>
-<input type="text" id="login-usuario" autocomplete="off" placeholder="Digite seu usuário">
+<label>📧 E-mail:</label>
+<input type="email" id="login-usuario" autocomplete="email" placeholder="Digite seu e-mail">
 </div>
 
 <div class="campo-login">
@@ -798,13 +798,13 @@ Entrar
 <div class="linha-form">
 
 <div class="campo">
-<label>👤 Novo usuário:</label>
-<input type="text" id="admin-novo-usuario" placeholder="Nome de usuário" autocomplete="off">
+<label>📧 E-mail:</label>
+<input type="email" id="admin-novo-email" placeholder="E-mail do usuário" autocomplete="email">
 </div>
 
 <div class="campo">
 <label>🔒 Senha:</label>
-<input type="password" id="admin-nova-senha" placeholder="Senha (mín. 4 caracteres)" autocomplete="off">
+<input type="password" id="admin-nova-senha" placeholder="Senha (mín. 6 caracteres)" autocomplete="new-password" minlength="6">
 </div>
 
 <div class="campo">
@@ -1153,7 +1153,6 @@ let firebaseAplicandoDadosRemotos = false;
 const FIREBASE_CHAVES_SINCRONIZADAS = [
     "estoqueContainers",
     "historicoMovimentacoes",
-    "usuariosCadastrados",
     "solicitacoesAcessoAdmin",
     "solicitacoesAlteracoesAdmin",
     "produtosExtrasAprovados"
@@ -4107,11 +4106,6 @@ new Date().toISOString(),
 
 dados:{
 
-usuariosCadastrados:
-JSON.parse(
-localStorage.getItem("usuariosCadastrados")
-) || [],
-
 solicitacoesAcessoAdmin:
 JSON.parse(
 localStorage.getItem("solicitacoesAcessoAdmin")
@@ -4210,9 +4204,8 @@ backup.dados.produtosCadastrados.length+
 "\nRegistros de estoque: "+
 backup.dados.estoqueContainers.length+
 "\nMovimentações: "+
-backup.dados.historicoMovimentacoes.length+
-"\nUsuários: "+
-backup.dados.usuariosCadastrados.length
+backup.dados.historicoMovimentacoes.length
+
 );
 
 return;
@@ -4331,9 +4324,6 @@ backup.dados;
 
 if(
 !Array.isArray(
-dados.usuariosCadastrados
-) ||
-!Array.isArray(
 dados.estoqueContainers
 ) ||
 !Array.isArray(
@@ -4387,13 +4377,6 @@ dados.historicoMovimentacoes
 )
 );
 
-localStorage.setItem(
-"usuariosCadastrados",
-JSON.stringify(
-dados.usuariosCadastrados
-)
-);
-
 if(Array.isArray(dados.solicitacoesAcessoAdmin)){
 localStorage.setItem(
 "solicitacoesAcessoAdmin",
@@ -4421,8 +4404,6 @@ dados.produtosCadastrados.length+
 dados.estoqueContainers.length+
 "\nMovimentações: "+
 dados.historicoMovimentacoes.length+
-"\nUsuários: "+
-dados.usuariosCadastrados.length+
 "\n\nO sistema será recarregado."
 );
 
@@ -4574,9 +4555,7 @@ async function iniciarAplicativo(){
 // recomendado logar com essas credenciais e trocar a senha
 // (e cadastrar seu usuário definitivo) assim que possível.
 
-const USUARIO_ADMIN_PADRAO = "admin";
-const SENHA_ADMIN_PADRAO = "admin123";
-const SENHA_ALTERNATIVA_ADMIN_PADRAO = "recuperar-admin-2026";
+
 
 let usuarioLogadoAtual = null;
 
@@ -4585,63 +4564,47 @@ let usuarioLogadoAtual = null;
 // USUÁRIOS CADASTRADOS (MULTIUSUÁRIO)
 // ======================================================
 // Guarda um ARRAY de usuários em vez de um único objeto.
-// Cada usuário: { usuario, senhaHash, senhaAlternativaHash, tipo }
-// tipo é "admin" ou "usuario".
+// Usuários são lidos do Firebase Authentication e de /perfisUsuarios/<UID>.
+// Nenhuma senha é armazenada no aplicativo.
 
-function carregarUsuariosCadastrados(){
+let usuariosFirebaseCache = [];
+let usuariosFirebaseProntos = false;
 
-const lista =
-JSON.parse(
-localStorage.getItem("usuariosCadastrados")
-);
-
-if(Array.isArray(lista))return lista;
-
-
-// Migração automática do formato antigo (um único usuário
-// guardado em "credenciaisLogin"), que vira o primeiro admin.
-
-const antigo =
-JSON.parse(
-localStorage.getItem("credenciaisLogin")
-);
-
-if(antigo && antigo.usuario){
-
-const migrado =
-[{
-usuario:antigo.usuario,
-senhaHash:antigo.senhaHash,
-senhaAlternativaHash:antigo.senhaAlternativaHash || null,
-tipo:"admin"
-}];
-
-localStorage.setItem(
-"usuariosCadastrados",
-JSON.stringify(migrado)
-);
-
-localStorage.removeItem("credenciaisLogin");
-
-return migrado;
-
+async function carregarUsuariosCadastrados(){
+    if(usuariosFirebaseProntos) return usuariosFirebaseCache.slice();
+    const snap = await firebaseDB.ref("perfisUsuarios").once("value");
+    const dados = snap.val() || {};
+    usuariosFirebaseCache = Object.keys(dados).map(function(uid){
+        const p = dados[uid] || {};
+        return {
+            uid: uid,
+            email: p.email || p.usuario || "",
+            usuario: p.email || p.usuario || "",
+            nome: p.nome || p.email || p.usuario || "Usuário",
+            tipo: p.tipo === "admin" ? "admin" : "usuario",
+            ativo: p.ativo !== false,
+            criadoEm: p.criadoEm || null
+        };
+    });
+    usuariosFirebaseProntos = true;
+    return usuariosFirebaseCache.slice();
 }
 
-
-return [];
-
+async function atualizarCacheUsuariosFirebase(){
+    usuariosFirebaseProntos = false;
+    return carregarUsuariosCadastrados();
 }
 
+async function salvarPerfilUsuarioFirebase(uid, perfil){
+    await firebaseDB.ref("perfisUsuarios/" + uid).set(perfil);
+    await atualizarCacheUsuariosFirebase();
+}
 
+// Compatibilidade apenas em memória. Nenhum usuário é salvo no localStorage.
 function salvarUsuariosCadastrados(lista){
-
-localStorage.setItem(
-"usuariosCadastrados",
-JSON.stringify(lista)
-);
-
+    usuariosFirebaseCache = Array.isArray(lista) ? lista.slice() : [];
+    usuariosFirebaseProntos = true;
 }
-
 
 function hashTexto(texto){
 
@@ -4883,6 +4846,7 @@ function entrarNoApp(usuarioObjeto){
     }
 
     iniciarAplicativo();
+    if(usuarioObjeto.tipo === "admin") renderizarUsuariosCadastradosAdmin();
 }
 
 async function sair(){
@@ -5185,7 +5149,7 @@ renderizarSolicitacoesAcessoAdmin();
 
 }
 
-function atenderSolicitacaoAcesso(id,acao){
+async function atenderSolicitacaoAcesso(id,acao){
 
 if(!usuarioLogadoAtual || usuarioLogadoAtual.tipo !== "admin"){
 alert("Apenas o administrador pode atender solicitações de acesso.");
@@ -5199,9 +5163,9 @@ return item.id === id && item.status === "pendente";
 
 if(!solicitacao)return;
 
-const usuarios = carregarUsuariosCadastrados();
+const usuarios = await carregarUsuariosCadastrados();
 const indiceUsuario = usuarios.findIndex(function(item){
-return item.usuario.toLowerCase() === solicitacao.usuario.toLowerCase();
+return (item.email || item.usuario || "").toLowerCase() === solicitacao.usuario.toLowerCase();
 });
 
 if(acao === "recusar"){
@@ -5233,7 +5197,7 @@ if(acao === "refazer"){
 
 const alvo = indiceUsuario >= 0 ? usuarios[indiceUsuario] : null;
 
-if(alvo && alvo.usuario.toLowerCase() === usuarioLogadoAtual.usuario.toLowerCase()){
+if(alvo && (alvo.email || alvo.usuario || "").toLowerCase() === (usuarioLogadoAtual.email || usuarioLogadoAtual.usuario || "").toLowerCase()){
 alert("Você não pode refazer o usuário com o qual está logado agora.");
 return;
 }
@@ -5254,12 +5218,12 @@ if(!confirm("Refazer o usuário \""+solicitacao.usuario+"\"? O cadastro atual se
 return;
 }
 
-if(indiceUsuario >= 0){
-usuarios.splice(indiceUsuario,1);
-salvarUsuariosCadastrados(usuarios);
+if(indiceUsuario >= 0 && usuarios[indiceUsuario].uid){
+await firebaseDB.ref("perfisUsuarios/" + usuarios[indiceUsuario].uid).update({ativo:false});
+await atualizarCacheUsuariosFirebase();
 }
 
-const campoUsuario = document.getElementById("admin-novo-usuario");
+const campoUsuario = document.getElementById("admin-novo-email");
 const campoSenha = document.getElementById("admin-nova-senha");
 const campoTipo = document.getElementById("admin-novo-tipo");
 
@@ -5267,7 +5231,7 @@ if(campoUsuario) campoUsuario.value = solicitacao.usuario;
 if(campoSenha) campoSenha.value = "";
 if(campoTipo) campoTipo.value = (alvo && alvo.tipo === "admin") ? "admin" : "usuario";
 
-renderizarUsuariosCadastradosAdmin();
+await renderizarUsuariosCadastradosAdmin();
 atualizarSolicitacao(id,"refazendo");
 
 alert("O usuário foi removido e preparado para novo cadastro. Defina a nova senha e clique em \"Cadastrar Usuário\".");
@@ -5276,254 +5240,154 @@ alert("O usuário foi removido e preparado para novo cadastro. Defina a nova sen
 
 }
 
-function renderizarUsuariosCadastradosAdmin(){
+async function renderizarUsuariosCadastradosAdmin(){
+    const area = document.getElementById("lista-usuarios-cadastrados");
+    if(!area) return;
 
-const area =
-document.getElementById("lista-usuarios-cadastrados");
-
-if(!area)return;
-
-const usuarios =
-carregarUsuariosCadastrados();
-
-if(usuarios.length === 0){
-
-area.innerHTML =
-`
-<div class="vazio">
-Nenhum usuário cadastrado.
-</div>
-`;
-
-return;
-
+    try{
+        const usuarios = await carregarUsuariosCadastrados();
+        if(usuarios.length === 0){
+            area.innerHTML = '<div class="vazio">Nenhum usuário cadastrado no Firebase.</div>';
+            return;
+        }
+        area.innerHTML = usuarios.map(function(item,index){
+            const identificador = item.email || item.usuario || "Usuário";
+            return `
+            <div class="produto-item">
+                <strong>${identificador}</strong>
+                — ${item.tipo === "admin" ? "👑 Administrador" : "👤 Usuário comum"}
+                ${item.ativo === false ? " — 🚫 Desativado" : ""}
+                <div class="acoes-item">
+                    <button class="btn-acao" onclick="redefinirSenhaUsuarioAdmin(${index})" title="Enviar redefinição de senha">🔑</button>
+                    <button class="btn-acao" onclick="excluirUsuarioAdmin(${index})" title="Desativar usuário">🗑️</button>
+                </div>
+            </div>`;
+        }).join("");
+    }catch(e){
+        area.innerHTML = '<div class="vazio">Não foi possível carregar os usuários do Firebase.</div>';
+    }
 }
 
+async function cadastrarUsuarioAdmin(){
+    esconderErroAdminUsuarios();
 
-area.innerHTML =
-usuarios.map(function(item,index){
+    if(!usuarioLogadoAtual || usuarioLogadoAtual.tipo !== "admin"){
+        mostrarErroAdminUsuarios("Apenas o administrador pode cadastrar usuários.");
+        return;
+    }
 
-return `
-<div class="produto-item">
-<strong>${item.usuario}</strong>
-—
-${item.tipo === "admin" ? "👑 Administrador" : "👤 Usuário comum"}
-<div class="acoes-item">
-<button
-class="btn-acao"
-onclick="redefinirSenhaUsuarioAdmin(${index})"
-title="Redefinir senha"
->
-🔑
-</button>
-<button
-class="btn-acao"
-onclick="excluirUsuarioAdmin(${index})"
-title="Excluir usuário"
->
-🗑️
-</button>
-</div>
-</div>
-`;
+    const campoEmail = document.getElementById("admin-novo-email");
+    const campoSenha = document.getElementById("admin-nova-senha");
+    const campoTipo = document.getElementById("admin-novo-tipo");
 
-}).join("");
+    const email = (campoEmail?.value || "").trim().toLowerCase();
+    const senha = campoSenha?.value || "";
+    const tipo = campoTipo?.value === "admin" ? "admin" : "usuario";
 
+    if(!email || !email.includes("@")){
+        mostrarErroAdminUsuarios("Informe um e-mail válido.");
+        return;
+    }
+    if(senha.length < 6){
+        mostrarErroAdminUsuarios("A senha deve ter pelo menos 6 caracteres.");
+        return;
+    }
+
+    try{
+        const usuarios = await carregarUsuariosCadastrados();
+        if(usuarios.some(function(item){ return String(item.email || "").toLowerCase() === email; })){
+            mostrarErroAdminUsuarios("Este e-mail já possui perfil no sistema.");
+            return;
+        }
+
+        // Usa um segundo app Firebase para criar o novo usuário sem deslogar o admin atual.
+        const nomeAppSecundario = "criadorUsuarioAdmin";
+        let appSecundario = firebase.apps.find(function(app){ return app.name === nomeAppSecundario; });
+        if(!appSecundario){
+            appSecundario = firebase.initializeApp(firebaseConfig, nomeAppSecundario);
+        }
+        const authSecundario = appSecundario.auth();
+        const credencial = await authSecundario.createUserWithEmailAndPassword(email, senha);
+        const novoUid = credencial.user.uid;
+
+        await firebaseDB.ref("perfisUsuarios/" + novoUid).set({
+            uid: novoUid,
+            email: email,
+            usuario: email,
+            nome: email.split("@")[0],
+            tipo: tipo,
+            ativo: true,
+            criadoEm: firebase.database.ServerValue.TIMESTAMP,
+            criadoPor: firebaseAuth.currentUser ? firebaseAuth.currentUser.uid : null
+        });
+
+        await authSecundario.signOut();
+        await atualizarCacheUsuariosFirebase();
+        await renderizarUsuariosCadastradosAdmin();
+
+        if(campoEmail) campoEmail.value = "";
+        if(campoSenha) campoSenha.value = "";
+        if(campoTipo) campoTipo.value = "usuario";
+
+        alert("Usuário cadastrado com sucesso no Firebase Authentication e no Realtime Database.");
+    }catch(erro){
+        console.error("Erro ao cadastrar usuário no Firebase:", erro);
+        let mensagem = "Não foi possível cadastrar o usuário.";
+        switch(erro?.code){
+            case "auth/email-already-in-use": mensagem = "Este e-mail já está cadastrado no Firebase Authentication."; break;
+            case "auth/invalid-email": mensagem = "O e-mail informado é inválido."; break;
+            case "auth/weak-password": mensagem = "A senha precisa ter pelo menos 6 caracteres."; break;
+            case "auth/operation-not-allowed": mensagem = "Ative o provedor E-mail/senha no Firebase Authentication."; break;
+            case "PERMISSION_DENIED":
+            case "database/permission-denied": mensagem = "O Firebase Authentication criou o usuário, mas as regras do Realtime Database bloquearam a gravação do perfil. Ajuste as regras de /perfisUsuarios."; break;
+        }
+        mostrarErroAdminUsuarios(mensagem);
+    }
 }
 
+async function excluirUsuarioAdmin(index){
+    if(!usuarioLogadoAtual || usuarioLogadoAtual.tipo !== "admin"){
+        alert("Apenas o administrador pode desativar usuários.");
+        return;
+    }
+    const usuarios = await carregarUsuariosCadastrados();
+    const alvo = usuarios[index];
+    if(!alvo) return;
 
-function cadastrarUsuarioAdmin(){
+    if(alvo.uid === firebaseAuth.currentUser?.uid){
+        alert("Você não pode desativar o usuário que está logado.");
+        return;
+    }
+    const totalAdmins = usuarios.filter(function(item){ return item.tipo === "admin" && item.ativo !== false; }).length;
+    if(alvo.tipo === "admin" && totalAdmins <= 1){
+        alert("Não é possível desativar o único administrador restante.");
+        return;
+    }
+    if(!confirm("Desativar o acesso de "+(alvo.email || alvo.usuario)+"? O cadastro do Authentication será mantido, mas o perfil ficará inativo.")) return;
 
-esconderErroAdminUsuarios();
-
-const campoUsuario =
-document.getElementById("admin-novo-usuario");
-
-const campoSenha =
-document.getElementById("admin-nova-senha");
-
-const campoTipo =
-document.getElementById("admin-novo-tipo");
-
-const novoUsuario =
-campoUsuario.value.trim();
-
-const novaSenha =
-campoSenha.value;
-
-const novoTipo =
-campoTipo.value;
-
-if(!novoUsuario){
-
-mostrarErroAdminUsuarios("Informe o nome do novo usuário.");
-
-return;
-
+    await firebaseDB.ref("perfisUsuarios/" + alvo.uid).update({ativo:false});
+    await atualizarCacheUsuariosFirebase();
+    await renderizarUsuariosCadastradosAdmin();
 }
 
-if(novaSenha.length < 4){
+async function redefinirSenhaUsuarioAdmin(index,aoConcluir){
+    if(!usuarioLogadoAtual || usuarioLogadoAtual.tipo !== "admin"){
+        alert("Apenas o administrador pode redefinir senhas.");
+        return;
+    }
+    const usuarios = await carregarUsuariosCadastrados();
+    const alvo = usuarios[index];
+    if(!alvo || !alvo.email) return;
 
-mostrarErroAdminUsuarios("A senha deve ter pelo menos 4 caracteres.");
-
-return;
-
+    try{
+        await firebaseAuth.sendPasswordResetEmail(alvo.email);
+        alert("Foi enviado um e-mail de redefinição de senha para "+alvo.email+".");
+        if(typeof aoConcluir === "function") aoConcluir();
+    }catch(erro){
+        console.error(erro);
+        alert("Não foi possível enviar o e-mail de redefinição de senha.");
+    }
 }
-
-
-
-const usuarios =
-carregarUsuariosCadastrados();
-
-const jaExiste =
-usuarios.some(function(item){
-
-return item.usuario.toLowerCase() ===
-novoUsuario.toLowerCase();
-
-});
-
-if(jaExiste){
-
-mostrarErroAdminUsuarios("Já existe um usuário com esse nome.");
-
-return;
-
-}
-
-
-hashTexto(novaSenha).then(function(senhaHash){
-
-usuarios.push({
-usuario:novoUsuario,
-senhaHash:senhaHash,
-senhaAlternativaHash:null,
-tipo:novoTipo
-});
-
-salvarUsuariosCadastrados(usuarios);
-
-renderizarUsuariosCadastradosAdmin();
-
-campoUsuario.value = "";
-
-campoSenha.value = "";
-
-
-campoTipo.value = "usuario";
-
-alert("Usuário cadastrado com sucesso!");
-
-});
-
-}
-
-
-function excluirUsuarioAdmin(index){
-
-const usuarios =
-carregarUsuariosCadastrados();
-
-const alvo =
-usuarios[index];
-
-if(!alvo)return;
-
-const totalAdmins =
-usuarios.filter(function(item){
-
-return item.tipo === "admin";
-
-}).length;
-
-if(alvo.tipo === "admin" && totalAdmins <= 1){
-
-alert(
-"Não é possível excluir o único administrador restante. "+
-"Cadastre outro admin antes de excluir este."
-);
-
-return;
-
-}
-
-if(
-usuarioLogadoAtual &&
-alvo.usuario.toLowerCase() === usuarioLogadoAtual.usuario.toLowerCase()
-){
-
-alert("Você não pode excluir o usuário com o qual está logado agora.");
-
-return;
-
-}
-
-if(
-!confirm(
-"Excluir o usuário \""+alvo.usuario+"\"? Essa ação não pode ser desfeita."
-)
-){
-return;
-}
-
-usuarios.splice(index,1);
-
-salvarUsuariosCadastrados(usuarios);
-
-renderizarUsuariosCadastradosAdmin();
-
-}
-
-
-function redefinirSenhaUsuarioAdmin(index,aoConcluir){
-
-const usuarios =
-carregarUsuariosCadastrados();
-
-const alvo =
-usuarios[index];
-
-if(!alvo)return;
-
-const novaSenha =
-prompt(
-"Digite a nova senha para o usuário \""+alvo.usuario+
-"\" (mínimo 4 caracteres):"
-);
-
-if(novaSenha === null)return;
-
-if(novaSenha.length < 4){
-
-alert("A senha deve ter pelo menos 4 caracteres.");
-
-return;
-
-}
-
-hashTexto(novaSenha).then(function(senhaHash){
-
-alvo.senhaHash = senhaHash;
-
-salvarUsuariosCadastrados(usuarios);
-
-renderizarUsuariosCadastradosAdmin();
-
-alert("Senha do usuário \""+alvo.usuario+"\" redefinida com sucesso.");
-
-if(typeof aoConcluir === "function"){
-aoConcluir();
-}
-
-}).catch(function(erro){
-
-console.error(erro);
-alert("Não foi possível redefinir a senha. Tente novamente.");
-
-});
-
-}
-
 
 // Permite enviar o formulário de login pressionando Enter.
 
