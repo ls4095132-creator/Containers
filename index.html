@@ -4298,12 +4298,16 @@ async function iniciarAplicativo(){
     criarContainers();
     preencherDataHora();
     garantirIdsEstoque();
-    await iniciarSincronizacaoFirebase();
+
+    // O aplicativo não fica preso na tela de login esperando o banco.
+    // A sincronização é iniciada em segundo plano.
+    iniciarSincronizacaoFirebase().catch(function(erro){
+        console.error("Erro na sincronização Firebase:",erro);
+    });
 
     atualizarListaProdutos();
     mostrarEstoque();
     mostrarHistorico();
-
 
     if(usuarioEhAdmin()){
         renderizarSolicitacoesAlteracoesAdmin();
@@ -4341,7 +4345,7 @@ async function iniciarAplicativo(){
 // - Senhas ficam exclusivamente no Firebase Authentication.
 // - Perfis (nome, e-mail, tipo e status) ficam em /perfisUsuarios/<UID>.
 // - Nenhum usuário, senha ou lista de usuários é salvo no localStorage.
-// - A sessão é mantida apenas em memória pelo Firebase Auth (Persistence.NONE).
+// - A sessão é mantida pelo Firebase Auth, não pelo sessionStorage.
 
 let usuarioLogadoAtual = null;
 let perfisUsuariosCache = {};
@@ -4463,44 +4467,82 @@ function atualizarTelaUsuarioLogado(){
     }
 }
 
-let processamentoLoginFirebase = false;
-
-async function verificarAutenticacao(usuarioFirebase=null){
-    const user=usuarioFirebase || firebaseAuth.currentUser;
+async function verificarAutenticacao(userInformado){
+    const user=userInformado || firebaseAuth.currentUser;
     if(!user){
         usuarioLogadoAtual=null;
         return false;
     }
 
     try{
-        const perfil=await garantirPerfilFirebase(user);
-        if(perfil.ativo === false){
-            await firebaseAuth.signOut();
-            mostrarErroLogin("Este usuário está bloqueado pelo administrador.");
-            return false;
+        // Carrega somente o perfil do usuário autenticado.
+        // Não bloqueia o login esperando a lista completa de usuários.
+        const perfil=await obterPerfilFirebase(user.uid);
+
+        if(!perfil){
+            // Se o usuário existe no Authentication mas ainda não possui
+            // perfil, cria o perfil automaticamente no Realtime Database.
+            const novoPerfil=await garantirPerfilFirebase(user);
+            return await concluirLoginFirebase(user,novoPerfil);
         }
 
-        usuarioLogadoAtual={
-            uid:user.uid,
-            usuario:perfil.usuario || perfil.nome || user.email,
-            nome:perfil.nome || perfil.usuario || user.email,
-            email:user.email || perfil.email,
-            tipo:perfil.tipo === "admin" ? "admin" : "usuario",
-            ativo:perfil.ativo !== false
-        };
-
-        await carregarPerfisUsuariosFirebase();
-        entrarNoApp(usuarioLogadoAtual);
-        return true;
+        return await concluirLoginFirebase(user,perfil);
     }catch(erro){
         console.error("Erro ao carregar perfil Firebase:",erro);
-        await firebaseAuth.signOut();
-        mostrarErroLogin("Não foi possível carregar seu perfil no Firebase. Verifique as regras do Realtime Database.");
+        await firebaseAuth.signOut().catch(function(){});
+        usuarioLogadoAtual=null;
+        const botao=document.getElementById("btn-acao-login");
+        if(botao){botao.disabled=false;botao.innerText="Entrar";}
+        mostrarErroLogin("O login do Firebase foi realizado, mas o perfil não pôde ser carregado. Verifique Realtime Database → Regras.");
         return false;
     }
 }
 
+async function concluirLoginFirebase(user,perfil){
+    if(!perfil) throw new Error("Perfil Firebase não encontrado.");
+
+    perfil.email=perfil.email || emailNormalizado(user.email);
+    perfil.ativo=perfil.ativo !== false;
+
+    if(perfil.ativo === false){
+        await firebaseAuth.signOut().catch(function(){});
+        mostrarErroLogin("Este usuário está bloqueado pelo administrador.");
+        return false;
+    }
+
+    usuarioLogadoAtual={
+        uid:user.uid,
+        usuario:perfil.usuario || perfil.nome || perfil.email || user.email,
+        nome:perfil.nome || perfil.usuario || user.email,
+        email:user.email || perfil.email,
+        tipo:perfil.tipo === "admin" ? "admin" : "usuario",
+        ativo:true
+    };
+
+    perfisUsuariosCache[user.uid]=perfil;
+
+    // Entra imediatamente no aplicativo. A sincronização completa do banco
+    // acontece em segundo plano e não pode deixar o botão "Entrando..." preso.
+    entrarNoApp(usuarioLogadoAtual);
+
+    // Para o painel administrativo, carrega a lista completa depois do login.
+    carregarPerfisUsuariosFirebase().then(function(){
+        if(usuarioEhAdmin()){
+            renderizarUsuariosCadastradosAdmin();
+            renderizarSolicitacoesAlteracoesAdmin();
+            atualizarIndicadorAdmin();
+        }
+    }).catch(function(e){
+        console.error("Erro ao carregar lista de perfis:",e);
+    });
+
+    return true;
+}
+
+let loginEmProcessamento=false;
+
 async function tratarEnvioLogin(){
+    if(loginEmProcessamento)return;
     esconderErroLogin();
 
     const usuarioDigitado=document.getElementById("login-usuario").value.trim();
@@ -4512,35 +4554,49 @@ async function tratarEnvioLogin(){
     }
 
     const botao=document.getElementById("btn-acao-login");
-    if(botao){ botao.disabled=true; botao.innerText="Entrando..."; }
+    loginEmProcessamento=true;
+    if(botao){botao.disabled=true;botao.innerText="Entrando...";}
 
     try{
-        processamentoLoginFirebase = true;
         const email=emailNormalizado(usuarioParaEmail(usuarioDigitado));
+
+        // Persistência somente em memória desta página.
         await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.NONE);
-        const credencial=await firebaseAuth.signInWithEmailAndPassword(email,senha);
-        const entrou=await verificarAutenticacao(credencial.user);
-        if(!entrou) throw new Error("O Firebase autenticou, mas o perfil não pôde ser carregado.");
+
+        // Usa diretamente a credencial retornada pelo Firebase.
+        const cred=await firebaseAuth.signInWithEmailAndPassword(email,senha);
+        console.log("✅ Firebase Authentication: usuário autenticado",cred.user.uid);
+
+        const sucesso=await verificarAutenticacao(cred.user);
+        if(!sucesso && botao){
+            botao.disabled=false;
+            botao.innerText="Entrar";
+        }
     }catch(erro){
         console.error("Erro no login Firebase:",erro);
         let mensagem="E-mail/usuário ou senha incorretos.";
-        if(erro && (erro.code === "auth/invalid-credential" || erro.code === "auth/wrong-password")) {
-            mensagem="E-mail/usuário ou senha incorretos no Firebase. Confira os dados em Authentication → Usuários.";
-        } else if(erro && erro.code === "auth/user-not-found") {
+        if(erro && erro.code === "auth/invalid-credential"){
+            mensagem="E-mail ou senha incorretos no Firebase Authentication. Confira o usuário em Authentication → Usuários.";
+        }else if(erro && erro.code === "auth/wrong-password"){
+            mensagem="Senha incorreta para este usuário.";
+        }else if(erro && erro.code === "auth/user-not-found"){
             mensagem="Esse usuário não existe no Firebase Authentication.";
-        } else if(erro && erro.code === "auth/invalid-email") {
+        }else if(erro && erro.code === "auth/invalid-email"){
             mensagem="Informe um e-mail válido.";
-        } else if(erro && erro.code === "auth/too-many-requests") {
+        }else if(erro && erro.code === "auth/too-many-requests"){
             mensagem="Muitas tentativas. Aguarde alguns minutos e tente novamente.";
-        } else if(erro && erro.code === "auth/network-request-failed") {
+        }else if(erro && erro.code === "auth/network-request-failed"){
             mensagem="Sem conexão com o Firebase. Verifique a internet.";
-        } else if(erro && erro.message && erro.message.includes("perfil")) {
-            mensagem="Login autenticado, mas o perfil não pôde ser carregado. Verifique perfisUsuarios e as regras do Firebase.";
+        }else if(erro && erro.code === "auth/operation-not-allowed"){
+            mensagem="O login por e-mail e senha está desativado no Firebase Authentication.";
         }
         mostrarErroLogin(mensagem);
     }finally{
-        processamentoLoginFirebase = false;
-        if(botao){ botao.disabled=false; botao.innerText="Entrar"; }
+        loginEmProcessamento=false;
+        if(botao && document.getElementById("tela-login")?.style.display !== "none"){
+            botao.disabled=false;
+            botao.innerText="Entrar";
+        }
     }
 }
 
@@ -4551,9 +4607,7 @@ function entrarNoApp(usuarioObjeto){
     if(login)login.style.display="none";
     if(app)app.style.display="block";
     atualizarTelaUsuarioLogado();
-    iniciarAplicativo().catch(function(erro){
-        console.error("Erro ao iniciar o aplicativo:",erro);
-    });
+    iniciarAplicativo();
 }
 
 async function sairDoSistema(){
@@ -4831,7 +4885,7 @@ async function configurarAutenticacaoSemPersistencia(){
 async function iniciarAutenticacao(){
     await configurarAutenticacaoSemPersistencia();
 
-    firebaseAuth.onAuthStateChanged(async function(user){
+    firebaseAuth.onAuthStateChanged(function(user){
         if(!user){
             usuarioLogadoAtual=null;
             perfisUsuariosCache={};
@@ -4844,7 +4898,11 @@ async function iniciarAutenticacao(){
             return;
         }
 
-        await verificarAutenticacao();
+        // Se o usuário já estiver autenticado na memória da página,
+        // carrega o perfil sem usar localStorage.
+        if(!usuarioLogadoAtual){
+            verificarAutenticacao(user);
+        }
     });
 }
 
@@ -4875,8 +4933,6 @@ setInterval(function(){
     }
     atualizarIndicadorAdmin();
 }, 2000);
-
-configurarAutenticacaoSemPersistencia();
 
 </script>
 
