@@ -1144,7 +1144,7 @@ style="margin-top:20px;"
 
 let estoque = JSON.parse(localStorage.getItem("estoqueContainers")) || [];
 let historico = JSON.parse(localStorage.getItem("historicoMovimentacoes")) || [];
-let firebaseSincronizacaoAtiva = false;
+let firebaseSincronizacaoAtiva = false; // appData desativado
 let firebaseListenersAtivos = false;
 let firebaseAplicandoDadosRemotos = false;
 
@@ -1281,7 +1281,7 @@ async function iniciarSincronizacaoFirebase(){
     const historicoRef = firebaseDB.ref("historico");
 
     try {
-        await sincronizarTodosOsDadosDoAplicativo();
+        // appData DESATIVADO: o sistema usa diretamente /estoque e /historico no Firebase.
         const [estoqueSnap, historicoSnap] = await Promise.all([
             estoqueRef.once("value"),
             historicoRef.once("value")
@@ -1326,7 +1326,7 @@ async function iniciarSincronizacaoFirebase(){
         }, function(error){ console.error("Firebase histórico:", error); });
 
         firebaseSincronizacaoAtiva = true;
-        ativarListenersDadosAplicativo();
+        // appData DESATIVADO para evitar permission_denied em /appData.
         console.log("☁️ Firebase: todos os dados do aplicativo sincronizados em tempo real.");
         mostrarEstoque();
         mostrarHistorico();
@@ -1334,7 +1334,8 @@ async function iniciarSincronizacaoFirebase(){
     } catch(error) {
         firebaseListenersAtivos = false;
         console.error("Erro ao iniciar sincronização Firebase:", error);
-        alert("O login funcionou, mas o banco Firebase ainda está bloqueado. Vamos configurar as regras de segurança no próximo passo.");
+        // Não bloqueia o usuário nem mantém a tela presa em "Entrando...".
+        // O login já foi autenticado pelo Firebase Authentication.
     }
 }
 
