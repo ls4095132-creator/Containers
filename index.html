@@ -4,6 +4,7 @@
 <head>
 
 <meta charset="UTF-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E📦%3C/text%3E%3C/svg%3E">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Controle de Containers</title>
@@ -691,9 +692,6 @@ const firebaseDB = firebase.database();
 console.log("🔥 Firebase conectado!");
 </script>
 
-
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='7' y='14' width='50' height='36' rx='5' fill='%2356d2ff'/%3E%3Cpath d='M7 25h50M18 14v36M32 14v36M46 14v36' stroke='%23041521' stroke-width='3' fill='none'/%3E%3C/svg%3E">
-
 </head>
 
 <body>
@@ -717,12 +715,12 @@ Entre com seu usuário e senha
 
 <div class="campo-login">
 <label>👤 Usuário:</label>
-<input type="text" id="login-usuario" autocomplete="off" placeholder="Digite seu usuário">
+<input type="email" id="login-usuario" autocomplete="username" autocomplete="off" placeholder="Digite seu usuário">
 </div>
 
 <div class="campo-login">
 <label>🔒 Senha:</label>
-<input type="password" id="login-senha" autocomplete="off" placeholder="Digite sua senha">
+<input type="password" id="login-senha" autocomplete="current-password" autocomplete="off" placeholder="Digite sua senha">
 </div>
 
 <button type="button" class="btn-login" id="btn-acao-login" onclick="tratarEnvioLogin()">
@@ -4344,7 +4342,7 @@ async function iniciarAplicativo(){
 // - Senhas ficam exclusivamente no Firebase Authentication.
 // - Perfis (nome, e-mail, tipo e status) ficam em /perfisUsuarios/<UID>.
 // - Nenhum usuário, senha ou lista de usuários é salvo no localStorage.
-// - A sessão usa Firebase Auth com persistência NONE e não é gravada no localStorage/sessionStorage.
+// - A sessão é mantida pelo Firebase Auth, não pelo sessionStorage.
 
 let usuarioLogadoAtual = null;
 let perfisUsuariosCache = {};
@@ -4502,44 +4500,64 @@ async function verificarAutenticacao(){
 async function tratarEnvioLogin(){
     esconderErroLogin();
 
-    const usuarioDigitado=document.getElementById("login-usuario").value.trim();
-    const senha=document.getElementById("login-senha").value;
+    const campoUsuario=document.getElementById("login-usuario");
+    const campoSenha=document.getElementById("login-senha");
+    const usuarioDigitado=(campoUsuario?.value || "").trim();
+    const senha=campoSenha?.value || "";
 
     if(!usuarioDigitado || !senha){
-        mostrarErroLogin("Preencha usuário e senha.");
+        mostrarErroLogin("Preencha o e-mail e a senha.");
         return;
     }
 
+    // O Firebase Authentication usa e-mail. Se for digitado somente o nome
+    // antes do @, mantemos compatibilidade com o padrão antigo do sistema.
+    const email=emailNormalizado(usuarioParaEmail(usuarioDigitado));
     const botao=document.getElementById("btn-acao-login");
-    if(botao)botao.disabled=true;
+    if(botao){ botao.disabled=true; botao.innerText="Entrando..."; }
 
     try{
-        const email=emailNormalizado(usuarioParaEmail(usuarioDigitado));
-        // Firebase Authentication é a única fonte de verdade para login.
-        // A sessão fica somente em memória nesta página.
+        // Importante: configurar a persistência ANTES de autenticar.
         await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.NONE);
-        if(firebaseAuth.currentUser){
-            await firebaseAuth.signOut();
-        }
-        await firebaseAuth.signInWithEmailAndPassword(email,senha);
-        // onAuthStateChanged continua o fluxo e carrega o perfil do Firebase.
+
+        // Não tentamos autenticar por localStorage/sessionStorage e não
+        // fazemos nenhum bypass. A senha é validada exclusivamente pelo Firebase.
+        await firebaseAuth.signInWithEmailAndPassword(email, senha);
+        // onAuthStateChanged assume o restante do fluxo.
     }catch(erro){
-        console.error("Erro no login Firebase:",erro);
-        let mensagem="E-mail/usuário ou senha incorretos.";
-        if(erro && (erro.code === "auth/invalid-credential" || erro.code === "auth/wrong-password")) {
-            mensagem="O Firebase recusou o login. Confira o e-mail exatamente como aparece em Authentication → Usuários e a senha dessa conta.";
-        } else if(erro && erro.code === "auth/user-not-found") {
-            mensagem="Esse usuário não existe no Firebase Authentication.";
-        } else if(erro && erro.code === "auth/invalid-email") {
-            mensagem="Informe um e-mail válido.";
-        } else if(erro && erro.code === "auth/too-many-requests") {
-            mensagem="Muitas tentativas. Aguarde alguns minutos e tente novamente.";
-        } else if(erro && erro.code === "auth/network-request-failed") {
-            mensagem="Sem conexão com o Firebase. Verifique a internet.";
+        console.error("Erro no login Firebase:", erro);
+        const codigo=erro?.code || "";
+        let mensagem="Não foi possível entrar.";
+
+        switch(codigo){
+            case "auth/invalid-credential":
+            case "auth/wrong-password":
+                mensagem="E-mail ou senha incorretos no Firebase. Verifique Authentication → Usuários.";
+                break;
+            case "auth/user-not-found":
+                mensagem="Este e-mail não existe no Firebase Authentication.";
+                break;
+            case "auth/invalid-email":
+                mensagem="O e-mail informado não é válido.";
+                break;
+            case "auth/user-disabled":
+                mensagem="Esta conta foi desativada no Firebase Authentication.";
+                break;
+            case "auth/too-many-requests":
+                mensagem="Muitas tentativas de login. Aguarde alguns minutos e tente novamente.";
+                break;
+            case "auth/network-request-failed":
+                mensagem="Não foi possível conectar ao Firebase. Verifique sua internet.";
+                break;
+            case "auth/operation-not-allowed":
+                mensagem="O login por e-mail e senha não está habilitado em Firebase → Authentication → Método de login.";
+                break;
+            default:
+                mensagem="Erro do Firebase ao autenticar ("+(codigo || "desconhecido")+"). Abra o Console para ver os detalhes.";
         }
         mostrarErroLogin(mensagem);
     }finally{
-        if(botao)botao.disabled=false;
+        if(botao){ botao.disabled=false; botao.innerText="Entrar"; }
     }
 }
 
@@ -4804,6 +4822,9 @@ async function excluirUsuarioAdmin(index){
     await alternarBloqueioUsuarioAdmin(index);
 }
 
+// Compatibilidade com chamadas antigas do painel.
+function garantirAdminPadrao(){return carregarUsuariosCadastrados();}
+
 // ======================================================
 // INICIALIZAÇÃO DA AUTENTICAÇÃO
 // ======================================================
@@ -4823,7 +4844,15 @@ async function configurarAutenticacaoSemPersistencia(){
 }
 
 async function iniciarAutenticacao(){
-    await configurarAutenticacaoSemPersistencia();
+    try{
+        // Sempre começa esta página sem uma sessão restaurada.
+        await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.NONE);
+        if(firebaseAuth.currentUser){
+            await firebaseAuth.signOut();
+        }
+    }catch(erro){
+        console.error("Erro ao preparar o Firebase Authentication:", erro);
+    }
 
     firebaseAuth.onAuthStateChanged(async function(user){
         if(!user){
