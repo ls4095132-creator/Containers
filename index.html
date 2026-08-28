@@ -4,7 +4,6 @@
 <head>
 
 <meta charset="UTF-8">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E📦%3C/text%3E%3C/svg%3E">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Controle de Containers</title>
@@ -715,12 +714,12 @@ Entre com seu usuário e senha
 
 <div class="campo-login">
 <label>👤 Usuário:</label>
-<input type="email" id="login-usuario" autocomplete="username" autocomplete="off" placeholder="Digite seu usuário">
+<input type="text" id="login-usuario" autocomplete="off" placeholder="Digite seu usuário">
 </div>
 
 <div class="campo-login">
 <label>🔒 Senha:</label>
-<input type="password" id="login-senha" autocomplete="current-password" autocomplete="off" placeholder="Digite sua senha">
+<input type="password" id="login-senha" autocomplete="off" placeholder="Digite sua senha">
 </div>
 
 <button type="button" class="btn-login" id="btn-acao-login" onclick="tratarEnvioLogin()">
@@ -4342,7 +4341,7 @@ async function iniciarAplicativo(){
 // - Senhas ficam exclusivamente no Firebase Authentication.
 // - Perfis (nome, e-mail, tipo e status) ficam em /perfisUsuarios/<UID>.
 // - Nenhum usuário, senha ou lista de usuários é salvo no localStorage.
-// - A sessão é mantida pelo Firebase Auth, não pelo sessionStorage.
+// - A sessão é mantida apenas em memória pelo Firebase Auth (Persistence.NONE).
 
 let usuarioLogadoAtual = null;
 let perfisUsuariosCache = {};
@@ -4464,11 +4463,13 @@ function atualizarTelaUsuarioLogado(){
     }
 }
 
-async function verificarAutenticacao(){
-    const user=firebaseAuth.currentUser;
+let processamentoLoginFirebase = false;
+
+async function verificarAutenticacao(usuarioFirebase=null){
+    const user=usuarioFirebase || firebaseAuth.currentUser;
     if(!user){
         usuarioLogadoAtual=null;
-        return;
+        return false;
     }
 
     try{
@@ -4476,7 +4477,7 @@ async function verificarAutenticacao(){
         if(perfil.ativo === false){
             await firebaseAuth.signOut();
             mostrarErroLogin("Este usuário está bloqueado pelo administrador.");
-            return;
+            return false;
         }
 
         usuarioLogadoAtual={
@@ -4490,73 +4491,55 @@ async function verificarAutenticacao(){
 
         await carregarPerfisUsuariosFirebase();
         entrarNoApp(usuarioLogadoAtual);
+        return true;
     }catch(erro){
         console.error("Erro ao carregar perfil Firebase:",erro);
         await firebaseAuth.signOut();
         mostrarErroLogin("Não foi possível carregar seu perfil no Firebase. Verifique as regras do Realtime Database.");
+        return false;
     }
 }
 
 async function tratarEnvioLogin(){
     esconderErroLogin();
 
-    const campoUsuario=document.getElementById("login-usuario");
-    const campoSenha=document.getElementById("login-senha");
-    const usuarioDigitado=(campoUsuario?.value || "").trim();
-    const senha=campoSenha?.value || "";
+    const usuarioDigitado=document.getElementById("login-usuario").value.trim();
+    const senha=document.getElementById("login-senha").value;
 
     if(!usuarioDigitado || !senha){
-        mostrarErroLogin("Preencha o e-mail e a senha.");
+        mostrarErroLogin("Preencha usuário e senha.");
         return;
     }
 
-    // O Firebase Authentication usa e-mail. Se for digitado somente o nome
-    // antes do @, mantemos compatibilidade com o padrão antigo do sistema.
-    const email=emailNormalizado(usuarioParaEmail(usuarioDigitado));
     const botao=document.getElementById("btn-acao-login");
     if(botao){ botao.disabled=true; botao.innerText="Entrando..."; }
 
     try{
-        // Importante: configurar a persistência ANTES de autenticar.
+        processamentoLoginFirebase = true;
+        const email=emailNormalizado(usuarioParaEmail(usuarioDigitado));
         await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.NONE);
-
-        // Não tentamos autenticar por localStorage/sessionStorage e não
-        // fazemos nenhum bypass. A senha é validada exclusivamente pelo Firebase.
-        await firebaseAuth.signInWithEmailAndPassword(email, senha);
-        // onAuthStateChanged assume o restante do fluxo.
+        const credencial=await firebaseAuth.signInWithEmailAndPassword(email,senha);
+        const entrou=await verificarAutenticacao(credencial.user);
+        if(!entrou) throw new Error("O Firebase autenticou, mas o perfil não pôde ser carregado.");
     }catch(erro){
-        console.error("Erro no login Firebase:", erro);
-        const codigo=erro?.code || "";
-        let mensagem="Não foi possível entrar.";
-
-        switch(codigo){
-            case "auth/invalid-credential":
-            case "auth/wrong-password":
-                mensagem="E-mail ou senha incorretos no Firebase. Verifique Authentication → Usuários.";
-                break;
-            case "auth/user-not-found":
-                mensagem="Este e-mail não existe no Firebase Authentication.";
-                break;
-            case "auth/invalid-email":
-                mensagem="O e-mail informado não é válido.";
-                break;
-            case "auth/user-disabled":
-                mensagem="Esta conta foi desativada no Firebase Authentication.";
-                break;
-            case "auth/too-many-requests":
-                mensagem="Muitas tentativas de login. Aguarde alguns minutos e tente novamente.";
-                break;
-            case "auth/network-request-failed":
-                mensagem="Não foi possível conectar ao Firebase. Verifique sua internet.";
-                break;
-            case "auth/operation-not-allowed":
-                mensagem="O login por e-mail e senha não está habilitado em Firebase → Authentication → Método de login.";
-                break;
-            default:
-                mensagem="Erro do Firebase ao autenticar ("+(codigo || "desconhecido")+"). Abra o Console para ver os detalhes.";
+        console.error("Erro no login Firebase:",erro);
+        let mensagem="E-mail/usuário ou senha incorretos.";
+        if(erro && (erro.code === "auth/invalid-credential" || erro.code === "auth/wrong-password")) {
+            mensagem="E-mail/usuário ou senha incorretos no Firebase. Confira os dados em Authentication → Usuários.";
+        } else if(erro && erro.code === "auth/user-not-found") {
+            mensagem="Esse usuário não existe no Firebase Authentication.";
+        } else if(erro && erro.code === "auth/invalid-email") {
+            mensagem="Informe um e-mail válido.";
+        } else if(erro && erro.code === "auth/too-many-requests") {
+            mensagem="Muitas tentativas. Aguarde alguns minutos e tente novamente.";
+        } else if(erro && erro.code === "auth/network-request-failed") {
+            mensagem="Sem conexão com o Firebase. Verifique a internet.";
+        } else if(erro && erro.message && erro.message.includes("perfil")) {
+            mensagem="Login autenticado, mas o perfil não pôde ser carregado. Verifique perfisUsuarios e as regras do Firebase.";
         }
         mostrarErroLogin(mensagem);
     }finally{
+        processamentoLoginFirebase = false;
         if(botao){ botao.disabled=false; botao.innerText="Entrar"; }
     }
 }
@@ -4568,7 +4551,9 @@ function entrarNoApp(usuarioObjeto){
     if(login)login.style.display="none";
     if(app)app.style.display="block";
     atualizarTelaUsuarioLogado();
-    iniciarAplicativo();
+    iniciarAplicativo().catch(function(erro){
+        console.error("Erro ao iniciar o aplicativo:",erro);
+    });
 }
 
 async function sairDoSistema(){
@@ -4844,15 +4829,7 @@ async function configurarAutenticacaoSemPersistencia(){
 }
 
 async function iniciarAutenticacao(){
-    try{
-        // Sempre começa esta página sem uma sessão restaurada.
-        await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.NONE);
-        if(firebaseAuth.currentUser){
-            await firebaseAuth.signOut();
-        }
-    }catch(erro){
-        console.error("Erro ao preparar o Firebase Authentication:", erro);
-    }
+    await configurarAutenticacaoSemPersistencia();
 
     firebaseAuth.onAuthStateChanged(async function(user){
         if(!user){
