@@ -691,6 +691,9 @@ const firebaseDB = firebase.database();
 console.log("🔥 Firebase conectado!");
 </script>
 
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='7' y='14' width='50' height='36' rx='5' fill='%2356d2ff'/%3E%3Cpath d='M7 25h50M18 14v36M32 14v36M46 14v36' stroke='%23041521' stroke-width='3' fill='none'/%3E%3C/svg%3E">
+
 </head>
 
 <body>
@@ -4341,7 +4344,7 @@ async function iniciarAplicativo(){
 // - Senhas ficam exclusivamente no Firebase Authentication.
 // - Perfis (nome, e-mail, tipo e status) ficam em /perfisUsuarios/<UID>.
 // - Nenhum usuário, senha ou lista de usuários é salvo no localStorage.
-// - A sessão é mantida pelo Firebase Auth, não pelo sessionStorage.
+// - A sessão usa Firebase Auth com persistência NONE e não é gravada no localStorage/sessionStorage.
 
 let usuarioLogadoAtual = null;
 let perfisUsuariosCache = {};
@@ -4512,15 +4515,19 @@ async function tratarEnvioLogin(){
 
     try{
         const email=emailNormalizado(usuarioParaEmail(usuarioDigitado));
-        // Garante que a persistência NONE esteja ativa antes do login.
+        // Firebase Authentication é a única fonte de verdade para login.
+        // A sessão fica somente em memória nesta página.
         await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.NONE);
+        if(firebaseAuth.currentUser){
+            await firebaseAuth.signOut();
+        }
         await firebaseAuth.signInWithEmailAndPassword(email,senha);
         // onAuthStateChanged continua o fluxo e carrega o perfil do Firebase.
     }catch(erro){
         console.error("Erro no login Firebase:",erro);
         let mensagem="E-mail/usuário ou senha incorretos.";
         if(erro && (erro.code === "auth/invalid-credential" || erro.code === "auth/wrong-password")) {
-            mensagem="E-mail/usuário ou senha incorretos no Firebase. Confira os dados em Authentication → Usuários.";
+            mensagem="O Firebase recusou o login. Confira o e-mail exatamente como aparece em Authentication → Usuários e a senha dessa conta.";
         } else if(erro && erro.code === "auth/user-not-found") {
             mensagem="Esse usuário não existe no Firebase Authentication.";
         } else if(erro && erro.code === "auth/invalid-email") {
@@ -4796,9 +4803,6 @@ async function alternarBloqueioUsuarioAdmin(index){
 async function excluirUsuarioAdmin(index){
     await alternarBloqueioUsuarioAdmin(index);
 }
-
-// Compatibilidade com chamadas antigas do painel.
-function garantirAdminPadrao(){return carregarUsuariosCadastrados();}
 
 // ======================================================
 // INICIALIZAÇÃO DA AUTENTICAÇÃO
