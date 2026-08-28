@@ -1152,6 +1152,20 @@ let solicitacoesAlteracoesCache = [];
 let solicitacoesAcessoCache = [];
 let firebaseSincronizacaoAtiva = false;
 let firebaseListenersAtivos = false;
+let firebaseRefsAtivos = [];
+
+function desligarListenersFirebase(){
+    firebaseRefsAtivos.forEach(function(item){ try{ item.ref.off(item.evento, item.callback); }catch(e){} });
+    firebaseRefsAtivos=[];
+    firebaseListenersAtivos=false;
+    firebaseSincronizacaoAtiva=false;
+}
+
+async function comTimeoutFirebase(promessa, ms, mensagem){
+    let timer;
+    const timeout=new Promise(function(_,reject){ timer=setTimeout(function(){ reject(new Error(mensagem || "Tempo esgotado ao acessar o Firebase.")); },ms); });
+    try{return await Promise.race([promessa,timeout]);}finally{clearTimeout(timer);}
+}
 
 function normalizarListaFirebase(valor){
     if(Array.isArray(valor)) return valor;
@@ -1162,112 +1176,42 @@ function normalizarListaFirebase(valor){
 async function iniciarSincronizacaoFirebase(){
     const usuarioFirebase=firebaseAuth.currentUser;
     if(firebaseListenersAtivos || !usuarioFirebase) return;
-
-    // Não inicia os listeners antes de o Firebase Authentication possuir
-    // um usuário/token válido. O login nunca depende da sincronização.
+    firebaseListenersAtivos=true;
     try{
-        await usuarioFirebase.getIdToken(true);
-    }catch(e){
-        console.error("Firebase: token não disponível para o Realtime Database:",e);
-        return;
-    }
-
-    firebaseListenersAtivos = true;
-
-    const estoqueRef = firebaseDB.ref("estoque");
-    const historicoRef = firebaseDB.ref("historico");
-    const produtosRef = firebaseDB.ref("produtos");
-    const alteracoesRef = firebaseDB.ref("solicitacoesAlteracoes");
-    const acessoRef = firebaseDB.ref("solicitacoesAcesso");
-
-    try{
-        // Cada área é carregada separadamente. Assim, uma regra incorreta
-        // em um caminho (por exemplo /produtos) não trava o restante do sistema.
-        const ler = async (ref, nome) => {
-            try { return await ref.once("value"); }
-            catch(e){ console.error("Firebase "+nome+":",e); return null; }
+        const estoqueRef=firebaseDB.ref("estoque");
+        const historicoRef=firebaseDB.ref("historico");
+        const produtosRef=firebaseDB.ref("produtos");
+        const alteracoesRef=firebaseDB.ref("solicitacoesAlteracoes");
+        const acessoRef=firebaseDB.ref("solicitacoesAcesso");
+        const ler=async function(ref,nome){
+            try{return await comTimeoutFirebase(ref.once("value"),10000,"Tempo esgotado ao carregar "+nome+".");}
+            catch(e){console.error("Firebase "+nome+":",e);return null;}
         };
+        const [estoqueSnap,historicoSnap,produtosSnap,alteracoesSnap,acessoSnap]=await Promise.all([
+            ler(estoqueRef,"estoque"),ler(historicoRef,"histórico"),ler(produtosRef,"produtos"),ler(alteracoesRef,"solicitações de alteração"),ler(acessoRef,"solicitações de acesso")
+        ]);
+        estoque=estoqueSnap?normalizarListaFirebase(estoqueSnap.val()):[];
+        historico=historicoSnap?normalizarListaFirebase(historicoSnap.val()):[];
+        solicitacoesAlteracoesCache=alteracoesSnap?normalizarListaFirebase(alteracoesSnap.val()):[];
+        solicitacoesAcessoCache=acessoSnap?normalizarListaFirebase(acessoSnap.val()):[];
+        produtosCadastrados=produtosSnap?normalizarListaFirebase(produtosSnap.val()):[];
 
-        const estoqueSnap = await ler(estoqueRef,"estoque");
-        const historicoSnap = await ler(historicoRef,"histórico");
-        const produtosSnap = await ler(produtosRef,"produtos");
-        const alteracoesSnap = await ler(alteracoesRef,"solicitações de alteração");
-        const acessoSnap = await ler(acessoRef,"solicitações de acesso");
-
-        estoque = estoqueSnap ? normalizarListaFirebase(estoqueSnap.val()) : [];
-        historico = historicoSnap ? normalizarListaFirebase(historicoSnap.val()) : [];
-        solicitacoesAlteracoesCache = alteracoesSnap ? normalizarListaFirebase(alteracoesSnap.val()) : [];
-        solicitacoesAcessoCache = acessoSnap ? normalizarListaFirebase(acessoSnap.val()) : [];
-
-        const produtosRemotos = produtosSnap ? normalizarListaFirebase(produtosSnap.val()) : [];
-        if(produtosRemotos.length){
-            produtosCadastrados = produtosRemotos;
-        }else if(usuarioEhAdmin && usuarioEhAdmin()){
-            // A lista que já existe no arquivo serve somente como carga inicial.
-            produtosCadastrados = (typeof PRODUTOS_CADASTRADOS_HTML !== "undefined" ? PRODUTOS_CADASTRADOS_HTML : []).map(p => ({
-                codigo:String(p.codigo || "").trim(),
-                nome:String(p.nome || "").trim()
-            }));
-            if(produtosCadastrados.length && produtosSnap){
-                try{ await produtosRef.set(produtosCadastrados); }catch(e){ console.error("Firebase produtos: não foi possível gravar a carga inicial.",e); }
-            }
-        }else{
-            produtosCadastrados = [];
+        if(produtosSnap && !produtosSnap.exists() && usuarioEhAdmin()){
+            const carga=(typeof PRODUTOS_CADASTRADOS_HTML!=="undefined"?PRODUTOS_CADASTRADOS_HTML:[]).map(function(p){return {codigo:String(p.codigo||"").trim(),nome:String(p.nome||"").trim()};});
+            if(carga.length){try{await produtosRef.set(carga);produtosCadastrados=carga;}catch(e){console.error("Firebase produtos: carga inicial não gravada:",e);}}
         }
 
-        // Se o banco estiver vazio, cria a estrutura inicial somente para estoque/histórico.
-        // Nunca recupera dados de armazenamento do computador.
-        if(estoqueSnap && !estoqueSnap.exists()) await estoqueRef.set([]);
-        if(historicoSnap && !historicoSnap.exists()) await historicoRef.set([]);
-        if(alteracoesSnap && !alteracoesSnap.exists()) await alteracoesRef.set([]);
-        if(acessoSnap && !acessoSnap.exists()) await acessoRef.set([]);
-
-        estoqueRef.on("value", function(snapshot){
-            estoque = normalizarListaFirebase(snapshot.val());
-            garantirIdsEstoque();
-            mostrarEstoque();
-            atualizarContador();
-        }, function(error){ console.error("Firebase estoque:", error); });
-
-        historicoRef.on("value", function(snapshot){
-            historico = normalizarListaFirebase(snapshot.val());
-            mostrarHistorico();
-        }, function(error){ console.error("Firebase histórico:", error); });
-
-        produtosRef.on("value", function(snapshot){
-            produtosCadastrados = normalizarListaFirebase(snapshot.val());
-            atualizarListaProdutos();
-            atualizarContadorProdutos();
-        }, function(error){ console.error("Firebase produtos:", error); });
-
-        alteracoesRef.on("value", function(snapshot){
-            solicitacoesAlteracoesCache = normalizarListaFirebase(snapshot.val());
-            if(typeof renderizarSolicitacoesAlteracoesAdmin === "function") renderizarSolicitacoesAlteracoesAdmin();
-            atualizarIndicadorAdmin();
-        }, function(error){ console.error("Firebase solicitações de alteração:", error); });
-
-        acessoRef.on("value", function(snapshot){
-            solicitacoesAcessoCache = normalizarListaFirebase(snapshot.val());
-            if(typeof renderizarSolicitacoesAcessoAdmin === "function") renderizarSolicitacoesAcessoAdmin();
-            atualizarIndicadorAdmin();
-        }, function(error){ console.error("Firebase solicitações de acesso:", error); });
-
-        firebaseSincronizacaoAtiva = true;
-        garantirIdsEstoque();
-        atualizarListaProdutos();
-        atualizarContadorProdutos();
-        mostrarEstoque();
-        mostrarHistorico();
-        atualizarContador();
-        console.log("☁️ Firebase: estoque, histórico, produtos e solicitações sincronizados em tempo real.");
-    }catch(error){
-        firebaseListenersAtivos = false;
-        firebaseSincronizacaoAtiva = false;
-        console.error("Erro ao iniciar sincronização Firebase:", error);
-        throw error;
-    }
+        const registrar=function(ref,evento,callback,erro){ref.on(evento,callback,erro);firebaseRefsAtivos.push({ref:ref,evento:evento,callback:callback});};
+        registrar(estoqueRef,"value",function(snapshot){estoque=normalizarListaFirebase(snapshot.val());garantirIdsEstoque();mostrarEstoque();atualizarContador();},function(e){console.error("Firebase estoque:",e);});
+        registrar(historicoRef,"value",function(snapshot){historico=normalizarListaFirebase(snapshot.val());mostrarHistorico();},function(e){console.error("Firebase histórico:",e);});
+        registrar(produtosRef,"value",function(snapshot){produtosCadastrados=normalizarListaFirebase(snapshot.val());atualizarListaProdutos();atualizarContadorProdutos();},function(e){console.error("Firebase produtos:",e);});
+        registrar(alteracoesRef,"value",function(snapshot){solicitacoesAlteracoesCache=normalizarListaFirebase(snapshot.val());if(typeof renderizarSolicitacoesAlteracoesAdmin==="function")renderizarSolicitacoesAlteracoesAdmin();atualizarIndicadorAdmin();},function(e){console.error("Firebase solicitações de alteração:",e);});
+        registrar(acessoRef,"value",function(snapshot){solicitacoesAcessoCache=normalizarListaFirebase(snapshot.val());if(typeof renderizarSolicitacoesAcessoAdmin==="function")renderizarSolicitacoesAcessoAdmin();atualizarIndicadorAdmin();},function(e){console.error("Firebase solicitações de acesso:",e);});
+        firebaseSincronizacaoAtiva=true;
+        atualizarListaProdutos();atualizarContadorProdutos();mostrarEstoque();mostrarHistorico();atualizarContador();
+        console.log("☁️ Firebase: sincronização em tempo real ativa.");
+    }catch(error){desligarListenersFirebase();console.error("Erro na sincronização Firebase:",error);}
 }
-
 async function salvarDados(){
     if(!firebaseAuth.currentUser) throw new Error("Usuário não autenticado.");
     try{
@@ -2350,6 +2294,16 @@ function renderizarSolicitacoesAlteracoesAdmin(){
         '</div></div>';
     }).join("");
     atualizarIndicadorAdmin();
+}
+
+function renderizarSolicitacoesAcessoAdmin(){
+    const area=document.getElementById("lista-solicitacoes-acesso-admin");
+    const contador=document.getElementById("contador-solicitacoes-acesso-admin");
+    if(!area||!usuarioEhAdmin())return;
+    const pendentes=carregarSolicitacoesAcesso().filter(function(item){return item.status==="pendente";});
+    if(contador)contador.innerText=pendentes.length?"("+pendentes.length+" pendente(s))":"(nenhuma pendente)";
+    if(!pendentes.length){area.innerHTML='<div class="vazio" style="margin-top:10px;">✅ Nenhuma solicitação de acesso pendente.</div>';return;}
+    area.innerHTML=pendentes.map(function(item){return '<div class="produto-item" style="margin-bottom:8px;"><strong>'+escaparHtmlAlteracao(item.email||item.usuario||"Usuário")+'</strong><br><span style="font-size:11px;color:var(--texto-fraco);">'+escaparHtmlAlteracao(item.mensagem||"Solicitação de acesso")+'</span></div>';}).join("");
 }
 
 function atualizarIndicadorAdmin(){
@@ -4043,86 +3997,31 @@ function atualizarTelaUsuarioLogado(){
 }
 
 async function verificarAutenticacao(userInformado){
-    const user=userInformado || firebaseAuth.currentUser;
-    if(!user){
-        usuarioLogadoAtual=null;
-        return false;
-    }
-
+    const user=userInformado||firebaseAuth.currentUser;
+    if(!user)return false;
     try{
-        // Garante token válido antes da primeira leitura protegida.
-        await user.getIdToken(true);
-
-        // Carrega somente o perfil do usuário autenticado.
-        // Não bloqueia o login esperando a lista completa de usuários.
-        const perfil=await obterPerfilFirebase(user.uid);
-
-        if(!perfil){
-            // Se o usuário existe no Authentication mas ainda não possui
-            // perfil, cria o perfil automaticamente no Realtime Database.
-            const novoPerfil=await garantirPerfilFirebase(user);
-            return await concluirLoginFirebase(user,novoPerfil);
-        }
-
-        return await concluirLoginFirebase(user,perfil);
+        const perfil=await comTimeoutFirebase(obterPerfilFirebase(user.uid),10000,"Tempo esgotado ao carregar seu perfil no Firebase.");
+        const perfilFinal=perfil||await comTimeoutFirebase(garantirPerfilFirebase(user),10000,"Tempo esgotado ao criar seu perfil no Firebase.");
+        return concluirLoginFirebase(user,perfilFinal);
     }catch(erro){
         console.error("Erro ao carregar perfil Firebase:",erro);
         await firebaseAuth.signOut().catch(function(){});
         usuarioLogadoAtual=null;
         const botao=document.getElementById("btn-acao-login");
         if(botao){botao.disabled=false;botao.innerText="Entrar";}
-        mostrarErroLogin("O login do Firebase foi realizado, mas o perfil não pôde ser carregado. Verifique Realtime Database → Regras.");
+        mostrarErroLogin("Não foi possível carregar seu perfil no Firebase. Verifique Realtime Database → Regras.");
         return false;
     }
 }
 
 async function concluirLoginFirebase(user,perfil){
-    if(!perfil) throw new Error("Perfil Firebase não encontrado.");
-
-    // Garante que o token atual do Firebase Authentication foi renovado
-    // antes de qualquer leitura protegida do Realtime Database.
-    // Isso evita permission_denied logo após o login em outros computadores.
-    try{
-        await user.getIdToken(true);
-    }catch(e){
-        console.warn("Não foi possível renovar o token antes da sincronização:",e);
-    }
-
-    perfil.email=perfil.email || emailNormalizado(user.email);
-    perfil.ativo=perfil.ativo !== false;
-
-    if(perfil.ativo === false){
-        await firebaseAuth.signOut().catch(function(){});
-        mostrarErroLogin("Este usuário está bloqueado pelo administrador.");
-        return false;
-    }
-
-    usuarioLogadoAtual={
-        uid:user.uid,
-        usuario:perfil.usuario || perfil.nome || perfil.email || user.email,
-        nome:perfil.nome || perfil.usuario || user.email,
-        email:user.email || perfil.email,
-        tipo:perfil.tipo === "admin" ? "admin" : "usuario",
-        ativo:true
-    };
-
+    if(!perfil)throw new Error("Perfil Firebase não encontrado.");
+    perfil.email=perfil.email||emailNormalizado(user.email);
+    perfil.ativo=perfil.ativo!==false;
+    if(perfil.ativo===false){await firebaseAuth.signOut().catch(function(){});mostrarErroLogin("Este usuário está bloqueado pelo administrador.");return false;}
+    usuarioLogadoAtual={uid:user.uid,usuario:perfil.usuario||perfil.nome||perfil.email||user.email,nome:perfil.nome||perfil.usuario||user.email,email:user.email||perfil.email,tipo:perfil.tipo==="admin"?"admin":"usuario",ativo:true};
     perfisUsuariosCache[user.uid]=perfil;
-
-    // Entra imediatamente no aplicativo. A sincronização completa do banco
-    // acontece em segundo plano e não pode deixar o botão "Entrando..." preso.
     entrarNoApp(usuarioLogadoAtual);
-
-    // Para o painel administrativo, carrega a lista completa depois do login.
-    carregarPerfisUsuariosFirebase().then(function(){
-        if(usuarioEhAdmin()){
-            renderizarUsuariosCadastradosAdmin();
-            renderizarSolicitacoesAlteracoesAdmin();
-            atualizarIndicadorAdmin();
-        }
-    }).catch(function(e){
-        console.error("Erro ao carregar lista de perfis:",e);
-    });
-
     return true;
 }
 
@@ -4131,59 +4030,35 @@ let loginEmProcessamento=false;
 async function tratarEnvioLogin(){
     if(loginEmProcessamento)return;
     esconderErroLogin();
-
-    const usuarioDigitado=document.getElementById("login-usuario").value.trim();
-    const senha=document.getElementById("login-senha").value;
-
-    if(!usuarioDigitado || !senha){
-        mostrarErroLogin("Preencha usuário e senha.");
-        return;
-    }
-
+    const campoUsuario=document.getElementById("login-usuario");
+    const campoSenha=document.getElementById("login-senha");
+    const usuarioDigitado=(campoUsuario?.value||"").trim();
+    const senha=campoSenha?.value||"";
+    if(!usuarioDigitado||!senha){mostrarErroLogin("Preencha usuário e senha.");return;}
     const botao=document.getElementById("btn-acao-login");
     loginEmProcessamento=true;
     if(botao){botao.disabled=true;botao.innerText="Entrando...";}
-
     try{
         const email=emailNormalizado(usuarioParaEmail(usuarioDigitado));
-
-        // Persistência somente em memória desta página.
         await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.NONE);
-
-        // Usa diretamente a credencial retornada pelo Firebase.
-        const cred=await firebaseAuth.signInWithEmailAndPassword(email,senha);
+        const cred=await comTimeoutFirebase(firebaseAuth.signInWithEmailAndPassword(email,senha),15000,"Tempo esgotado ao autenticar no Firebase.");
         console.log("✅ Firebase Authentication: usuário autenticado",cred.user.uid);
-
-        const sucesso=await verificarAutenticacao(cred.user);
-        if(!sucesso && botao){
-            botao.disabled=false;
-            botao.innerText="Entrar";
-        }
+        await verificarAutenticacao(cred.user);
     }catch(erro){
         console.error("Erro no login Firebase:",erro);
         let mensagem="E-mail/usuário ou senha incorretos.";
-        if(erro && erro.code === "auth/invalid-credential"){
-            mensagem="E-mail ou senha incorretos no Firebase Authentication. Confira o usuário em Authentication → Usuários.";
-        }else if(erro && erro.code === "auth/wrong-password"){
-            mensagem="Senha incorreta para este usuário.";
-        }else if(erro && erro.code === "auth/user-not-found"){
-            mensagem="Esse usuário não existe no Firebase Authentication.";
-        }else if(erro && erro.code === "auth/invalid-email"){
-            mensagem="Informe um e-mail válido.";
-        }else if(erro && erro.code === "auth/too-many-requests"){
-            mensagem="Muitas tentativas. Aguarde alguns minutos e tente novamente.";
-        }else if(erro && erro.code === "auth/network-request-failed"){
-            mensagem="Sem conexão com o Firebase. Verifique a internet.";
-        }else if(erro && erro.code === "auth/operation-not-allowed"){
-            mensagem="O login por e-mail e senha está desativado no Firebase Authentication.";
-        }
+        if(erro?.code==="auth/invalid-credential")mensagem="E-mail ou senha incorretos no Firebase Authentication.";
+        else if(erro?.code==="auth/wrong-password")mensagem="Senha incorreta para este usuário.";
+        else if(erro?.code==="auth/user-not-found")mensagem="Esse usuário não existe no Firebase Authentication.";
+        else if(erro?.code==="auth/invalid-email")mensagem="Informe um e-mail válido.";
+        else if(erro?.code==="auth/too-many-requests")mensagem="Muitas tentativas. Aguarde alguns minutos.";
+        else if(erro?.code==="auth/network-request-failed")mensagem="Sem conexão com o Firebase.";
+        else if(erro?.code==="auth/operation-not-allowed")mensagem="Login por e-mail e senha está desativado no Firebase Authentication.";
+        else if(erro?.message)mensagem=erro.message;
         mostrarErroLogin(mensagem);
     }finally{
         loginEmProcessamento=false;
-        if(botao && document.getElementById("tela-login")?.style.display !== "none"){
-            botao.disabled=false;
-            botao.innerText="Entrar";
-        }
+        if(botao&&document.getElementById("tela-login")?.style.display!=="none"){botao.disabled=false;botao.innerText="Entrar";}
     }
 }
 
@@ -4203,6 +4078,7 @@ async function sairDoSistema(){
     }catch(erro){
         console.error("Erro ao sair do Firebase:", erro);
     }finally{
+        desligarListenersFirebase();
         usuarioLogadoAtual=null;
         perfisUsuariosCache={};
         const app=document.getElementById("app-principal");
@@ -4402,28 +4278,15 @@ async function configurarAutenticacaoSemPersistencia(){
 }
 
 async function iniciarAutenticacao(){
-    await configurarAutenticacaoSemPersistencia();
-
+    try{await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.NONE);}catch(e){console.error("Erro ao configurar autenticação sem persistência:",e);}
     firebaseAuth.onAuthStateChanged(function(user){
         if(!user){
-            usuarioLogadoAtual=null;
-            perfisUsuariosCache={};
-            firebaseListenersAtivos=false;
-            firebaseSincronizacaoAtiva=false;
-            const app=document.getElementById("app-principal");
-            const login=document.getElementById("tela-login");
-            if(app)app.style.display="none";
-            if(login)login.style.display="flex";
-            return;
-        }
-
-        // Se o usuário já estiver autenticado na memória da página,
-        if(!usuarioLogadoAtual){
-            verificarAutenticacao(user);
+            usuarioLogadoAtual=null;perfisUsuariosCache={};desligarListenersFirebase();
+            const app=document.getElementById("app-principal"),login=document.getElementById("tela-login");
+            if(app)app.style.display="none";if(login)login.style.display="flex";
         }
     });
 }
-
 iniciarAutenticacao();
 
 // Permite enviar o formulário de login pressionando Enter.
