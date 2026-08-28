@@ -28,9 +28,13 @@
     box-sizing: border-box;
 }
 
+html, body {
+    min-height: 100%;
+}
+
 body {
     font-family: 'Segoe UI', Arial, sans-serif;
-    margin: 12px;
+    margin: 0;
     background:
         radial-gradient(circle at 15% 0%, rgba(86,210,255,.06), transparent 45%),
         var(--bg);
@@ -548,14 +552,14 @@ button:disabled {
 }
 
 .tela-login {
-    position: fixed;
-    inset: 0;
+    position: fixed !important;
+    inset: 0 !important;
     background:
         radial-gradient(circle at 20% 10%, rgba(86,210,255,.08), transparent 45%),
         var(--bg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     z-index: 100;
     padding: 20px;
 }
@@ -678,7 +682,8 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const firebaseAuth = firebase.auth();
 const firebaseDB = firebase.database();
-firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(console.error);
+// A sessão não fica persistida entre recarregamentos/aberturas.
+// A função configurarAutenticacaoSemPersistencia() confirma isso antes do login.
 console.log("🔥 Firebase conectado!");
 </script>
 
@@ -940,11 +945,7 @@ onfocus="mostrarSugestoesProduto()"
 onblur="esconderSugestoesProduto()"
 >
 <div id="sugestoes-produto" class="sugestoes-produto"></div>
-<div style="margin-top:5px;text-align:right;">
-<button type="button" id="btn-solicitar-novo-produto" class="btn-cancelar" style="display:none;padding:5px 9px;font-size:11px;" onclick="solicitarNovoProdutoAdmin()">
-➕ Solicitar novo produto
-</button>
-</div>
+
 </div>
 
 <div class="campo">
@@ -2077,7 +2078,6 @@ const PRODUTOS_CADASTRADOS_HTML = [
 ];
 
 const CHAVE_SOLICITACOES_ALTERACOES = "solicitacoesAlteracoesAdmin";
-const CHAVE_PRODUTOS_EXTRAS_APROVADOS = "produtosExtrasAprovados";
 
 let produtosCadastrados = PRODUTOS_CADASTRADOS_HTML.map(function(item){
     return {
@@ -2085,19 +2085,6 @@ let produtosCadastrados = PRODUTOS_CADASTRADOS_HTML.map(function(item){
         nome: String(item.nome || "").trim()
     };
 });
-
-try{
-    const extrasIniciais = JSON.parse(localStorage.getItem(CHAVE_PRODUTOS_EXTRAS_APROVADOS));
-    if(Array.isArray(extrasIniciais)){
-        extrasIniciais.forEach(function(extra){
-            if(extra && extra.nome && !produtosCadastrados.some(function(p){
-                return (p.codigo||"").toLowerCase()===String(extra.codigo||"").toLowerCase() || p.nome.toLowerCase()===String(extra.nome).toLowerCase();
-            })){
-                produtosCadastrados.push({codigo:String(extra.codigo||"").trim(),nome:String(extra.nome).trim()});
-            }
-        });
-    }
-}catch(e){}
 
 // ======================================================
 // SALVAR DADOS
@@ -2141,14 +2128,6 @@ function salvarSolicitacoesAlteracoes(lista){
     localStorage.setItem(CHAVE_SOLICITACOES_ALTERACOES, JSON.stringify(lista));
 }
 
-function carregarProdutosExtrasAprovados(){
-    const lista = JSON.parse(localStorage.getItem(CHAVE_PRODUTOS_EXTRAS_APROVADOS));
-    return Array.isArray(lista) ? lista : [];
-}
-
-function salvarProdutosExtrasAprovados(lista){
-    localStorage.setItem(CHAVE_PRODUTOS_EXTRAS_APROVADOS, JSON.stringify(lista));
-}
 
 function gerarIdEstoque(){
     return "EST-" + Date.now() + "-" + Math.random().toString(36).slice(2,8);
@@ -2212,7 +2191,6 @@ function textoTipoAlteracao(tipo){
         ALTERACAO:"✏️ Alteração de container",
         EXCLUSAO:"🗑️ Exclusão de item do container",
         ZERAR_CONTAINER:"🧹 Zerar container",
-        NOVO_PRODUTO:"🏷️ Solicitação de novo produto",
         LIMPAR_HISTORICO:"🧾 Limpeza do histórico"
     };
     return mapa[tipo] || "📋 Alteração";
@@ -2220,7 +2198,6 @@ function textoTipoAlteracao(tipo){
 
 function resumoSolicitacaoAlteracao(sol){
     const dados=sol.dados || {};
-    if(sol.tipo === "NOVO_PRODUTO") return "Código: <strong>"+escaparHtmlAlteracao(dados.codigo)+"</strong> — "+escaparHtmlAlteracao(dados.nome);
     if(sol.tipo === "ZERAR_CONTAINER") return "Container <strong>"+escaparHtmlAlteracao(dados.num)+"</strong> — "+((dados.itens || []).length)+" item(ns) serão removidos.";
     if(sol.tipo === "LIMPAR_HISTORICO") return "Solicitado pelo operador: apagar o histórico de movimentações.";
     const item=dados.novoItem || dados.item || {};
@@ -2266,20 +2243,6 @@ function aplicarAlteracaoAprovada(sol){
         });
         estoque=estoque.filter(function(item){ return Number(item.num)!==num; });
         return "Container "+num+" zerado com sucesso.";
-    }
-
-    if(sol.tipo === "NOVO_PRODUTO"){
-        const codigo=String(dados.codigo || "").trim();
-        const nome=String(dados.nome || "").trim();
-        if(!nome) throw new Error("Nome do produto inválido.");
-        if(produtosCadastrados.some(function(p){ return (p.codigo||"").toLowerCase()===codigo.toLowerCase() || p.nome.toLowerCase()===nome.toLowerCase(); })) throw new Error("Este produto já existe na lista.");
-        const extras=carregarProdutosExtrasAprovados();
-        const novo={codigo:codigo,nome:nome};
-        extras.push(novo);
-        salvarProdutosExtrasAprovados(extras);
-        produtosCadastrados.push(novo);
-        atualizarListaProdutos();
-        return "Novo produto aprovado e incluído na lista desta instalação.";
     }
 
     if(sol.tipo === "LIMPAR_HISTORICO"){
@@ -2357,23 +2320,6 @@ function atualizarIndicadorAdmin(){
     const alteracoes=carregarSolicitacoesAlteracoes().filter(function(item){ return item.status==="pendente"; }).length;
     const painel=document.getElementById("painel-admin-usuarios");
     botao.innerText = (acessos+alteracoes)>0 ? "👑 Usuários / 🔔 "+(acessos+alteracoes)+" pendente(s)" : (painel && painel.style.display !== "none" ? "🙈 Ocultar Usuários" : "👑 Usuários Cadastrados");
-}
-
-function solicitarNovoProdutoAdmin(){
-    if(usuarioEhAdmin()){
-        alert("O administrador pode editar diretamente a lista PRODUTOS_CADASTRADOS_HTML no código para produtos permanentes.");
-        return;
-    }
-    const codigo=prompt("Digite o código do novo produto:");
-    if(codigo===null)return;
-    const nome=prompt("Digite o nome do novo produto:");
-    if(nome===null)return;
-    const c=String(codigo).trim();
-    const n=String(nome).trim();
-    if(!n){ alert("Informe o nome do produto."); return; }
-    if(produtosCadastrados.some(function(p){ return (p.codigo||"").toLowerCase()===c.toLowerCase() || p.nome.toLowerCase()===n.toLowerCase(); })) { alert("Este produto já está cadastrado."); return; }
-    solicitarAlteracaoAdmin("NOVO_PRODUTO", {codigo:c,nome:n}, "Solicitação de inclusão de novo produto feita pelo operador.");
-    alert("📨 Solicitação enviada ao administrador para aprovação do novo produto.");
 }
 
 window.addEventListener("storage",function(evento){
@@ -2869,27 +2815,6 @@ title="Remover produto"
 }
 
 
-function cadastrarProduto(){
-    alert("O cadastro de produtos agora é feito diretamente no código HTML. Edite PRODUTOS_CADASTRADOS_HTML no início do script.");
-}
-
-
-function removerProdutoCadastrado(index){
-    alert("A lista de produtos é definida diretamente no código HTML e não pode ser alterada pela tela.");
-}
-
-
-function apagarTodosProdutos(){
-    alert("A lista de produtos é definida diretamente no código HTML e não pode ser apagada pela tela.");
-}
-
-
-function toggleImportarProdutos(){}
-
-
-function importarProdutos(){
-    alert("A importação pela tela foi desativada. Edite PRODUTOS_CADASTRADOS_HTML no código.");
-}
 
 
 // ======================================================
@@ -4378,21 +4303,10 @@ async function iniciarAplicativo(){
     garantirIdsEstoque();
     await iniciarSincronizacaoFirebase();
 
-    const extras = carregarProdutosExtrasAprovados();
-    extras.forEach(function(extra){
-        if(extra && extra.nome && !produtosCadastrados.some(function(p){
-            return (p.codigo||"").toLowerCase()===String(extra.codigo||"").toLowerCase() || p.nome.toLowerCase()===String(extra.nome).toLowerCase();
-        })){
-            produtosCadastrados.push({codigo:String(extra.codigo||"").trim(),nome:String(extra.nome).trim()});
-        }
-    });
-
     atualizarListaProdutos();
     mostrarEstoque();
     mostrarHistorico();
 
-    const botaoNovoProduto=document.getElementById("btn-solicitar-novo-produto");
-    if(botaoNovoProduto) botaoNovoProduto.style.display = usuarioEhAdmin() ? "none" : "inline-block";
 
     if(usuarioEhAdmin()){
         renderizarSolicitacoesAlteracoesAdmin();
