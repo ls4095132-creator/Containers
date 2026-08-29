@@ -1353,6 +1353,59 @@ async function solicitarAlteracaoAdmin(tipo, dados, descricao){
     renderizarSolicitacoesAlteracoesAdmin();
 }
 
+
+// ======================================================
+// FUNÇÕES DE INTERFACE / ADMINISTRADOR
+// ======================================================
+function toggleAdminUsuarios(){
+    const painel=document.getElementById("painel-admin-usuarios");
+    if(!painel || !usuarioEhAdmin()) return;
+    const abrir = painel.style.display === "none" || painel.style.display === "";
+    painel.style.display = abrir ? "block" : "none";
+    const botao=document.getElementById("btn-abrir-painel-admin");
+    if(botao) botao.innerText = abrir ? "🙈 Ocultar Usuários" : "👑 Usuários Cadastrados";
+    if(abrir){
+        Promise.resolve(renderizarSolicitacoesAcessoAdmin?.()).catch(console.error);
+        Promise.resolve(renderizarSolicitacoesAlteracoesAdmin?.()).catch(console.error);
+        Promise.resolve(renderizarUsuariosCadastradosAdmin?.()).catch(console.error);
+    }
+    atualizarIndicadorAdmin();
+}
+
+function esconderRecuperarSenha(){
+    const painel=document.getElementById("painel-recuperar-senha");
+    const bloco=document.getElementById("bloco-login-normal");
+    if(painel) painel.style.display="none";
+    if(bloco) bloco.style.display="block";
+    esconderErroRecuperar();
+}
+
+function solicitarAcessoAdmin(){
+    return enviarSolicitacaoAcesso();
+}
+
+async function removerProdutoCadastrado(indiceOriginal){
+    if(!usuarioEhAdmin()){
+        alert("Apenas o administrador pode remover produtos.");
+        return;
+    }
+    const indice=Number(indiceOriginal);
+    if(!Number.isInteger(indice) || !produtosCadastrados[indice]) return;
+    const produto=produtosCadastrados[indice];
+    if(!confirm("Remover o produto "+produto.nome+" do cadastro do Firebase?")) return;
+    try{
+        produtosCadastrados.splice(indice,1);
+        await salvarProdutosFirebase(produtosCadastrados);
+        atualizarListaProdutos();
+        atualizarContadorProdutos();
+        if(typeof renderizarProdutosCadastrados === "function") renderizarProdutosCadastrados();
+        alert("✅ Produto removido do Firebase.");
+    }catch(erro){
+        console.error("Erro ao remover produto:",erro);
+        alert("Não foi possível remover o produto do Firebase.\n\n"+erro.message);
+    }
+}
+
 // ======================================================
 // LISTA DE PRODUTOS - CADASTRO DIRETO NO CÓDIGO HTML
 // ======================================================
@@ -2215,8 +2268,6 @@ const PRODUTOS_CADASTRADOS_HTML = [
     { codigo:"PA000858", nome:"MOSTARDA AMARELA CANADENSE 45,36 KG" }
 ];
 
-const CHAVE_SOLICITACOES_ALTERACOES = "solicitacoesAlteracoesAdmin";
-
 produtosCadastrados = PRODUTOS_CADASTRADOS_HTML.map(function(item){
     return {
         codigo: String(item.codigo || "").trim(),
@@ -2260,14 +2311,14 @@ function resumoSolicitacaoAlteracao(sol){
     return "Container <strong>"+escaparHtmlAlteracao(item.num)+"</strong> — "+escaparHtmlAlteracao(item.prod || "")+(item.qtd != null ? " — Qtd: "+escaparHtmlAlteracao(item.qtd) : "");
 }
 
-async function aplicarAlteracaoAprovada(sol){
+function aplicarAlteracaoAprovada(sol){
     const dados=sol.dados || {};
 
     if(sol.tipo === "ENTRADA"){
         const novoItem={...dados.item};
         if(!novoItem.id) novoItem.id=gerarIdEstoque();
         estoque.push(novoItem);
-        await registrarMovimentacao("ENTRADA", novoItem, "Entrada aprovada pelo administrador. Operador: "+sol.operador);
+        registrarMovimentacao("ENTRADA", novoItem, "Entrada aprovada pelo administrador. Operador: "+sol.operador);
         return "Nova entrada aprovada e adicionada ao estoque.";
     }
 
@@ -2277,7 +2328,7 @@ async function aplicarAlteracaoAprovada(sol){
         const novoItem={...dados.novoItem, id:dados.itemId};
         const antigo=estoque[indice];
         estoque[indice]=novoItem;
-        await registrarMovimentacao("ALTERAÇÃO", novoItem, "Alteração aprovada pelo administrador. Operador: "+sol.operador+". Quantidade anterior: "+antigo.qtd+", Peso anterior: "+antigo.peso+" KG.");
+        registrarMovimentacao("ALTERAÇÃO", novoItem, "Alteração aprovada pelo administrador. Operador: "+sol.operador+". Quantidade anterior: "+antigo.qtd+", Peso anterior: "+antigo.peso+" KG.");
         return "Alteração do container aprovada.";
     }
 
@@ -2286,7 +2337,7 @@ async function aplicarAlteracaoAprovada(sol){
         if(indice < 0) throw new Error("O item do estoque não foi encontrado. A exclusão não foi aplicada.");
         const item=estoque[indice];
         estoque.splice(indice,1);
-        await registrarMovimentacao("EXCLUSÃO", item, "Exclusão aprovada pelo administrador. Operador: "+sol.operador);
+        registrarMovimentacao("EXCLUSÃO", item, "Exclusão aprovada pelo administrador. Operador: "+sol.operador);
         return "Exclusão aprovada.";
     }
 
@@ -2295,7 +2346,7 @@ async function aplicarAlteracaoAprovada(sol){
         const itensAtuais=estoque.filter(function(item){ return Number(item.num)===num; });
         if(itensAtuais.length===0) return "O container já estava vazio.";
         itensAtuais.forEach(function(item){
-            await registrarMovimentacao("CONTAINER ZERADO", item, "Container zerado com aprovação do administrador. Operador: "+sol.operador);
+            registrarMovimentacao("CONTAINER ZERADO", item, "Container zerado com aprovação do administrador. Operador: "+sol.operador);
         });
         estoque=estoque.filter(function(item){ return Number(item.num)!==num; });
         return "Container "+num+" zerado com sucesso.";
@@ -2309,18 +2360,18 @@ async function aplicarAlteracaoAprovada(sol){
     throw new Error("Tipo de alteração desconhecido.");
 }
 
-async function aprovarAlteracaoAdmin(id){
+function aprovarAlteracaoAdmin(id){
     if(!usuarioEhAdmin()){ alert("Apenas o administrador pode aprovar alterações."); return; }
     const lista=carregarSolicitacoesAlteracoes();
     const sol=lista.find(function(item){ return item.id===id && item.status==="pendente"; });
     if(!sol)return;
     try{
-        const mensagem=await aplicarAlteracaoAprovada(sol);
+        const mensagem=aplicarAlteracaoAprovada(sol);
         sol.status="aprovada";
         sol.atendidoPor=usuarioLogadoAtual.usuario;
         sol.atendidoEm=new Date().toISOString();
         salvarSolicitacoesAlteracoes(lista);
-        await salvarDados();
+        salvarDados();
         mostrarEstoque();
         mostrarHistorico();
         renderizarSolicitacoesAlteracoesAdmin();
@@ -2330,7 +2381,7 @@ async function aprovarAlteracaoAdmin(id){
     }
 }
 
-async function recusarAlteracaoAdmin(id){
+function recusarAlteracaoAdmin(id){
     if(!usuarioEhAdmin()){ alert("Apenas o administrador pode recusar alterações."); return; }
     const lista=carregarSolicitacoesAlteracoes();
     const sol=lista.find(function(item){ return item.id===id && item.status==="pendente"; });
@@ -2339,7 +2390,7 @@ async function recusarAlteracaoAdmin(id){
     sol.status="recusada";
     sol.atendidoPor=usuarioLogadoAtual.usuario;
     sol.atendidoEm=new Date().toISOString();
-    await salvarSolicitacoesAlteracoes(lista);
+    salvarSolicitacoesAlteracoes(lista);
     renderizarSolicitacoesAlteracoesAdmin();
 }
 
@@ -2462,7 +2513,7 @@ grade.appendChild(box);
 // REGISTRAR MOVIMENTAÇÃO
 // ======================================================
 
-async function registrarMovimentacao(
+function registrarMovimentacao(
 tipo,
 item,
 detalhes=""
@@ -2873,27 +2924,11 @@ title="Remover produto"
 
 
 
-async function removerProdutoCadastrado(index){
-    if(!usuarioEhAdmin()){ alert("Apenas o administrador pode remover produtos."); return; }
-    if(index < 0 || index >= produtosCadastrados.length) return;
-    const produto=produtosCadastrados[index];
-    if(!confirm("Remover o produto "+(produto.nome||"")+" da lista?")) return;
-    const novaLista=produtosCadastrados.filter(function(_,i){ return i !== index; });
-    try{
-        await salvarProdutosFirebase(novaLista);
-        renderizarProdutosCadastrados();
-        atualizarListaProdutos();
-    }catch(e){
-        console.error("Erro ao remover produto:",e);
-        alert("Não foi possível remover o produto do Firebase.");
-    }
-}
-
 // ======================================================
 // ENTRADA
 // ======================================================
 
-async function adicionarItem(){
+function adicionarItem(){
 
 const data = document.getElementById("data").value;
 const num = document.getElementById("num").value;
@@ -2950,19 +2985,19 @@ if(editIndex !== "") {
 
     if(usuarioEhAdmin()){
         estoque[indice]=item;
-        await registrarMovimentacao("ALTERAÇÃO", item, `Registro alterado pelo administrador. Quantidade anterior: ${antigo.qtd}, Peso anterior: ${antigo.peso} KG.`);
+        registrarMovimentacao("ALTERAÇÃO", item, `Registro alterado pelo administrador. Quantidade anterior: ${antigo.qtd}, Peso anterior: ${antigo.peso} KG.`);
         alert("✅ Entrada alterada com sucesso!");
     }else{
-        await solicitarAlteracaoAdmin("ALTERACAO", {itemId:antigo.id, antigoItem:antigo, novoItem:item}, "O operador solicitou alteração de uma mercadoria já registrada.");
+        solicitarAlteracaoAdmin("ALTERACAO", {itemId:antigo.id, antigoItem:antigo, novoItem:item}, "O operador solicitou alteração de uma mercadoria já registrada.");
         alert("📨 Alteração enviada ao administrador. O estoque só será alterado após aprovação.");
     }
 }else{
     if(usuarioEhAdmin()){
         estoque.push(item);
-        await registrarMovimentacao("ENTRADA", item, "Nova mercadoria recebida pelo administrador.");
+        registrarMovimentacao("ENTRADA", item, "Nova mercadoria recebida pelo administrador.");
         alert("✅ Mercadoria registrada com sucesso!");
     }else{
-        await solicitarAlteracaoAdmin("ENTRADA", {item:item}, "O operador solicitou uma nova entrada no container.");
+        solicitarAlteracaoAdmin("ENTRADA", {item:item}, "O operador solicitou uma nova entrada no container.");
         alert("📨 Nova entrada enviada ao administrador. Ela aparecerá no painel para validação.");
     }
 }
@@ -3242,21 +3277,21 @@ limparFormulario();
 // EXCLUIR
 // ======================================================
 
-async function excluirItem(index){
+function excluirItem(index){
     const item=estoque[index];
     if(!item)return;
     if(!confirm("Excluir esta mercadoria do estoque?")) return;
 
     if(usuarioEhAdmin()){
         estoque.splice(index,1);
-        await registrarMovimentacao("EXCLUSÃO", item, "Mercadoria excluída pelo administrador.");
+        registrarMovimentacao("EXCLUSÃO", item, "Mercadoria excluída pelo administrador.");
         mostrarEstoque();
         mostrarHistorico();
         alert("✅ Mercadoria excluída com sucesso.");
         return;
     }
 
-    await solicitarAlteracaoAdmin("EXCLUSAO", {itemId:item.id, item:item}, "O operador solicitou a exclusão desta mercadoria.");
+    solicitarAlteracaoAdmin("EXCLUSAO", {itemId:item.id, item:item}, "O operador solicitou a exclusão desta mercadoria.");
     alert("📨 Exclusão enviada ao administrador. O item permanecerá no estoque até a aprovação.");
 }
 
@@ -3265,7 +3300,7 @@ async function excluirItem(index){
 // ZERAR CONTAINER
 // ======================================================
 
-async function esvaziarContainer(){
+function esvaziarContainer(){
     const num=document.getElementById("num").value;
     if(!num){ alert("Digite o número do container."); return; }
 
@@ -3275,7 +3310,7 @@ async function esvaziarContainer(){
 
     if(usuarioEhAdmin()){
         itens.forEach(function(item){
-            await registrarMovimentacao("CONTAINER ZERADO", item, "Produto removido através da função Zerar Container pelo administrador.");
+            registrarMovimentacao("CONTAINER ZERADO", item, "Produto removido através da função Zerar Container pelo administrador.");
         });
         estoque=estoque.filter(function(item){ return Number(item.num)!==Number(num); });
         salvarDados();
@@ -3286,7 +3321,7 @@ async function esvaziarContainer(){
         return;
     }
 
-    await solicitarAlteracaoAdmin("ZERAR_CONTAINER", {num:Number(num), itens:itens}, "O operador solicitou o zeramento completo do container.");
+    solicitarAlteracaoAdmin("ZERAR_CONTAINER", {num:Number(num), itens:itens}, "O operador solicitou o zeramento completo do container.");
     alert("📨 Solicitação para zerar o Container "+num+" enviada ao administrador. O estoque não será alterado até a aprovação.");
 }
 
@@ -3645,20 +3680,20 @@ movimento.style.display=
 // LIMPAR HISTÓRICO
 // ======================================================
 
-async function limparHistorico(){
+function limparHistorico(){
     if(historico.length===0){ alert("O histórico já está vazio."); return; }
     const confirmar=confirm("Tem certeza que deseja apagar todo o histórico de movimentações?\n\nO estoque atual NÃO será apagado.");
     if(!confirmar)return;
 
     if(usuarioEhAdmin()){
         historico=[];
-        await salvarDados();
+        salvarDados();
         mostrarHistorico();
         alert("✅ Histórico apagado com sucesso.");
         return;
     }
 
-    await solicitarAlteracaoAdmin("LIMPAR_HISTORICO", {}, "O operador solicitou a limpeza do histórico de movimentações.");
+    solicitarAlteracaoAdmin("LIMPAR_HISTORICO", {}, "O operador solicitou a limpeza do histórico de movimentações.");
     alert("📨 Solicitação enviada ao administrador. O histórico só será apagado após aprovação.");
 }
 
@@ -4379,21 +4414,15 @@ setInterval(function(){
     atualizarIndicadorAdmin();
 }, 2000);
 
-
-// Handlers globais para os botões inline do aplicativo.
+// Compatibilidade: garante que os handlers usados pelos botões HTML
+// estejam disponíveis no escopo global do navegador.
 window.tratarEnvioLogin = tratarEnvioLogin;
 window.sairDoSistema = sairDoSistema;
-window.cadastrarUsuarioAdmin = cadastrarUsuarioAdmin;
 window.toggleAdminUsuarios = toggleAdminUsuarios;
-window.adicionarItem = adicionarItem;
-window.editarItem = editarItem;
-window.excluirItem = excluirItem;
-window.esvaziarContainer = esvaziarContainer;
-window.limparHistorico = limparHistorico;
-window.aprovarAlteracaoAdmin = aprovarAlteracaoAdmin;
-window.recusarAlteracaoAdmin = recusarAlteracaoAdmin;
+window.esconderRecuperarSenha = esconderRecuperarSenha;
+window.solicitarAcessoAdmin = solicitarAcessoAdmin;
 window.removerProdutoCadastrado = removerProdutoCadastrado;
-console.log("✅ CONTROLE DE CONTAINERS — FIREBASE TOTAL carregado.");
+console.log("✅ CONTROLE DE CONTAINERS — FIREBASE FINAL carregado sem armazenamento local.");
 </script>
 
 </body>
