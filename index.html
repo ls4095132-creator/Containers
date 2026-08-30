@@ -750,6 +750,7 @@ firebaseCadastroAuth.setPersistence(firebase.auth.Auth.Persistence.NONE).catch(f
 console.log("🔥 Firebase conectado!");
 </script>
 
+<link rel="icon" href="data:,">
 </head>
 
 <body>
@@ -4253,6 +4254,16 @@ async function enviarSolicitacaoAcesso(){
     }
 }
 
+// Protege textos vindos do Firebase antes de inserir no HTML.
+function escaparHtmlSolicitacao(texto){
+    return String(texto ?? "")
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/\'/g,"&#039;");
+}
+
 // ------------------------------------------------------
 // Criação/gestão de usuários Firebase
 // ------------------------------------------------------
@@ -4443,6 +4454,7 @@ setInterval(function(){
 
 // Compatibilidade: garante que os handlers usados pelos botões HTML
 // estejam disponíveis no escopo global do navegador.
+window.escaparHtmlSolicitacao = escaparHtmlSolicitacao;
 window.tratarEnvioLogin = tratarEnvioLogin;
 window.sairDoSistema = sairDoSistema;
 
