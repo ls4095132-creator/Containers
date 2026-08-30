@@ -569,6 +569,14 @@ button:disabled {
     padding: 20px;
 }
 
+.tela-login.login-oculta {
+    display: none !important;
+}
+
+#app-principal.app-visivel {
+    display: block !important;
+}
+
 .cartao-login {
     background: var(--bg-painel);
     border: 1px solid var(--borda);
@@ -2368,6 +2376,15 @@ function renderizarSolicitacoesAlteracoesAdmin(){
     atualizarIndicadorAdmin();
 }
 
+function escaparHtmlSolicitacao(valor){
+    return String(valor == null ? "" : valor)
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/\"/g,"&quot;")
+        .replace(/'/g,"&#039;");
+}
+
 function renderizarSolicitacoesAcessoAdmin(){
     const area=document.getElementById("lista-solicitacoes-acesso-admin");
     const contador=document.getElementById("contador-solicitacoes-acesso-admin");
@@ -2378,45 +2395,25 @@ function renderizarSolicitacoesAcessoAdmin(){
     area.innerHTML=pendentes.map(function(item){return '<div class="produto-item" style="margin-bottom:8px;"><strong>'+escaparHtmlAlteracao(item.email||item.usuario||"Usuário")+'</strong><br><span style="font-size:11px;color:var(--texto-fraco);">'+escaparHtmlAlteracao(item.mensagem||"Solicitação de acesso")+'</span></div>';}).join("");
 }
 
-
 function toggleAdminUsuarios(){
-    if(!usuarioEhAdmin()){
-        console.warn("Acesso negado: painel administrativo.");
-        return;
-    }
-
+    if(!usuarioEhAdmin()) return;
     const painel=document.getElementById("painel-admin-usuarios");
     const botao=document.getElementById("btn-abrir-painel-admin");
-    if(!painel)return;
-
-    const estaAberto = painel.style.display !== "none" && painel.style.display !== "";
-
-    if(estaAberto){
+    if(!painel) return;
+    const aberto = painel.style.display !== "none" && painel.style.display !== "";
+    if(aberto){
         painel.style.display="none";
-        if(botao){
-            botao.innerText="👑 Usuários Cadastrados";
-        }
+        if(botao) botao.innerText="👑 Usuários Cadastrados";
         return;
     }
-
     painel.style.display="block";
-
-    if(botao){
-        botao.innerText="🙈 Ocultar Usuários";
-    }
-
-    // Carrega os dados administrativos diretamente do Firebase.
+    if(botao) botao.innerText="🙈 Ocultar Usuários";
     Promise.all([
-        (typeof carregarPerfisUsuariosFirebase==="function" ? carregarPerfisUsuariosFirebase() : Promise.resolve()),
-        (typeof renderizarSolicitacoesAcessoAdmin==="function" ? renderizarSolicitacoesAcessoAdmin() : Promise.resolve()),
-        (typeof renderizarSolicitacoesAlteracoesAdmin==="function" ? renderizarSolicitacoesAlteracoesAdmin() : Promise.resolve()),
-        (typeof renderizarUsuariosCadastradosAdmin==="function" ? renderizarUsuariosCadastradosAdmin() : Promise.resolve())
-    ]).catch(function(erro){
-        console.error("Erro ao abrir painel administrativo:", erro);
-        mostrarErroAdminUsuarios("Não foi possível carregar os dados administrativos do Firebase.");
-    });
-
-    atualizarIndicadorAdmin();
+        carregarPerfisUsuariosFirebase().catch(function(e){console.error("Perfis Firebase:",e);}),
+        (typeof renderizarSolicitacoesAcessoAdmin === "function" ? renderizarSolicitacoesAcessoAdmin() : Promise.resolve()),
+        (typeof renderizarSolicitacoesAlteracoesAdmin === "function" ? renderizarSolicitacoesAlteracoesAdmin() : Promise.resolve()),
+        (typeof renderizarUsuariosCadastradosAdmin === "function" ? renderizarUsuariosCadastradosAdmin() : Promise.resolve())
+    ]).catch(function(e){console.error("Erro ao abrir painel admin:",e);});
 }
 
 function atualizarIndicadorAdmin(){
@@ -4147,8 +4144,14 @@ async function entrarNoApp(usuarioObjeto){
     // O acesso ao app não depende da leitura de uma coleção que o usuário
     // comum não pode acessar. Primeiro mostramos o sistema e depois
     // iniciamos as sincronizações permitidas pelo Firebase.
-    if(login)login.style.display="none";
-    if(app)app.style.display="block";
+    if(login){
+        login.classList.add("login-oculta");
+        login.style.display="none";
+    }
+    if(app){
+        app.classList.add("app-visivel");
+        app.style.display="block";
+    }
     atualizarTelaUsuarioLogado();
 
     try{
@@ -4172,8 +4175,14 @@ async function sairDoSistema(){
         perfisUsuariosCache={};
         const app=document.getElementById("app-principal");
         const login=document.getElementById("tela-login");
-        if(app)app.style.display="none";
-        if(login)login.style.display="block";
+        if(app){
+            app.classList.remove("app-visivel");
+            app.style.display="none";
+        }
+        if(login){
+            login.classList.remove("login-oculta");
+            login.style.display="flex";
+        }
         const campo=document.getElementById("login-usuario");
         if(campo){ campo.value=""; campo.focus(); }
         const senha=document.getElementById("login-senha");
@@ -4372,7 +4381,8 @@ async function iniciarAutenticacao(){
         if(!user){
             usuarioLogadoAtual=null;perfisUsuariosCache={};desligarListenersFirebase();
             const app=document.getElementById("app-principal"),login=document.getElementById("tela-login");
-            if(app)app.style.display="none";if(login)login.style.display="flex";
+            if(app){app.classList.remove("app-visivel");app.style.display="none";}
+            if(login){login.classList.remove("login-oculta");login.style.display="flex";}
         }
     });
 }
