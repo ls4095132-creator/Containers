@@ -5,13 +5,9 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#0a0f1c">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-<title>Controle de Containers — Firebase Central</title>
-<meta name="app-version" content="Firebase-Central">
+<title>Controle de Containers — Firebase V6</title>
+<meta name="app-version" content="Firebase-V6">
 
 <style>
 
@@ -573,6 +569,13 @@ button:disabled {
     padding: 20px;
 }
 
+/* Estado oculto da tela de login.
+   Necessário porque .tela-login usa display:flex !important. */
+.tela-login.oculta {
+    display: none !important;
+}
+
+
 .cartao-login {
     background: var(--bg-painel);
     border: 1px solid var(--borda);
@@ -671,57 +674,13 @@ button:disabled {
     font-size: 12px;
 }
 
-
-/* ======================================================
-   RESPONSIVIDADE / CELULAR / NOTEBOOK
-   ====================================================== */
-@media (max-width: 900px){
-    body{padding:10px;}
-    .painel{padding:16px;}
-    .linha-form{gap:8px;}
-    .painel-entrada .linha-identificacao,
-    .painel-entrada .linha-produto,
-    .painel-entrada .linha-quantidade{
-        grid-template-columns:repeat(2,minmax(0,1fr));
-        min-width:0;
-        max-width:none;
-    }
-}
-
-@media (max-width: 700px){
-    body{margin:0;padding:8px;font-size:14px;}
-    h1{font-size:23px;gap:7px;margin-bottom:16px;}
-    .painel{padding:12px;border-radius:10px;}
-    .painel-busca{padding:10px;}
-    .barra-usuario{position:sticky;top:0;z-index:90;background:rgba(10,15,28,.96);padding:6px 0;justify-content:space-between;flex-wrap:wrap;}
-    .barra-usuario span{font-size:12px;}
-    .btn-sair,.barra-usuario button{width:auto;}
-    .painel-entrada .linha-identificacao,
-    .painel-entrada .linha-produto,
-    .painel-entrada .linha-quantidade{grid-template-columns:1fr;}
-    .container-botoes{gap:7px;}
-    .container-botoes button{width:100%;}
-    .grid{grid-template-columns:1fr 1fr;gap:8px;}
-    .box{min-height:125px;padding:12px;}
-    .titulo{font-size:14px;}
-    .produto-item{padding-right:38px;}
-    .acoes-item{right:2px;}
-    .cartao-login{max-width:360px;padding:20px;}
-    .tela-login{padding:12px;}
-    input,select,textarea{font-size:16px;}
-}
-
-@media (max-width: 430px){
-    .grid{grid-template-columns:1fr;}
-    h1{font-size:20px;}
-    .cartao-login{max-width:100%;}
-}
 </style>
 
 <!-- FIREBASE: conexão do sistema -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
 <script>
 const firebaseConfig = {
     apiKey: "AIzaSyB7nueKFNhlXRNg5aOH-JknVcmF5Eihawc",
@@ -736,21 +695,12 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const firebaseAuth = firebase.auth();
 const firebaseDB = firebase.database();
-
-// Cadastro de usuários sem derrubar a sessão do administrador:
-// uma segunda instância do Firebase Authentication é usada somente para criar
-// a nova conta. A senha nunca é gravada no banco de dados do sistema.
-const firebaseCadastroApp = firebase.initializeApp(firebaseConfig, "cadastroUsuariosApp");
-const firebaseCadastroAuth = firebaseCadastroApp.auth();
-firebaseCadastroAuth.setPersistence(firebase.auth.Auth.Persistence.NONE).catch(function(e){
-    console.error("Erro ao configurar autenticação de cadastro:", e);
-});
+const firebaseFunctions = firebase.functions();
 // A sessão não fica persistida entre recarregamentos/aberturas.
 // A função configurarAutenticacaoSemPersistencia() confirma isso antes do login.
 console.log("🔥 Firebase conectado!");
 </script>
 
-<link rel="icon" href="data:,">
 </head>
 
 <body>
@@ -773,8 +723,8 @@ Entre com seu usuário e senha
 <div id="bloco-login-normal">
 
 <div class="campo-login">
-<label>📧 E-mail:</label>
-<input type="email" id="login-usuario" autocomplete="off" placeholder="Digite seu usuário">
+<label>👤 Usuário:</label>
+<input type="text" id="login-usuario" autocomplete="off" placeholder="Digite seu usuário">
 </div>
 
 <div class="campo-login">
@@ -1244,8 +1194,6 @@ async function iniciarSincronizacaoFirebase(){
         const produtosRef=firebaseDB.ref("produtos");
         const alteracoesRef=firebaseDB.ref("solicitacoesAlteracoes");
         const acessoRef=firebaseDB.ref("solicitacoesAcesso");
-        const meuPerfilRef=firebaseDB.ref("perfisUsuarios/"+usuarioFirebase.uid);
-        const perfisRef=firebaseDB.ref("perfisUsuarios");
 
         const ler=async function(ref,nome){
             try{
@@ -1321,36 +1269,12 @@ async function iniciarSincronizacaoFirebase(){
             atualizarIndicadorAdmin();
         },function(e){console.error("Firebase solicitações de alteração:",e);});
 
-        // Mantém o perfil atual sincronizado e permite bloquear/alterar o tipo
-        // de acesso sem precisar recarregar a página.
-        registrar(meuPerfilRef,"value",function(snapshot){
-            const perfil=snapshot.val();
-            if(!perfil || perfil.ativo === false){
-                firebaseAuth.signOut().catch(function(){});
-                return;
-            }
-            if(usuarioLogadoAtual){
-                usuarioLogadoAtual.nome=perfil.nome || usuarioLogadoAtual.nome;
-                usuarioLogadoAtual.usuario=perfil.usuario || usuarioLogadoAtual.usuario;
-                usuarioLogadoAtual.email=perfil.email || usuarioLogadoAtual.email;
-                usuarioLogadoAtual.tipo=perfil.tipo === "admin" ? "admin" : "usuario";
-                atualizarTelaUsuarioLogado();
-                atualizarIndicadorAdmin();
-            }
-        },function(e){console.error("Firebase meu perfil:",e);});
-
         if(souAdmin){
             registrar(acessoRef,"value",function(snapshot){
                 solicitacoesAcessoCache=normalizarListaFirebase(snapshot.val());
                 if(typeof renderizarSolicitacoesAcessoAdmin==="function") renderizarSolicitacoesAcessoAdmin();
                 atualizarIndicadorAdmin();
             },function(e){console.error("Firebase solicitações de acesso:",e);});
-
-            // Lista completa de perfis somente para o administrador.
-            registrar(perfisRef,"value",function(snapshot){
-                perfisUsuariosCache=snapshot.val() || {};
-                if(typeof renderizarUsuariosCadastradosAdmin==="function") renderizarUsuariosCadastradosAdmin();
-            },function(e){console.error("Firebase perfis de usuários:",e);});
         }
 
         firebaseSincronizacaoAtiva=true;
@@ -1406,7 +1330,7 @@ function garantirIdsEstoque(){
     estoque.forEach(function(item){
         if(!item.id){ item.id = gerarIdEstoque(); alterado = true; }
     });
-    if(alterado && firebaseAuth.currentUser && firebaseSincronizacaoAtiva && usuarioEhAdmin()) {
+    if(alterado && firebaseAuth.currentUser && firebaseSincronizacaoAtiva){
         firebaseDB.ref("estoque").set(estoque).catch(function(e){ console.error("Erro ao completar IDs do estoque:",e); });
     }
 }
@@ -2298,6 +2222,7 @@ const PRODUTOS_CADASTRADOS_HTML = [
     { codigo:"PA000858", nome:"MOSTARDA AMARELA CANADENSE 45,36 KG" }
 ];
 
+const CHAVE_SOLICITACOES_ALTERACOES = "solicitacoesAlteracoesAdmin";
 
 produtosCadastrados = PRODUTOS_CADASTRADOS_HTML.map(function(item){
     return {
@@ -2451,7 +2376,7 @@ function renderizarSolicitacoesAlteracoesAdmin(){
 }
 
 function renderizarSolicitacoesAcessoAdmin(){
-    const area=document.getElementById("lista-solicitacoes-admin");
+    const area=document.getElementById("lista-solicitacoes-acesso-admin");
     const contador=document.getElementById("contador-solicitacoes-acesso-admin");
     if(!area||!usuarioEhAdmin())return;
     const pendentes=carregarSolicitacoesAcesso().filter(function(item){return item.status==="pendente";});
@@ -4058,29 +3983,45 @@ function carregarUsuariosCadastrados(){
 }
 
 async function carregarPerfisUsuariosFirebase(){
-    const user=firebaseAuth.currentUser;
-    if(!user) return [];
+    if(!firebaseAuth.currentUser) return [];
 
-    // Usuário comum só precisa do próprio perfil.
-    // Administrador pode listar todos os perfis para o painel administrativo.
-    const souAdminAtual=usuarioEhAdmin();
-    const ref=souAdminAtual
-        ? firebaseDB.ref("perfisUsuarios")
-        : firebaseDB.ref("perfisUsuarios/"+user.uid);
-
-    const snap=await comTimeoutFirebase(ref.once("value"),10000,"Tempo esgotado ao carregar os perfis de usuários.");
-
-    if(souAdminAtual){
-        perfisUsuariosCache=snap.exists() ? (snap.val() || {}) : {};
-    }else{
-        perfisUsuariosCache[user.uid]=snap.exists() ? (snap.val() || {}) : {};
-    }
+    const snap=await firebaseDB.ref("perfisUsuarios").once("value");
+    perfisUsuariosCache=snap.exists() ? (snap.val() || {}) : {};
     return carregarUsuariosCadastrados();
 }
 
 async function obterPerfilFirebase(uid){
     const snap=await firebaseDB.ref("perfisUsuarios/"+uid).once("value");
     return snap.exists() ? snap.val() : null;
+}
+
+async function garantirPerfilFirebase(user){
+    const uid=user.uid;
+    let perfil=await obterPerfilFirebase(uid);
+
+    if(perfil){
+        perfil.email=perfil.email || emailNormalizado(user.email);
+        perfil.ativo=perfil.ativo !== false;
+        perfisUsuariosCache[uid]=perfil;
+        return perfil;
+    }
+
+    const email=emailNormalizado(user.email);
+    const tipo=EMAILS_ADMIN_INICIAIS.includes(email) ? "admin" : "usuario";
+
+    perfil={
+        uid:uid,
+        email:email,
+        usuario:email,
+        nome:user.displayName || email,
+        tipo:tipo,
+        ativo:true,
+        criadoEm:firebase.database.ServerValue.TIMESTAMP
+    };
+
+    await firebaseDB.ref("perfisUsuarios/"+uid).set(perfil);
+    perfisUsuariosCache[uid]=perfil;
+    return perfil;
 }
 
 function atualizarTelaUsuarioLogado(){
@@ -4103,12 +4044,8 @@ async function verificarAutenticacao(userInformado){
     if(!user)return false;
     try{
         const perfil=await comTimeoutFirebase(obterPerfilFirebase(user.uid),10000,"Tempo esgotado ao carregar seu perfil no Firebase.");
-        if(!perfil){
-            await firebaseAuth.signOut().catch(function(){});
-            mostrarErroLogin("Este usuário não possui um perfil autorizado no sistema. Procure o administrador.");
-            return false;
-        }
-        return concluirLoginFirebase(user,perfil);
+        const perfilFinal=perfil||await comTimeoutFirebase(garantirPerfilFirebase(user),10000,"Tempo esgotado ao criar seu perfil no Firebase.");
+        return concluirLoginFirebase(user,perfilFinal);
     }catch(erro){
         console.error("Erro ao carregar perfil Firebase:",erro);
         await firebaseAuth.signOut().catch(function(){});
@@ -4176,7 +4113,7 @@ async function entrarNoApp(usuarioObjeto){
     // O acesso ao app não depende da leitura de uma coleção que o usuário
     // comum não pode acessar. Primeiro mostramos o sistema e depois
     // iniciamos as sincronizações permitidas pelo Firebase.
-    if(login)login.style.display="none";
+    if(login)login.classList.add("oculta");
     if(app)app.style.display="block";
     atualizarTelaUsuarioLogado();
 
@@ -4202,7 +4139,7 @@ async function sairDoSistema(){
         const app=document.getElementById("app-principal");
         const login=document.getElementById("tela-login");
         if(app)app.style.display="none";
-        if(login)login.style.display="block";
+        if(login)login.classList.remove("oculta");
         const campo=document.getElementById("login-usuario");
         if(campo){ campo.value=""; campo.focus(); }
         const senha=document.getElementById("login-senha");
@@ -4254,16 +4191,6 @@ async function enviarSolicitacaoAcesso(){
     }
 }
 
-// Protege textos vindos do Firebase antes de inserir no HTML.
-function escaparHtmlSolicitacao(texto){
-    return String(texto ?? "")
-        .replace(/&/g,"&amp;")
-        .replace(/</g,"&lt;")
-        .replace(/>/g,"&gt;")
-        .replace(/"/g,"&quot;")
-        .replace(/\'/g,"&#039;");
-}
-
 // ------------------------------------------------------
 // Criação/gestão de usuários Firebase
 // ------------------------------------------------------
@@ -4277,46 +4204,32 @@ async function cadastrarUsuarioAdmin(){
     const campoUsuario=document.getElementById("admin-novo-usuario");
     const campoSenha=document.getElementById("admin-nova-senha");
     const campoTipo=document.getElementById("admin-novo-tipo");
-    const email=(campoUsuario?.value||"").trim().toLowerCase();
-    const senha=campoSenha?.value||"";
-    const tipo=campoTipo?.value === "admin" ? "admin" : "usuario";
+    const novoUsuario=(campoUsuario ? campoUsuario.value : "").trim().toLowerCase();
+    const novaSenha=campoSenha ? campoSenha.value : "";
+    const novoTipo=campoTipo && campoTipo.value === "admin" ? "admin" : "usuario";
 
-    if(!email || !email.includes("@")){ mostrarErroAdminUsuarios("Informe um e-mail válido."); return; }
-    if(senha.length < 6){ mostrarErroAdminUsuarios("A senha deve ter pelo menos 6 caracteres."); return; }
+    if(!novoUsuario){ mostrarErroAdminUsuarios("Informe o e-mail do novo usuário."); return; }
+    if(!novoUsuario.includes("@")){ mostrarErroAdminUsuarios("Informe um e-mail válido."); return; }
+    if(novaSenha.length < 6){ mostrarErroAdminUsuarios("A senha do Firebase deve ter pelo menos 6 caracteres."); return; }
 
     try{
-        // Cria a conta em uma segunda instância para manter o admin conectado.
-        const cred=await firebaseCadastroAuth.createUserWithEmailAndPassword(email,senha);
-        const uid=cred.user.uid;
+        const criarUsuario = firebaseFunctions.httpsCallable("criarUsuario");
+        await criarUsuario({email:novoUsuario, senha:novaSenha, tipo:novoTipo});
 
-        // O administrador atual grava o perfil no Realtime Database.
-        await firebaseDB.ref("perfisUsuarios/"+uid).set({
-            uid:uid,
-            email:email,
-            usuario:email,
-            nome:email.split("@")[0],
-            tipo:tipo,
-            ativo:true,
-            criadoEm:firebase.database.ServerValue.TIMESTAMP
-        });
-
-        await firebaseCadastroAuth.signOut().catch(function(){});
         await carregarPerfisUsuariosFirebase();
         await renderizarUsuariosCadastradosAdmin();
-
         if(campoUsuario)campoUsuario.value="";
         if(campoSenha)campoSenha.value="";
         if(campoTipo)campoTipo.value="usuario";
-        alert("✅ Usuário criado diretamente no Firebase Authentication e em /perfisUsuarios.");
+        alert("✅ Usuário criado no Firebase Authentication e no Realtime Database.");
     }catch(erro){
         console.error("Erro ao cadastrar usuário Firebase:",erro);
-        try{ await firebaseCadastroAuth.signOut(); }catch(e){}
         let mensagem="Não foi possível cadastrar o usuário no Firebase.";
-        if(erro?.code === "auth/email-already-in-use") mensagem="Este e-mail já existe no Firebase Authentication.";
-        else if(erro?.code === "auth/invalid-email") mensagem="Informe um e-mail válido.";
-        else if(erro?.code === "auth/weak-password") mensagem="A senha deve ter pelo menos 6 caracteres.";
-        else if(erro?.code === "auth/operation-not-allowed") mensagem="O login por e-mail e senha precisa estar ativado no Firebase Authentication.";
-        else if(erro?.message) mensagem=erro.message;
+        if(erro && erro.code === "functions/already-exists") mensagem="Este e-mail já existe no Firebase Authentication.";
+        else if(erro && erro.code === "functions/permission-denied") mensagem="Apenas o administrador pode cadastrar usuários.";
+        else if(erro && erro.code === "functions/invalid-argument") mensagem="Confira o e-mail, a senha e o tipo de acesso.";
+        else if(erro && erro.code === "functions/unauthenticated") mensagem="Sua sessão expirou. Faça login novamente como administrador.";
+        else if(erro && erro.code === "functions/not-found") mensagem="A função criarUsuario ainda não foi publicada no Firebase. Faça o deploy da pasta functions incluída neste pacote.";
         mostrarErroAdminUsuarios(mensagem);
     }
 }
@@ -4336,7 +4249,7 @@ async function renderizarUsuariosCadastradosAdmin(){
             '<div class="acoes-item">'+
             '<button class="btn-acao" onclick="redefinirSenhaUsuarioAdmin('+index+')" title="Enviar redefinição de senha">🔑</button>'+
             '<button class="btn-acao" onclick="alternarBloqueioUsuarioAdmin('+index+')" title="Bloquear/ativar usuário">'+(item.ativo === false ? "🔓" : "🚫")+'</button>'+
-            '<button class="btn-acao" onclick="excluirUsuarioAdmin('+index+')" title="Remover acesso">🗑️</button>'+
+            '<button class="btn-acao" onclick="excluirUsuarioAdmin('+index+')" title="Excluir usuário">🗑️</button>'+
             '</div></div>';
     }).join("");
 }
@@ -4380,16 +4293,21 @@ async function excluirUsuarioAdmin(index){
     const usuarios=carregarUsuariosCadastrados();
     const alvo=usuarios[index];
     if(!alvo)return;
-    if(alvo.uid === firebaseAuth.currentUser.uid){ alert("Você não pode remover seu próprio acesso."); return; }
-    if(!confirm("Remover o acesso de "+alvo.email+"? O perfil será removido do sistema e o login ficará bloqueado."))return;
+    if(alvo.uid === firebaseAuth.currentUser.uid){
+        alert("Você não pode excluir o usuário com o qual está logado.");
+        return;
+    }
+    if(!confirm("Excluir definitivamente o usuário "+alvo.email+"? Essa ação não pode ser desfeita."))return;
+
     try{
-        await firebaseDB.ref("perfisUsuarios/"+alvo.uid).remove();
+        const excluirUsuario=firebaseFunctions.httpsCallable("excluirUsuario");
+        await excluirUsuario({uid:alvo.uid});
         await carregarPerfisUsuariosFirebase();
         await renderizarUsuariosCadastradosAdmin();
-        alert("✅ Acesso removido do sistema. A conta de autenticação permanece no Firebase, mas sem perfil autorizado não poderá entrar.");
+        alert("✅ Usuário excluído do Firebase Authentication e do Realtime Database.");
     }catch(erro){
         console.error(erro);
-        alert("Não foi possível remover o acesso. Verifique as regras do Firebase.");
+        alert("Não foi possível excluir o usuário. Verifique se as Cloud Functions estão publicadas.");
     }
 }
 
@@ -4420,7 +4338,7 @@ async function iniciarAutenticacao(){
         if(!user){
             usuarioLogadoAtual=null;perfisUsuariosCache={};desligarListenersFirebase();
             const app=document.getElementById("app-principal"),login=document.getElementById("tela-login");
-            if(app)app.style.display="none";if(login)login.style.display="flex";
+            if(app)app.style.display="none";if(login)login.classList.remove("oculta");
         }
     });
 }
@@ -4454,11 +4372,9 @@ setInterval(function(){
 
 // Compatibilidade: garante que os handlers usados pelos botões HTML
 // estejam disponíveis no escopo global do navegador.
-window.escaparHtmlSolicitacao = escaparHtmlSolicitacao;
 window.tratarEnvioLogin = tratarEnvioLogin;
 window.sairDoSistema = sairDoSistema;
-
-console.log("✅ CONTROLE DE CONTAINERS — FIREBASE CENTRAL carregado.");
+console.log("✅ CONTROLE DE CONTAINERS — FIREBASE V6 carregado.");
 </script>
 
 </body>
