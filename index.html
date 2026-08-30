@@ -9,10 +9,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="manifest" href="./manifest.webmanifest">
 
-<title>Controle de Containers — Firebase V6</title>
-<meta name="app-version" content="Firebase-V6">
+<title>Controle de Containers — Firebase Central</title>
+<meta name="app-version" content="Firebase-Central">
 
 <style>
 
@@ -4058,10 +4057,23 @@ function carregarUsuariosCadastrados(){
 }
 
 async function carregarPerfisUsuariosFirebase(){
-    if(!firebaseAuth.currentUser) return [];
+    const user=firebaseAuth.currentUser;
+    if(!user) return [];
 
-    const snap=await firebaseDB.ref("perfisUsuarios").once("value");
-    perfisUsuariosCache=snap.exists() ? (snap.val() || {}) : {};
+    // Usuário comum só precisa do próprio perfil.
+    // Administrador pode listar todos os perfis para o painel administrativo.
+    const souAdminAtual=usuarioEhAdmin();
+    const ref=souAdminAtual
+        ? firebaseDB.ref("perfisUsuarios")
+        : firebaseDB.ref("perfisUsuarios/"+user.uid);
+
+    const snap=await comTimeoutFirebase(ref.once("value"),10000,"Tempo esgotado ao carregar os perfis de usuários.");
+
+    if(souAdminAtual){
+        perfisUsuariosCache=snap.exists() ? (snap.val() || {}) : {};
+    }else{
+        perfisUsuariosCache[user.uid]=snap.exists() ? (snap.val() || {}) : {};
+    }
     return carregarUsuariosCadastrados();
 }
 
@@ -4433,15 +4445,8 @@ setInterval(function(){
 // estejam disponíveis no escopo global do navegador.
 window.tratarEnvioLogin = tratarEnvioLogin;
 window.sairDoSistema = sairDoSistema;
-if("serviceWorker" in navigator){
-    window.addEventListener("load", function(){
-        navigator.serviceWorker.register("./sw.js").catch(function(erro){
-            console.warn("PWA: service worker não registrado:", erro);
-        });
-    });
-}
 
-console.log("✅ CONTROLE DE CONTAINERS — FIREBASE V6 carregado.");
+console.log("✅ CONTROLE DE CONTAINERS — FIREBASE CENTRAL carregado.");
 </script>
 
 </body>
