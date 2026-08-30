@@ -569,13 +569,6 @@ button:disabled {
     padding: 20px;
 }
 
-/* Estado oculto da tela de login.
-   Necessário porque .tela-login usa display:flex !important. */
-.tela-login.oculta {
-    display: none !important;
-}
-
-
 .cartao-login {
     background: var(--bg-painel);
     border: 1px solid var(--borda);
@@ -2385,6 +2378,47 @@ function renderizarSolicitacoesAcessoAdmin(){
     area.innerHTML=pendentes.map(function(item){return '<div class="produto-item" style="margin-bottom:8px;"><strong>'+escaparHtmlAlteracao(item.email||item.usuario||"Usuário")+'</strong><br><span style="font-size:11px;color:var(--texto-fraco);">'+escaparHtmlAlteracao(item.mensagem||"Solicitação de acesso")+'</span></div>';}).join("");
 }
 
+
+function toggleAdminUsuarios(){
+    if(!usuarioEhAdmin()){
+        console.warn("Acesso negado: painel administrativo.");
+        return;
+    }
+
+    const painel=document.getElementById("painel-admin-usuarios");
+    const botao=document.getElementById("btn-abrir-painel-admin");
+    if(!painel)return;
+
+    const estaAberto = painel.style.display !== "none" && painel.style.display !== "";
+
+    if(estaAberto){
+        painel.style.display="none";
+        if(botao){
+            botao.innerText="👑 Usuários Cadastrados";
+        }
+        return;
+    }
+
+    painel.style.display="block";
+
+    if(botao){
+        botao.innerText="🙈 Ocultar Usuários";
+    }
+
+    // Carrega os dados administrativos diretamente do Firebase.
+    Promise.all([
+        (typeof carregarPerfisUsuariosFirebase==="function" ? carregarPerfisUsuariosFirebase() : Promise.resolve()),
+        (typeof renderizarSolicitacoesAcessoAdmin==="function" ? renderizarSolicitacoesAcessoAdmin() : Promise.resolve()),
+        (typeof renderizarSolicitacoesAlteracoesAdmin==="function" ? renderizarSolicitacoesAlteracoesAdmin() : Promise.resolve()),
+        (typeof renderizarUsuariosCadastradosAdmin==="function" ? renderizarUsuariosCadastradosAdmin() : Promise.resolve())
+    ]).catch(function(erro){
+        console.error("Erro ao abrir painel administrativo:", erro);
+        mostrarErroAdminUsuarios("Não foi possível carregar os dados administrativos do Firebase.");
+    });
+
+    atualizarIndicadorAdmin();
+}
+
 function atualizarIndicadorAdmin(){
     const botao=document.getElementById("btn-abrir-painel-admin");
     if(!botao || !usuarioEhAdmin())return;
@@ -4113,7 +4147,7 @@ async function entrarNoApp(usuarioObjeto){
     // O acesso ao app não depende da leitura de uma coleção que o usuário
     // comum não pode acessar. Primeiro mostramos o sistema e depois
     // iniciamos as sincronizações permitidas pelo Firebase.
-    if(login)login.classList.add("oculta");
+    if(login)login.style.display="none";
     if(app)app.style.display="block";
     atualizarTelaUsuarioLogado();
 
@@ -4139,7 +4173,7 @@ async function sairDoSistema(){
         const app=document.getElementById("app-principal");
         const login=document.getElementById("tela-login");
         if(app)app.style.display="none";
-        if(login)login.classList.remove("oculta");
+        if(login)login.style.display="block";
         const campo=document.getElementById("login-usuario");
         if(campo){ campo.value=""; campo.focus(); }
         const senha=document.getElementById("login-senha");
@@ -4338,7 +4372,7 @@ async function iniciarAutenticacao(){
         if(!user){
             usuarioLogadoAtual=null;perfisUsuariosCache={};desligarListenersFirebase();
             const app=document.getElementById("app-principal"),login=document.getElementById("tela-login");
-            if(app)app.style.display="none";if(login)login.classList.remove("oculta");
+            if(app)app.style.display="none";if(login)login.style.display="flex";
         }
     });
 }
@@ -4372,6 +4406,7 @@ setInterval(function(){
 
 // Compatibilidade: garante que os handlers usados pelos botões HTML
 // estejam disponíveis no escopo global do navegador.
+window.toggleAdminUsuarios = toggleAdminUsuarios;
 window.tratarEnvioLogin = tratarEnvioLogin;
 window.sairDoSistema = sairDoSistema;
 console.log("✅ CONTROLE DE CONTAINERS — FIREBASE V6 carregado.");
