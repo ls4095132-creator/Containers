@@ -1014,6 +1014,39 @@ Entrar
 <div style="margin-top:8px;font-size:11px;color:var(--texto-fraco);">As alterações feitas por usuários comuns não entram no estoque até serem aprovadas aqui.</div>
 </div>
 
+<!-- ======================================================
+     SOLICITAÇÕES DE MERCADORIA DOS USUÁRIOS EXTERNOS
+     ====================================================== -->
+
+<div
+    id="painel-solicitacoes-mercadoria-admin"
+    style="background:rgba(86,210,255,.07);
+           border:1px solid var(--azul-forte);
+           padding:12px;
+           border-radius:8px;
+           margin-bottom:18px;"
+>
+
+    <h2 style="margin-top:0;">
+        📨 Solicitações de Mercadoria
+        <span
+            id="contador-solicitacoes-mercadoria-admin"
+            style="font-size:12px;
+                   color:var(--texto-fraco);"
+        >
+        </span>
+    </h2>
+
+    <div id="lista-solicitacoes-mercadoria-admin">
+
+        <div class="vazio">
+            📭 Nenhuma solicitação de mercadoria.
+        </div>
+
+    </div>
+
+</div>
+    
 <div class="linha-form">
 
 <div class="campo">
@@ -1362,6 +1395,7 @@ let historico = [];
 let produtosCadastrados = [];
 let solicitacoesAlteracoesCache = [];
 let solicitacoesAcessoCache = [];
+let solicitacoesMercadoriaAdminCache = [];
 let firebaseSincronizacaoAtiva = false;
 let firebaseListenersAtivos = false;
 let firebaseRefsAtivos = [];
@@ -1398,7 +1432,8 @@ async function iniciarSincronizacaoFirebase(){
         const produtosRef=firebaseDB.ref("produtos");
         const alteracoesRef=firebaseDB.ref("solicitacoesAlteracoes");
         const acessoRef=firebaseDB.ref("solicitacoesAcesso");
-
+        const solicitacoesMercadoriaRef=firebaseDB.ref("solicitacoesMercadoria");
+        
         const ler=async function(ref,nome){
             try{
                 return await comTimeoutFirebase(ref.once("value"),10000,"Tempo esgotado ao carregar "+nome+".");
@@ -1416,7 +1451,10 @@ async function iniciarSincronizacaoFirebase(){
             ler(produtosRef,"produtos"),
             ler(alteracoesRef,"solicitações de alteração")
         ];
-        if(souAdmin) resultados.push(ler(acessoRef,"solicitações de acesso"));
+        if(souAdmin){
+    resultados.push(ler(acessoRef,"solicitações de acesso"));
+    resultados.push(ler(solicitacoesMercadoriaRef,"solicitações de mercadoria"));
+}
 
         const valores=await Promise.all(resultados);
         const estoqueSnap=valores[0];
@@ -1424,12 +1462,16 @@ async function iniciarSincronizacaoFirebase(){
         const produtosSnap=valores[2];
         const alteracoesSnap=valores[3];
         const acessoSnap=souAdmin ? valores[4] : null;
+        const solicitacoesMercadoriaSnap=souAdmin ? valores[5] : null;
 
         estoque=estoqueSnap ? normalizarListaFirebase(estoqueSnap.val()) : [];
         historico=historicoSnap ? normalizarListaFirebase(historicoSnap.val()) : [];
         produtosCadastrados=produtosSnap ? normalizarListaFirebase(produtosSnap.val()) : [];
         solicitacoesAlteracoesCache=alteracoesSnap ? normalizarListaFirebase(alteracoesSnap.val()) : [];
         solicitacoesAcessoCache=souAdmin && acessoSnap ? normalizarListaFirebase(acessoSnap.val()) : [];
+        solicitacoesMercadoriaAdminCache=souAdmin && solicitacoesMercadoriaSnap
+    ? normalizarListaFirebase(solicitacoesMercadoriaSnap.val())
+    : [];
 
         if(produtosSnap && !produtosSnap.exists() && souAdmin){
             const carga=(typeof PRODUTOS_CADASTRADOS_HTML!=="undefined" ? PRODUTOS_CADASTRADOS_HTML : []).map(function(p){
@@ -1474,12 +1516,37 @@ async function iniciarSincronizacaoFirebase(){
         },function(e){console.error("Firebase solicitações de alteração:",e);});
 
         if(souAdmin){
-            registrar(acessoRef,"value",function(snapshot){
-                solicitacoesAcessoCache=normalizarListaFirebase(snapshot.val());
-                if(typeof renderizarSolicitacoesAcessoAdmin==="function") renderizarSolicitacoesAcessoAdmin();
-                atualizarIndicadorAdmin();
-            },function(e){console.error("Firebase solicitações de acesso:",e);});
+
+    registrar(acessoRef,"value",function(snapshot){
+
+        solicitacoesAcessoCache=normalizarListaFirebase(snapshot.val());
+
+        if(typeof renderizarSolicitacoesAcessoAdmin==="function"){
+            renderizarSolicitacoesAcessoAdmin();
         }
+
+        atualizarIndicadorAdmin();
+
+    },function(e){
+        console.error("Firebase solicitações de acesso:",e);
+    });
+
+
+    registrar(solicitacoesMercadoriaRef,"value",function(snapshot){
+
+        solicitacoesMercadoriaAdminCache=normalizarListaFirebase(snapshot.val());
+
+        if(typeof renderizarSolicitacoesMercadoriaAdmin==="function"){
+            renderizarSolicitacoesMercadoriaAdmin();
+        }
+
+        atualizarIndicadorAdmin();
+
+    },function(e){
+        console.error("Firebase solicitações de mercadoria:",e);
+    });
+
+}
 
         firebaseSincronizacaoAtiva=true;
         atualizarListaProdutos();
@@ -2598,6 +2665,314 @@ function renderizarSolicitacoesAcessoAdmin(){
     area.innerHTML=pendentes.map(function(item){return '<div class="produto-item" style="margin-bottom:8px;"><strong>'+escaparHtmlAlteracao(item.email||item.usuario||"Usuário")+'</strong><br><span style="font-size:11px;color:var(--texto-fraco);">'+escaparHtmlAlteracao(item.mensagem||"Solicitação de acesso")+'</span></div>';}).join("");
 }
 
+function renderizarSolicitacoesMercadoriaAdmin(){
+
+    const area=document.getElementById("lista-solicitacoes-mercadoria-admin");
+    const contador=document.getElementById("contador-solicitacoes-mercadoria-admin");
+
+    if(!area || !usuarioEhAdmin()) return;
+
+    const lista=Array.isArray(solicitacoesMercadoriaAdminCache)
+        ? solicitacoesMercadoriaAdminCache.slice()
+        : [];
+
+    const pendentes=lista.filter(function(item){
+        return item.status==="pendente";
+    });
+
+    if(contador){
+        contador.innerText=" — "+pendentes.length+" pendente(s)";
+    }
+
+    if(!lista.length){
+
+        area.innerHTML=`
+            <div class="vazio" style="margin-top:10px;">
+                📭 Nenhuma solicitação de mercadoria.
+            </div>
+        `;
+
+        return;
+    }
+
+    lista.sort(function(a,b){
+
+        const ordem={
+            "pendente":0,
+            "atendido":1,
+            "cancelado":2
+        };
+
+        const statusA=ordem[a.status] ?? 9;
+        const statusB=ordem[b.status] ?? 9;
+
+        if(statusA!==statusB){
+            return statusA-statusB;
+        }
+
+        return String(b.dataHora||"")
+            .localeCompare(String(a.dataHora||""));
+
+    });
+
+    area.innerHTML=lista.map(function(item){
+
+        let statusTexto="⏳ Pendente";
+        let statusClasse="tipo-alteracao";
+
+        if(item.status==="atendido"){
+            statusTexto="✅ Atendido";
+            statusClasse="tipo-entrada";
+        }
+
+        if(item.status==="cancelado"){
+            statusTexto="❌ Cancelado";
+            statusClasse="tipo-exclusao";
+        }
+
+        const container=item.container || "—";
+        const produto=item.produto || "—";
+        const codigo=item.codigo || "—";
+        const lote=item.lote || "—";
+        const fornecedor=item.fornecedor || "—";
+        const nf=item.nf || "—";
+
+        const solicitante=
+            item.solicitanteNome ||
+            item.solicitante ||
+            "—";
+
+        const quantidade=
+            Number(item.quantidadeSolicitada || 0);
+
+        const peso=
+            Number(item.pesoSolicitado || 0);
+
+        const saldoQuantidade=
+            Number(item.saldoQuantidade || 0);
+
+        const saldoPeso=
+            Number(item.saldoPeso || 0);
+
+        const dataHora=item.dataHora
+            ? new Date(item.dataHora).toLocaleString("pt-BR")
+            : "—";
+
+        return `
+            <div class="produto-item"
+                 style="margin-bottom:10px;
+                        padding:12px;
+                        border:1px solid var(--borda);
+                        border-radius:8px;">
+
+                <div style="margin-bottom:8px;">
+
+                    <span class="tipo ${statusClasse}">
+                        ${statusTexto}
+                    </span>
+
+                </div>
+
+                <div style="font-size:12px;line-height:1.8;">
+
+                    <strong>📦 Container:</strong>
+                    ${container}
+
+                    <br>
+
+                    <strong>📋 Produto:</strong>
+                    ${produto}
+
+                    <br>
+
+                    <strong>🔢 Código:</strong>
+                    ${codigo}
+
+                    <br>
+
+                    <strong>🏷️ Lote:</strong>
+                    ${lote}
+
+                    <br>
+
+                    <strong>🏢 Fornecedor:</strong>
+                    ${fornecedor}
+
+                    <br>
+
+                    <strong>🧾 Nota Fiscal:</strong>
+                    ${nf}
+
+                    <br>
+
+                    <strong>👤 Solicitante:</strong>
+                    ${solicitante}
+
+                    <br>
+
+                    <strong>🔢 Quantidade solicitada:</strong>
+                    ${quantidade}
+
+                    <br>
+
+                    <strong>⚖️ Peso solicitado:</strong>
+                    ${peso.toLocaleString("pt-BR",{
+                        minimumFractionDigits:2
+                    })} KG
+
+                    <br>
+
+                    <strong>📦 Saldo no container:</strong>
+                    ${saldoQuantidade} volume(s)
+
+                    /
+
+                    ${saldoPeso.toLocaleString("pt-BR",{
+                        minimumFractionDigits:2
+                    })} KG
+
+                    <br>
+
+                    <strong>🕐 Data:</strong>
+                    ${dataHora}
+
+                    ${
+                        item.observacao
+                        ? `
+                            <br>
+                            <strong>💬 Observação:</strong>
+                            ${item.observacao}
+                          `
+                        : ""
+                    }
+
+                </div>
+
+                ${
+                    item.status==="pendente"
+                    ? `
+                        <div class="container-botoes"
+                             style="margin-top:12px;">
+
+                            <button
+                                type="button"
+                                class="btn-salvar"
+                                onclick="atenderSolicitacaoMercadoriaAdmin('${item.id}')">
+
+                                ✅ Atender Solicitação
+
+                            </button>
+
+                            <button
+                                type="button"
+                                class="btn-apagar-historico"
+                                onclick="cancelarSolicitacaoMercadoriaAdmin('${item.id}')">
+
+                                ❌ Cancelar Solicitação
+
+                            </button>
+
+                        </div>
+                      `
+                    : ""
+                }
+
+            </div>
+        `;
+
+    }).join("");
+}
+
+async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
+
+    if(!usuarioEhAdmin() || !id){
+        return;
+    }
+
+    const ref = firebaseDB.ref("solicitacoesMercadoria/" + id);
+
+    try{
+
+        const snapshot = await ref.once("value");
+
+        if(!snapshot.exists()){
+            alert("❌ Esta solicitação não existe mais.");
+            return;
+        }
+
+        const pedido = snapshot.val() || {};
+
+        if(pedido.status !== "pendente"){
+            alert("⚠️ Esta solicitação já foi processada.");
+            return;
+        }
+
+        const mensagem = novoStatus === "atendido"
+            ? "Deseja marcar esta solicitação como ATENDIDA?"
+            : "Deseja CANCELAR esta solicitação?";
+
+        if(!confirm(mensagem)){
+            return;
+        }
+
+        await ref.update({
+
+            status: novoStatus,
+
+            processadoEm: new Date().toISOString(),
+
+            processadoPorUid:
+                firebaseAuth.currentUser
+                    ? firebaseAuth.currentUser.uid
+                    : "",
+
+            processadoPor:
+                typeof operadorAtual === "function"
+                    ? operadorAtual()
+                    : "Administrador"
+
+        });
+
+        alert(
+            novoStatus === "atendido"
+                ? "✅ Solicitação atendida com sucesso!"
+                : "❌ Solicitação cancelada."
+        );
+
+    }catch(erro){
+
+        console.error(
+            "Erro ao atualizar solicitação de mercadoria:",
+            erro
+        );
+
+        alert(
+            "❌ Não foi possível atualizar a solicitação."
+        );
+
+    }
+}
+
+
+async function atenderSolicitacaoMercadoriaAdmin(id){
+
+    await atualizarStatusSolicitacaoMercadoriaAdmin(
+        id,
+        "atendido"
+    );
+
+}
+
+
+async function cancelarSolicitacaoMercadoriaAdmin(id){
+
+    await atualizarStatusSolicitacaoMercadoriaAdmin(
+        id,
+        "cancelado"
+    );
+
+}
+    
 function toggleAdminUsuarios(){
     if(!usuarioEhAdmin()) return;
     const painel=document.getElementById("painel-admin-usuarios");
