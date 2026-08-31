@@ -784,6 +784,204 @@ Entrar
 
 <!-- APLICATIVO -->
 
+    <!-- ======================================================
+     TELA EXCLUSIVA — USUÁRIO EXTERNO
+     ====================================================== -->
+
+<div id="app-externo" style="display:none;">
+
+    <div class="barra-usuario">
+        <span id="texto-usuario-externo"></span>
+
+        <button
+            type="button"
+            class="btn-sair"
+            onclick="sairDoSistema()"
+        >
+            🚪 Sair
+        </button>
+    </div>
+
+    <h1>📦 Consulta de Saldo dos Containers</h1>
+
+    <div class="aviso-armazenamento">
+        👁️ <strong>Modo consulta:</strong>
+        este acesso permite consultar o saldo dos containers
+        e enviar solicitações de mercadoria.
+        Não permite alterar, excluir ou cadastrar estoque.
+    </div>
+
+    <!-- PESQUISA -->
+
+    <div class="painel-busca">
+
+        <strong>
+            🔎 Pesquisar Containers:
+        </strong>
+
+        <input
+            type="text"
+            id="campo-busca-externo"
+            class="input-busca"
+            placeholder="Produto, lote, container, NF ou fornecedor..."
+            oninput="filtrarEstoqueExterno()"
+        >
+
+    </div>
+
+    <!-- CONTADOR -->
+
+    <div
+        id="contador-externo"
+        class="contador"
+    >
+        Containers ocupados: 0 / 60
+    </div>
+
+    <!-- CONTAINERS -->
+
+    <div
+        class="grid"
+        id="grade-externa"
+    ></div>
+
+
+    <!-- ==================================================
+         SOLICITAÇÃO DE MERCADORIA
+         ================================================== -->
+
+    <div class="painel">
+
+        <h2>📨 Solicitação de Mercadoria</h2>
+
+        <div class="aviso-armazenamento">
+            Selecione o container e depois escolha uma
+            mercadoria existente naquele container.
+        </div>
+
+
+        <div class="linha-form">
+
+            <div class="campo">
+
+                <label>
+                    📦 Container:
+                </label>
+
+                <select id="solicitacao-container">
+                    <option value="">
+                        Selecione o container
+                    </option>
+                </select>
+
+            </div>
+
+
+            <div class="campo">
+
+                <label>
+                    📋 Mercadoria:
+                </label>
+
+                <select id="solicitacao-produto">
+                    <option value="">
+                        Selecione a mercadoria
+                    </option>
+                </select>
+
+            </div>
+
+
+            <div class="campo">
+
+                <label>
+                    🔢 Quantidade:
+                </label>
+
+                <input
+                    type="number"
+                    id="solicitacao-qtd"
+                    min="1"
+                    placeholder="Quantidade"
+                >
+
+            </div>
+
+
+            <div class="campo">
+
+                <label>
+                    ⚖️ Peso solicitado (KG):
+                </label>
+
+                <input
+                    type="number"
+                    id="solicitacao-peso"
+                    min="0"
+                    step="0.01"
+                    placeholder="Peso"
+                >
+
+            </div>
+
+        </div>
+
+
+        <div class="campo">
+
+            <label>
+                💬 Observação:
+            </label>
+
+            <textarea
+                id="solicitacao-observacao"
+                rows="3"
+                placeholder="Informe alguma observação sobre a solicitação..."
+            ></textarea>
+
+        </div>
+
+
+        <div class="container-botoes">
+
+            <button
+                type="button"
+                class="btn-salvar"
+                onclick="enviarSolicitacaoMercadoria()"
+            >
+                📨 Enviar Solicitação
+            </button>
+
+            <button
+                type="button"
+                class="btn-cancelar"
+                onclick="limparSolicitacaoMercadoria()"
+            >
+                🧹 Limpar
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- ==================================================
+         MINHAS SOLICITAÇÕES
+         ================================================== -->
+
+    <div class="painel">
+
+        <h2>📋 Minhas Solicitações</h2>
+
+        <div
+            id="lista-minhas-solicitacoes"
+        >
+        </div>
+
+    </div>
+
+</div>
+    
 <div id="app-principal" style="display:none;">
 
 <div class="barra-usuario">
@@ -4011,7 +4209,9 @@ function carregarUsuariosCadastrados(){
             usuario:p.usuario || p.nome || p.email || "",
             nome:p.nome || p.usuario || "",
             email:p.email || "",
-            tipo:p.tipo === "admin" ? "admin" : "usuario",
+            tipo:p.tipo === "admin"
+    ? "admin"
+    : (p.tipo === "externo" ? "externo" : "usuario"),
             ativo:p.ativo !== false,
             criadoEm:p.criadoEm || null
         };
@@ -4098,7 +4298,9 @@ async function concluirLoginFirebase(user,perfil){
     perfil.email=perfil.email||emailNormalizado(user.email);
     perfil.ativo=perfil.ativo!==false;
     if(perfil.ativo===false){await firebaseAuth.signOut().catch(function(){});mostrarErroLogin("Este usuário está bloqueado pelo administrador.");return false;}
-    usuarioLogadoAtual={uid:user.uid,usuario:perfil.usuario||perfil.nome||perfil.email||user.email,nome:perfil.nome||perfil.usuario||user.email,email:user.email||perfil.email,tipo:perfil.tipo==="admin"?"admin":"usuario",ativo:true};
+    usuarioLogadoAtual={uid:user.uid,usuario:perfil.usuario||perfil.nome||perfil.email||user.email,nome:perfil.nome||perfil.usuario||user.email,email:user.email||perfil.email,tipo:perfil.tipo === "admin"
+    ? "admin"
+    : (perfil.tipo === "externo" ? "externo" : "usuario"),ativo:true};
     perfisUsuariosCache[user.uid]=perfil;
     await entrarNoApp(usuarioLogadoAtual);
     return true;
@@ -4146,6 +4348,41 @@ async function entrarNoApp(usuarioObjeto){
     const login=document.getElementById("tela-login");
     const app=document.getElementById("app-principal");
 
+    const appExterno=document.getElementById("app-externo");
+
+if(usuarioObjeto && usuarioObjeto.tipo === "externo"){
+
+    if(login){
+        login.classList.add("login-oculta");
+        login.style.display="none";
+    }
+
+    if(app){
+        app.classList.remove("app-visivel");
+        app.style.display="none";
+    }
+
+    if(appExterno){
+        appExterno.style.display="block";
+    }
+
+    const textoUsuarioExterno =
+        document.getElementById("texto-usuario-externo");
+
+    if(textoUsuarioExterno){
+        textoUsuarioExterno.innerText =
+            "🌐 " +
+            (usuarioObjeto.nome ||
+             usuarioObjeto.usuario ||
+             usuarioObjeto.email ||
+             "Usuário externo");
+    }
+
+    iniciarTelaUsuarioExterno();
+
+    return;
+}
+
     // O acesso ao app não depende da leitura de uma coleção que o usuário
     // comum não pode acessar. Primeiro mostramos o sistema e depois
     // iniciamos as sincronizações permitidas pelo Firebase.
@@ -4179,10 +4416,14 @@ async function sairDoSistema(){
         usuarioLogadoAtual=null;
         perfisUsuariosCache={};
         const app=document.getElementById("app-principal");
+        const appExterno=document.getElementById("app-externo");
         const login=document.getElementById("tela-login");
         if(app){
             app.classList.remove("app-visivel");
             app.style.display="none";
+        }
+        if(appExterno){
+            appExterno.style.display="none";
         }
         if(login){
             login.classList.remove("login-oculta");
@@ -4362,6 +4603,648 @@ async function excluirUsuarioAdmin(index){
 // Compatibilidade com chamadas antigas do painel.
 function garantirAdminPadrao(){return carregarUsuariosCadastrados();}
 
+// ======================================================
+// TELA DO USUÁRIO EXTERNO
+// ======================================================
+
+let listenerEstoqueExterno = null;
+
+function iniciarTelaUsuarioExterno(){
+
+    criarContainersExternos();
+
+    carregarEstoqueExterno();
+
+    const campoBusca =
+        document.getElementById("campo-busca-externo");
+
+    if(campoBusca){
+        campoBusca.value = "";
+    }
+
+    const campoContainer =
+        document.getElementById(
+            "solicitacao-container"
+        );
+
+    if(campoContainer){
+
+        campoContainer.onchange =
+            function(){
+
+                carregarMercadoriasContainerExterno();
+
+            };
+
+    }
+
+}
+
+
+// ======================================================
+// CRIAR OS 60 CONTAINERS DA TELA EXTERNA
+// ======================================================
+
+function criarContainersExternos(){
+
+    const grade =
+        document.getElementById("grade-externa");
+
+    if(!grade)return;
+
+    grade.innerHTML = "";
+
+    for(let i = 1; i <= 60; i++){
+
+        const numero =
+            String(i).padStart(2,"0");
+
+        const box =
+            document.createElement("div");
+
+        box.className = "box";
+
+        box.id =
+            "externo-c-" + i;
+
+        box.innerHTML = `
+
+            <div class="titulo">
+                📦 Container ${numero}
+            </div>
+
+            <div
+                id="externo-dados-${i}"
+                class="lista-produtos"
+            >
+            </div>
+
+        `;
+
+        grade.appendChild(box);
+    }
+
+}
+
+
+// ======================================================
+// CARREGAR ESTOQUE DO FIREBASE
+// ======================================================
+
+function carregarEstoqueExterno(){
+
+    if(!firebaseAuth.currentUser){
+
+        console.warn(
+            "Usuário externo não autenticado."
+        );
+
+        return;
+    }
+
+    const ref =
+        firebaseDB.ref("estoque");
+
+    if(listenerEstoqueExterno){
+
+        try{
+            ref.off(
+                "value",
+                listenerEstoqueExterno
+            );
+        }catch(e){}
+
+    }
+
+    listenerEstoqueExterno =
+        function(snapshot){
+
+            const dados =
+                snapshot.val();
+
+            estoque =
+                normalizarListaFirebase(dados);
+
+            renderizarEstoqueExterno();
+
+            preencherContainersSolicitacaoExterno();
+
+            carregarMercadoriasContainerExterno();
+
+        };
+
+    ref.on(
+        "value",
+        listenerEstoqueExterno,
+        function(erro){
+
+            console.error(
+                "Erro ao carregar estoque para usuário externo:",
+                erro
+            );
+
+        }
+    );
+
+}
+
+
+// ======================================================
+// MOSTRAR ESTOQUE NA TELA EXTERNA
+// ======================================================
+
+function renderizarEstoqueExterno(){
+
+    for(let i = 1; i <= 60; i++){
+
+        const area =
+            document.getElementById(
+                "externo-dados-" + i
+            );
+
+        const container =
+            document.getElementById(
+                "externo-c-" + i
+            );
+
+        if(area){
+            area.innerHTML = "";
+        }
+
+        if(container){
+            container.classList.remove(
+                "ocupado"
+            );
+
+            container.classList.remove(
+                "escondido"
+            );
+        }
+
+    }
+
+
+    estoque.forEach(
+        function(item){
+
+            const numero =
+                Number(item.num);
+
+            const area =
+                document.getElementById(
+                    "externo-dados-" + numero
+                );
+
+            const container =
+                document.getElementById(
+                    "externo-c-" + numero
+                );
+
+            if(!area || !container){
+                return;
+            }
+
+            container.classList.add(
+                "ocupado"
+            );
+
+
+            const div =
+                document.createElement(
+                    "div"
+                );
+
+            div.className =
+                "produto-item";
+
+
+            div.innerHTML = `
+
+                <strong>
+                    ${item.codigo
+                        ? item.codigo + " - "
+                        : ""
+                    }${escaparHtmlExterno(
+                        item.prod || ""
+                    )}
+                </strong>
+
+                <br>
+
+                🏢
+                ${escaparHtmlExterno(
+                    item.fornecedor || ""
+                )}
+
+                <br>
+
+                🧾 NF:
+                ${escaparHtmlExterno(
+                    item.nf || ""
+                )}
+
+                <br>
+
+                🏷️ Lote:
+                ${escaparHtmlExterno(
+                    item.lote || ""
+                )}
+
+                <br>
+
+                🔢 Quantidade:
+                ${Number(
+                    item.qtd || 0
+                )}
+
+                <br>
+
+                ⚖️ Peso:
+                ${Number(
+                    item.peso || 0
+                ).toLocaleString(
+                    "pt-BR",
+                    {
+                        minimumFractionDigits: 2
+                    }
+                )}
+                KG
+
+                <br>
+
+                📅
+                ${formatarData(
+                    item.data || ""
+                )}
+
+            `;
+
+            area.appendChild(div);
+
+        }
+    );
+
+
+    for(let i = 1; i <= 60; i++){
+
+        const area =
+            document.getElementById(
+                "externo-dados-" + i
+            );
+
+        if(
+            area &&
+            area.children.length === 0
+        ){
+
+            area.innerHTML = `
+
+                <div class="vazio">
+                    Container vazio
+                </div>
+
+            `;
+
+        }
+
+    }
+
+
+    atualizarContadorExterno();
+
+    filtrarEstoqueExterno();
+
+}
+
+
+// ======================================================
+// CONTADOR DOS CONTAINERS
+// ======================================================
+
+function atualizarContadorExterno(){
+
+    const numeros =
+        new Set(
+            estoque.map(
+                function(item){
+                    return Number(item.num);
+                }
+            )
+        );
+
+    const ocupados =
+        numeros.size;
+
+    const contador =
+        document.getElementById(
+            "contador-externo"
+        );
+
+    if(contador){
+
+        contador.innerText =
+            "Containers ocupados: " +
+            ocupados +
+            " / 60";
+
+    }
+
+}
+
+
+// ======================================================
+// FILTRO DA CONSULTA EXTERNA
+// ======================================================
+
+function filtrarEstoqueExterno(){
+
+    const campo =
+        document.getElementById(
+            "campo-busca-externo"
+        );
+
+    if(!campo)return;
+
+    const texto =
+        campo.value
+            .toLowerCase()
+            .trim();
+
+
+    for(let i = 1; i <= 60; i++){
+
+        const container =
+            document.getElementById(
+                "externo-c-" + i
+            );
+
+        if(!container)continue;
+
+
+        const conteudo =
+            container.innerText
+                .toLowerCase();
+
+
+        if(
+            texto === "" ||
+            conteudo.includes(texto)
+        ){
+
+            container.classList.remove(
+                "escondido"
+            );
+
+        }else{
+
+            container.classList.add(
+                "escondido"
+            );
+
+        }
+
+    }
+
+}
+
+
+// ======================================================
+// PREENCHER CONTAINERS DO PEDIDO
+// ======================================================
+
+function preencherContainersSolicitacaoExterno(){
+
+    const campo =
+        document.getElementById(
+            "solicitacao-container"
+        );
+
+    if(!campo)return;
+
+
+    const valorAtual =
+        campo.value;
+
+
+    campo.innerHTML = `
+
+        <option value="">
+            Selecione o container
+        </option>
+
+    `;
+
+
+    const containers =
+        [
+            ...new Set(
+
+                estoque
+                    .map(
+                        function(item){
+                            return Number(item.num);
+                        }
+                    )
+                    .filter(
+                        function(num){
+                            return num >= 1 &&
+                                   num <= 60;
+                        }
+                    )
+
+            )
+        ]
+        .sort(
+            function(a,b){
+                return a-b;
+            }
+        );
+
+
+    containers.forEach(
+        function(numero){
+
+            const option =
+                document.createElement(
+                    "option"
+                );
+
+            option.value =
+                numero;
+
+            option.textContent =
+                "Container " +
+                String(numero)
+                    .padStart(2,"0");
+
+            campo.appendChild(
+                option
+            );
+
+        }
+    );
+
+
+    if(
+        containers.includes(
+            Number(valorAtual)
+        )
+    ){
+
+        campo.value =
+            valorAtual;
+
+    }
+
+}
+
+
+// ======================================================
+// CARREGAR MERCADORIAS DO CONTAINER SELECIONADO
+// ======================================================
+
+function carregarMercadoriasContainerExterno(){
+
+    const campoContainer =
+        document.getElementById(
+            "solicitacao-container"
+        );
+
+    const campoProduto =
+        document.getElementById(
+            "solicitacao-produto"
+        );
+
+    if(!campoContainer || !campoProduto){
+        return;
+    }
+
+    const numeroContainer =
+        Number(campoContainer.value);
+
+    campoProduto.innerHTML = `
+
+        <option value="">
+            Selecione a mercadoria
+        </option>
+
+    `;
+
+    if(!numeroContainer){
+        return;
+    }
+
+    const mercadorias =
+        estoque
+            .filter(
+                function(item){
+
+                    return Number(item.num) ===
+                           numeroContainer;
+
+                }
+            )
+            .sort(
+                function(a,b){
+
+                    return String(
+                        a.prod || ""
+                    ).localeCompare(
+                        String(
+                            b.prod || ""
+                        ),
+                        "pt-BR"
+                    );
+
+                }
+            );
+
+    mercadorias.forEach(
+        function(item){
+
+            const option =
+                document.createElement(
+                    "option"
+                );
+
+            option.value =
+                item.id ||
+                (
+                    String(item.num) +
+                    "|" +
+                    String(item.codigo || "") +
+                    "|" +
+                    String(item.prod || "") +
+                    "|" +
+                    String(item.lote || "")
+                );
+
+            option.textContent =
+                (
+                    item.codigo
+                    ? item.codigo + " - "
+                    : ""
+                ) +
+                (item.prod || "") +
+                (
+                    item.lote
+                    ? " — Lote " + item.lote
+                    : ""
+                ) +
+                " — Saldo: " +
+                Number(item.qtd || 0) +
+                " vol. / " +
+                Number(item.peso || 0)
+                    .toLocaleString(
+                        "pt-BR",
+                        {
+                            minimumFractionDigits:2
+                        }
+                    ) +
+                " KG";
+
+            option.dataset.itemId =
+                item.id || "";
+
+            campoProduto.appendChild(
+                option
+            );
+
+        }
+    );
+
+}
+
+// ======================================================
+// SEGURANÇA PARA EXIBIÇÃO DO ESTOQUE
+// ======================================================
+
+function escaparHtmlExterno(valor){
+
+    return String(valor || "")
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+
+}
+    
 // ======================================================
 // INICIALIZAÇÃO DA AUTENTICAÇÃO
 // ======================================================
