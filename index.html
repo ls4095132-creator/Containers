@@ -5216,6 +5216,724 @@ function carregarMercadoriasContainerExterno(){
 }
 
 // ======================================================
+// ENCONTRAR ITEM DE ESTOQUE SELECIONADO NO PEDIDO
+// ======================================================
+
+function obterItemSolicitacaoExterno(){
+
+    const campoContainer =
+        document.getElementById(
+            "solicitacao-container"
+        );
+
+    const campoProduto =
+        document.getElementById(
+            "solicitacao-produto"
+        );
+
+    if(!campoContainer || !campoProduto){
+        return null;
+    }
+
+    const numeroContainer =
+        Number(campoContainer.value);
+
+    const opcao =
+        campoProduto.options[
+            campoProduto.selectedIndex
+        ];
+
+    if(!numeroContainer || !opcao){
+        return null;
+    }
+
+    const itemId =
+        opcao.dataset.itemId || "";
+
+    const valorOpcao =
+        opcao.value || "";
+
+    const itens =
+        estoque.filter(
+            function(item){
+
+                return Number(item.num) ===
+                       numeroContainer;
+
+            }
+        );
+
+    return itens.find(
+        function(item){
+
+            if(itemId && item.id){
+                return String(item.id) ===
+                       String(itemId);
+            }
+
+            const chave =
+                String(item.num) + "|" +
+                String(item.codigo || "") + "|" +
+                String(item.prod || "") + "|" +
+                String(item.lote || "");
+
+            return chave === valorOpcao;
+
+        }
+    ) || null;
+
+}
+
+
+// ======================================================
+// ENVIAR SOLICITAÇÃO DE MERCADORIA
+// ======================================================
+
+async function enviarSolicitacaoMercadoria(){
+
+    if(
+        !firebaseAuth.currentUser ||
+        !usuarioLogadoAtual
+    ){
+
+        alert(
+            "Sua sessão expirou. Faça login novamente."
+        );
+
+        return;
+    }
+
+    const campoContainer =
+        document.getElementById(
+            "solicitacao-container"
+        );
+
+    const campoProduto =
+        document.getElementById(
+            "solicitacao-produto"
+        );
+
+    const campoQtd =
+        document.getElementById(
+            "solicitacao-qtd"
+        );
+
+    const campoPeso =
+        document.getElementById(
+            "solicitacao-peso"
+        );
+
+    const campoObservacao =
+        document.getElementById(
+            "solicitacao-observacao"
+        );
+
+
+    const numeroContainer =
+        Number(
+            campoContainer
+                ? campoContainer.value
+                : 0
+        );
+
+    const quantidadeSolicitada =
+        Number(
+            campoQtd
+                ? campoQtd.value
+                : 0
+        );
+
+    const pesoSolicitado =
+        Number(
+            campoPeso
+                ? campoPeso.value
+                : 0
+        );
+
+    const observacao =
+        campoObservacao
+            ? campoObservacao.value.trim()
+            : "";
+
+
+    if(!numeroContainer){
+
+        alert(
+            "Selecione o container."
+        );
+
+        return;
+    }
+
+
+    const item =
+        obterItemSolicitacaoExterno();
+
+
+    if(!item){
+
+        alert(
+            "Selecione uma mercadoria disponível dentro do container."
+        );
+
+        return;
+    }
+
+
+    if(
+        quantidadeSolicitada <= 0 &&
+        pesoSolicitado <= 0
+    ){
+
+        alert(
+            "Informe a quantidade ou o peso solicitado."
+        );
+
+        return;
+    }
+
+
+    const saldoQuantidade =
+        Number(item.qtd || 0);
+
+    const saldoPeso =
+        Number(item.peso || 0);
+
+
+    if(
+        quantidadeSolicitada > 0 &&
+        quantidadeSolicitada > saldoQuantidade
+    ){
+
+        alert(
+            "A quantidade solicitada ("+
+            quantidadeSolicitada+
+            ") é maior que o saldo disponível ("+
+            saldoQuantidade+
+            ")."
+        );
+
+        return;
+    }
+
+
+    if(
+        pesoSolicitado > 0 &&
+        pesoSolicitado > saldoPeso
+    ){
+
+        alert(
+            "O peso solicitado ("+
+            pesoSolicitado.toLocaleString(
+                "pt-BR",
+                {
+                    minimumFractionDigits:2
+                }
+            )+
+            " KG) é maior que o saldo disponível ("+
+            saldoPeso.toLocaleString(
+                "pt-BR",
+                {
+                    minimumFractionDigits:2
+                }
+            )+
+            " KG)."
+        );
+
+        return;
+    }
+
+
+    const idPedido =
+        "PED-" +
+        Date.now() +
+        "-" +
+        Math.random()
+            .toString(36)
+            .slice(2,8);
+
+
+    const pedido = {
+
+        id: idPedido,
+
+        status: "pendente",
+
+        solicitanteUid:
+            firebaseAuth.currentUser.uid,
+
+        solicitante:
+            usuarioLogadoAtual.email ||
+            usuarioLogadoAtual.usuario ||
+            "",
+
+        solicitanteNome:
+            usuarioLogadoAtual.nome ||
+            usuarioLogadoAtual.usuario ||
+            usuarioLogadoAtual.email ||
+            "",
+
+        dataHora:
+            new Date().toISOString(),
+
+        container:
+            numeroContainer,
+
+        itemEstoqueId:
+            item.id || "",
+
+        codigo:
+            item.codigo || "",
+
+        produto:
+            item.prod || "",
+
+        lote:
+            item.lote || "",
+
+        fornecedor:
+            item.fornecedor || "",
+
+        nf:
+            item.nf || "",
+
+        saldoQuantidade:
+            saldoQuantidade,
+
+        saldoPeso:
+            saldoPeso,
+
+        quantidadeSolicitada:
+            quantidadeSolicitada,
+
+        pesoSolicitado:
+            pesoSolicitado,
+
+        observacao:
+            observacao
+
+    };
+
+
+    const botao =
+        document.querySelector(
+            '#app-externo button[onclick="enviarSolicitacaoMercadoria()"]'
+        );
+
+
+    try{
+
+        if(botao){
+
+            botao.disabled =
+                true;
+
+            botao.innerText =
+                "Enviando...";
+        }
+
+
+        await firebaseDB
+            .ref(
+                "solicitacoesMercadoria/" +
+                idPedido
+            )
+            .set(pedido);
+
+
+        alert(
+            "✅ Solicitação enviada com sucesso.\n\n"+
+            "Pedido: " +
+            idPedido
+        );
+
+
+        limparSolicitacaoMercadoria();
+
+
+    }catch(erro){
+
+        console.error(
+            "Erro ao enviar solicitação:",
+            erro
+        );
+
+        alert(
+            "Não foi possível enviar a solicitação.\n\n"+
+            "Verifique as regras do Firebase Realtime Database."
+        );
+
+    }finally{
+
+        if(botao){
+
+            botao.disabled =
+                false;
+
+            botao.innerText =
+                "📨 Enviar Solicitação";
+        }
+
+    }
+
+}
+
+
+// ======================================================
+// LIMPAR SOLICITAÇÃO
+// ======================================================
+
+function limparSolicitacaoMercadoria(){
+
+    const container =
+        document.getElementById(
+            "solicitacao-container"
+        );
+
+    const produto =
+        document.getElementById(
+            "solicitacao-produto"
+        );
+
+    const qtd =
+        document.getElementById(
+            "solicitacao-qtd"
+        );
+
+    const peso =
+        document.getElementById(
+            "solicitacao-peso"
+        );
+
+    const observacao =
+        document.getElementById(
+            "solicitacao-observacao"
+        );
+
+
+    if(container){
+        container.value = "";
+    }
+
+    if(produto){
+
+        produto.innerHTML = `
+
+            <option value="">
+                Selecione a mercadoria
+            </option>
+
+        `;
+
+    }
+
+    if(qtd){
+        qtd.value = "";
+    }
+
+    if(peso){
+        peso.value = "";
+    }
+
+    if(observacao){
+        observacao.value = "";
+    }
+
+}
+
+
+// ======================================================
+// CARREGAR "MINHAS SOLICITAÇÕES"
+// ======================================================
+
+let listenerSolicitacoesExterno = null;
+
+function iniciarSolicitacoesExterno(){
+
+    if(!firebaseAuth.currentUser){
+        return;
+    }
+
+    const ref =
+        firebaseDB.ref(
+            "solicitacoesMercadoria"
+        );
+
+
+    if(listenerSolicitacoesExterno){
+
+        try{
+
+            ref.off(
+                "value",
+                listenerSolicitacoesExterno
+            );
+
+        }catch(e){}
+
+    }
+
+
+    listenerSolicitacoesExterno =
+        function(snapshot){
+
+            const dados =
+                snapshot.val();
+
+            const todas =
+                normalizarListaFirebase(
+                    dados
+                );
+
+
+            const minhas =
+                todas.filter(
+                    function(item){
+
+                        return String(
+                            item.solicitanteUid || ""
+                        ) ===
+                        String(
+                            firebaseAuth.currentUser.uid
+                        );
+
+                    }
+                );
+
+
+            renderizarMinhasSolicitacoesExterno(
+                minhas
+            );
+
+        };
+
+
+    ref.on(
+        "value",
+        listenerSolicitacoesExterno,
+        function(erro){
+
+            console.error(
+                "Erro nas solicitações do usuário externo:",
+                erro
+            );
+
+        }
+    );
+
+}
+
+
+function renderizarMinhasSolicitacoesExterno(
+    lista
+){
+
+    const area =
+        document.getElementById(
+            "lista-minhas-solicitacoes"
+        );
+
+    if(!area){
+        return;
+    }
+
+
+    if(!lista.length){
+
+        area.innerHTML = `
+
+            <div class="vazio">
+                Nenhuma solicitação enviada.
+            </div>
+
+        `;
+
+        return;
+    }
+
+
+    const ordenada =
+        lista
+            .slice()
+            .sort(
+                function(a,b){
+
+                    return String(
+                        b.dataHora || ""
+                    ).localeCompare(
+                        String(
+                            a.dataHora || ""
+                        )
+                    );
+
+                }
+            );
+
+
+    area.innerHTML =
+        ordenada
+            .map(
+                function(pedido){
+
+                    let classeStatus =
+                        "status-pendente";
+
+                    let textoStatus =
+                        "⏳ Pendente";
+
+
+                    if(
+                        pedido.status ===
+                        "atendido"
+                    ){
+
+                        classeStatus =
+                            "status-atendido";
+
+                        textoStatus =
+                            "✅ Atendido";
+
+                    }else if(
+                        pedido.status ===
+                        "cancelado"
+                    ){
+
+                        classeStatus =
+                            "status-cancelado";
+
+                        textoStatus =
+                            "❌ Cancelado";
+
+                    }
+
+
+                    return `
+
+                        <div class="movimento">
+
+                            <div
+                                class="tipo ${classeStatus}"
+                            >
+                                ${textoStatus}
+                            </div>
+
+                            <br>
+
+                            <strong>
+                                📦 Container
+                                ${String(
+                                    pedido.container || ""
+                                ).padStart(2,"0")}
+                            </strong>
+
+                            <br>
+
+                            📋
+                            ${escaparHtmlExterno(
+                                pedido.produto || ""
+                            )}
+
+                            ${
+                                pedido.codigo
+                                ?
+                                " (" +
+                                escaparHtmlExterno(
+                                    pedido.codigo
+                                ) +
+                                ")"
+                                :
+                                ""
+                            }
+
+                            <br>
+
+                            🏷️ Lote:
+                            ${escaparHtmlExterno(
+                                pedido.lote || ""
+                            )}
+
+                            <br>
+
+                            🔢 Solicitado:
+                            ${Number(
+                                pedido.quantidadeSolicitada || 0
+                            )}
+
+                            <br>
+
+                            ⚖️ Peso:
+                            ${Number(
+                                pedido.pesoSolicitado || 0
+                            ).toLocaleString(
+                                "pt-BR",
+                                {
+                                    minimumFractionDigits:2
+                                }
+                            )}
+                            KG
+
+                            <br>
+
+                            📅
+                            ${pedido.dataHora
+                                ?
+                                new Date(
+                                    pedido.dataHora
+                                ).toLocaleString(
+                                    "pt-BR"
+                                )
+                                :
+                                ""
+                            }
+
+                            <br>
+
+                            🔖 Pedido:
+                            ${escaparHtmlExterno(
+                                pedido.id || ""
+                            )}
+
+                            ${
+                                pedido.observacao
+                                ?
+                                `
+                                <hr>
+
+                                💬
+                                ${escaparHtmlExterno(
+                                    pedido.observacao
+                                )}
+                                `
+                                :
+                                ""
+                            }
+
+                        </div>
+
+                    `;
+
+                }
+            )
+            .join("");
+
+}
+
+
+// Executa a sincronização das solicitações quando a tela externa iniciar.
+const iniciarTelaUsuarioExternoOriginal =
+    iniciarTelaUsuarioExterno;
+
+iniciarTelaUsuarioExterno =
+    function(){
+
+        iniciarTelaUsuarioExternoOriginal();
+
+        iniciarSolicitacoesExterno();
+
+    };
+
+
+// ======================================================
 // SEGURANÇA PARA EXIBIÇÃO DO ESTOQUE
 // ======================================================
 
