@@ -6029,59 +6029,31 @@ function iniciarSolicitacoesExterno(){
         return;
     }
 
-    const ref =
-        firebaseDB.ref(
-            "solicitacoesMercadoria"
-        );
+    const uid = firebaseAuth.currentUser.uid;
 
+    const ref = firebaseDB
+        .ref("solicitacoesMercadoria")
+        .orderByChild("solicitanteUid")
+        .equalTo(uid);
 
     if(listenerSolicitacoesExterno){
-
         try{
-
-            ref.off(
-                "value",
-                listenerSolicitacoesExterno
-            );
-
+            listenerSolicitacoesExterno();
         }catch(e){}
-
     }
 
+    listenerSolicitacoesExterno = function(snapshot){
 
-    listenerSolicitacoesExterno =
-        function(snapshot){
+        const dados = snapshot.val();
 
-            const dados =
-                snapshot.val();
+        const minhas = normalizarListaFirebase(
+            dados
+        );
 
-            const todas =
-                normalizarListaFirebase(
-                    dados
-                );
-
-
-            const minhas =
-                todas.filter(
-                    function(item){
-
-                        return String(
-                            item.solicitanteUid || ""
-                        ) ===
-                        String(
-                            firebaseAuth.currentUser.uid
-                        );
-
-                    }
-                );
-
-
-            renderizarMinhasSolicitacoesExterno(
-                minhas
-            );
-
-        };
-
+        renderizarMinhasSolicitacoesExterno(
+            minhas
+        );
+    };
 
     ref.on(
         "value",
@@ -6095,7 +6067,6 @@ function iniciarSolicitacoesExterno(){
 
         }
     );
-
 }
 
 
