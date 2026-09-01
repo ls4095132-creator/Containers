@@ -7233,10 +7233,57 @@ function limparSolicitacaoMercadoria(){
 
 
 // ======================================================
-// CARREGAR "MINHAS SOLICITAÇÕES"
+// MINHAS SOLICITAÇÕES — USUÁRIO EXTERNO
 // ======================================================
+// IMPORTANTE:
+// A exclusão feita pelo usuário externo NÃO apaga e NÃO altera
+// o registro do Firebase. O registro continua disponível para o Admin.
+// A ocultação é salva somente no navegador do próprio usuário.
 
 let listenerSolicitacoesExterno = null;
+let refSolicitacoesExterno = null;
+
+function chaveOcultasSolicitacoesExterno(){
+    const uid = firebaseAuth.currentUser
+        ? String(firebaseAuth.currentUser.uid || '')
+        : '';
+    return 'solicitacoesMercadoriaOcultas_' + uid;
+}
+
+function carregarIdsOcultosSolicitacoesExterno(){
+    try{
+        const bruto = localStorage.getItem(
+            chaveOcultasSolicitacoesExterno()
+        );
+        const lista = bruto ? JSON.parse(bruto) : [];
+        return Array.isArray(lista)
+            ? lista.map(function(id){ return String(id); })
+            : [];
+    }catch(e){
+        console.error('Erro ao carregar solicitações ocultadas:', e);
+        return [];
+    }
+}
+
+function salvarIdsOcultosSolicitacoesExterno(ids){
+    try{
+        const unicos = Array.from(
+            new Set(
+                (Array.isArray(ids) ? ids : [])
+                    .map(function(id){ return String(id); })
+                    .filter(Boolean)
+            )
+        );
+
+        localStorage.setItem(
+            chaveOcultasSolicitacoesExterno(),
+            JSON.stringify(unicos)
+        );
+    }catch(e){
+        console.error('Erro ao salvar solicitações ocultadas:', e);
+        throw e;
+    }
+}
 
 function iniciarSolicitacoesExterno(){
 
@@ -7244,103 +7291,118 @@ function iniciarSolicitacoesExterno(){
         return;
     }
 
-    const uid = firebaseAuth.currentUser.uid;
+    const uid = String(firebaseAuth.currentUser.uid || '');
+    if(!uid) return;
 
-    const ref = firebaseDB
-        .ref("solicitacoesMercadoria")
-        .orderByChild("solicitanteUid")
-        .equalTo(uid);
-
-    if(listenerSolicitacoesExterno){
+    // Remove listener anterior corretamente, caso a tela seja reiniciada.
+    if(refSolicitacoesExterno && listenerSolicitacoesExterno){
         try{
-            listenerSolicitacoesExterno();
-        }catch(e){}
+            refSolicitacoesExterno.off(
+                'value',
+                listenerSolicitacoesExterno
+            );
+        }catch(e){
+            console.warn('Não foi possível remover listener anterior:', e);
+        }
     }
+
+    refSolicitacoesExterno = firebaseDB
+        .ref('solicitacoesMercadoria')
+        .orderByChild('solicitanteUid')
+        .equalTo(uid);
 
     listenerSolicitacoesExterno = function(snapshot){
 
-        const dados = snapshot.val();
-
         const todas = normalizarListaFirebase(
-            dados
+            snapshot.val()
         );
 
-        // O usuário pode ocultar suas solicitações finalizadas da própria tela,
-        // mas NUNCA apagamos o registro do Firebase. O Admin continua sendo
-        // a fonte oficial e consegue consultar/exportar o registro completo.
+        const idsOcultos = carregarIdsOcultosSolicitacoesExterno();
+
         const minhas = todas.filter(function(item){
-            return item && item.ocultadaPeloSolicitante !== true;
+
+            if(!item) return false;
+
+            // Segurança adicional: só exibe solicitações do próprio UID.
+            if(String(item.solicitanteUid || '') !== uid){
+                return false;
+            }
+
+            // Se o usuário ocultou no próprio navegador, não exibe.
+            if(idsOcultos.indexOf(String(item.id || '')) !== -1){
+                return false;
+            }
+
+            return true;
         });
 
         window.__minhasSolicitacoesExterno = minhas.slice();
 
-        renderizarMinhasSolicitacoesExterno(
-            minhas
-        );
+        renderizarMinhasSolicitacoesExterno(minhas);
     };
 
-    ref.on(
-        "value",
+    refSolicitacoesExterno.on(
+        'value',
         listenerSolicitacoesExterno,
         function(erro){
-
             console.error(
-                "Erro nas solicitações do usuário externo:",
+                'Erro nas solicitações do usuário externo:',
                 erro
             );
-
         }
     );
 }
-
-
 
 // ======================================================
 // EXPORTAR MINHAS SOLICITAÇÕES — USUÁRIO EXTERNO
 // ======================================================
 
+function escaparExcelExterno(valor){
+    return String(valor == null ? '' : valor)
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;');
+}
+
 function obterMinhasSolicitacoesExternoAtualizadas(){
+
     const uid = firebaseAuth.currentUser
-        ? firebaseAuth.currentUser.uid
-        : "";
+        ? String(firebaseAuth.currentUser.uid || '')
+        : '';
 
     if(!uid) return [];
 
-    return (Array.isArray(window.__minhasSolicitacoesExterno)
-        ? window.__minhasSolicitacoesExterno
-        : []
-    ).filter(function(item){
-        return item &&
-               String(item.solicitanteUid || "") === String(uid);
-    });
-}
+    const idsOcultos = carregarIdsOcultosSolicitacoesExterno();
 
-function escaparExcelExterno(valor){
-    return String(valor == null ? "" : valor)
-        .replace(/&/g,"&amp;")
-        .replace(/</g,"&lt;")
-        .replace(/>/g,"&gt;")
-        .replace(/"/g,"&quot;");
+    return (
+        Array.isArray(window.__minhasSolicitacoesExterno)
+            ? window.__minhasSolicitacoesExterno
+            : []
+    ).filter(function(item){
+
+        return item &&
+            String(item.solicitanteUid || '') === uid &&
+            idsOcultos.indexOf(String(item.id || '')) === -1;
+    });
 }
 
 function exportarMinhasSolicitacoesExternoExcel(){
 
     if(!firebaseAuth.currentUser){
-        alert("❌ Sua sessão expirou. Faça login novamente.");
+        alert('❌ Sua sessão expirou. Faça login novamente.');
         return;
     }
 
     const lista = obterMinhasSolicitacoesExternoAtualizadas();
 
     if(!lista.length){
-        alert("📭 Você ainda não possui solicitações para exportar.");
+        alert('📭 Você ainda não possui solicitações para exportar.');
         return;
     }
 
     let htmlExcel =
-        '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>';
-
-    htmlExcel +=
+        '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>' +
         '<h2>Minhas Solicitações de Mercadoria</h2>' +
         '<table border="1">' +
         '<tr>' +
@@ -7356,58 +7418,66 @@ function exportarMinhasSolicitacoesExternoExcel(){
         '<th>Observação</th>' +
         '</tr>';
 
-    lista.forEach(function(pedido){
+    lista
+        .slice()
+        .sort(function(a,b){
+            return String(b.dataHora || '')
+                .localeCompare(String(a.dataHora || ''));
+        })
+        .forEach(function(pedido){
 
-        const status =
-            pedido.status === "atendido"
-                ? "Atendida"
-                : pedido.status === "cancelado"
-                    ? "Cancelada"
-                    : "Pendente";
+            const status =
+                pedido.status === 'atendido'
+                    ? 'Atendida'
+                    : pedido.status === 'cancelado'
+                        ? 'Cancelada'
+                        : 'Pendente';
 
-        const data =
-            pedido.dataHora
-                ? new Date(pedido.dataHora).toLocaleString("pt-BR")
-                : "";
+            const data = pedido.dataHora
+                ? new Date(pedido.dataHora).toLocaleString('pt-BR')
+                : '';
 
-        htmlExcel += '<tr>';
+            const nf =
+                pedido.status === 'atendido'
+                    ? (pedido.nfFinalizacao || pedido.nf || '')
+                    : '';
 
-        [
-            status,
-            data,
-            pedido.container || "",
-            pedido.codigo || "",
-            pedido.produto || "",
-            pedido.lote || "",
-            pedido.quantidadeSolicitada || "",
-            pedido.pesoSolicitado || "",
-            pedido.status === "atendido"
-                ? (pedido.nfFinalizacao || pedido.nf || "")
-                : "",
-            pedido.observacao || ""
-        ].forEach(function(valor){
-            htmlExcel +=
-                '<td>' + escaparExcelExterno(valor) + '</td>';
+            htmlExcel += '<tr>';
+
+            [
+                status,
+                data,
+                pedido.container || '',
+                pedido.codigo || '',
+                pedido.produto || '',
+                pedido.lote || '',
+                pedido.quantidadeSolicitada || '',
+                pedido.pesoSolicitado || '',
+                nf,
+                pedido.observacao || ''
+            ].forEach(function(valor){
+                htmlExcel +=
+                    '<td>' + escaparExcelExterno(valor) + '</td>';
+            });
+
+            htmlExcel += '</tr>';
         });
-
-        htmlExcel += '</tr>';
-    });
 
     htmlExcel += '</table></body></html>';
 
     const blob = new Blob(
         [htmlExcel],
-        {type:"application/vnd.ms-excel;charset=utf-8;"}
+        {type:'application/vnd.ms-excel;charset=utf-8;'}
     );
 
     const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
+    const link = document.createElement('a');
 
     link.href = url;
     link.download =
-        "minhas_solicitacoes_" +
+        'minhas_solicitacoes_' +
         new Date().toISOString().slice(0,10) +
-        ".xls";
+        '.xls';
 
     document.body.appendChild(link);
     link.click();
@@ -7416,93 +7486,105 @@ function exportarMinhasSolicitacoesExternoExcel(){
     URL.revokeObjectURL(url);
 }
 
-
 // ======================================================
-// OCULTAR UMA SOLICITAÇÃO DA TELA DO USUÁRIO EXTERNO (SEM APAGAR DO ADMIN)
+// OCULTAR UMA SOLICITAÇÃO FINALIZADA
+// NÃO APAGA DO FIREBASE / NÃO AFETA O ADMIN
 // ======================================================
 
 async function excluirMinhaSolicitacaoExterno(id){
 
     if(!firebaseAuth.currentUser || !id){
-        alert("❌ Não foi possível identificar sua solicitação.");
+        alert('❌ Não foi possível identificar sua solicitação.');
+        return;
+    }
+
+    const uid = String(firebaseAuth.currentUser.uid || '');
+    const lista = obterMinhasSolicitacoesExternoAtualizadas();
+
+    const pedido = lista.find(function(item){
+        return String(item.id || '') === String(id);
+    });
+
+    if(!pedido){
+        alert('❌ Esta solicitação não está disponível para exclusão.');
+        return;
+    }
+
+    if(String(pedido.solicitanteUid || '') !== uid){
+        alert('❌ Você não pode excluir esta solicitação.');
+        return;
+    }
+
+    if(
+        pedido.status !== 'atendido' &&
+        pedido.status !== 'cancelado'
+    ){
+        alert(
+            '⚠️ Solicitações pendentes não podem ser excluídas.\n\n' +
+            'Aguarde o processamento pelo administrador.'
+        );
+        return;
+    }
+
+    if(!confirm(
+        'Ocultar esta solicitação da sua lista?\n\n' +
+        'O registro continuará armazenado no painel do administrador.'
+    )){
         return;
     }
 
     try{
 
-        const ref = firebaseDB.ref(
-            "solicitacoesMercadoria/" + id
+        const idsOcultos =
+            carregarIdsOcultosSolicitacoesExterno();
+
+        if(idsOcultos.indexOf(String(id)) === -1){
+            idsOcultos.push(String(id));
+        }
+
+        // NÃO fazemos remove(), set() ou update() no Firebase.
+        // Isso evita PERMISSION_DENIED e preserva o registro do Admin.
+        salvarIdsOcultosSolicitacoesExterno(idsOcultos);
+
+        const novas =
+            (Array.isArray(window.__minhasSolicitacoesExterno)
+                ? window.__minhasSolicitacoesExterno
+                : []
+            ).filter(function(item){
+                return String(item.id || '') !== String(id);
+            });
+
+        window.__minhasSolicitacoesExterno = novas;
+        renderizarMinhasSolicitacoesExterno(novas);
+
+        alert(
+            '✅ Solicitação removida da sua lista.\n\n' +
+            'O registro continua armazenado para o administrador.'
         );
-
-        const snapshot = await ref.once("value");
-
-        if(!snapshot.exists()){
-            alert("❌ Esta solicitação não existe mais.");
-            return;
-        }
-
-        const pedido = snapshot.val() || {};
-
-        // Segurança: o usuário só pode excluir uma solicitação
-        // pertencente ao próprio UID.
-        if(
-            String(pedido.solicitanteUid || "") !==
-            String(firebaseAuth.currentUser.uid)
-        ){
-            alert("❌ Você não pode excluir esta solicitação.");
-            return;
-        }
-
-        // Solicitações pendentes não podem ser apagadas,
-        // para não desaparecerem do painel do administrador.
-        if(pedido.status !== "atendido" && pedido.status !== "cancelado"){
-            alert(
-                "⚠️ Solicitações pendentes não podem ser excluídas.\n\n" +
-                "Aguarde o processamento pelo administrador."
-            );
-            return;
-        }
-
-        if(!confirm(
-            "Excluir definitivamente esta solicitação do seu histórico?\n\n" +
-            "Essa ação não poderá ser desfeita."
-        )){
-            return;
-        }
-
-        // NÃO remover do Firebase.
-        // Apenas ocultar para este usuário. O Admin continua vendo o registro.
-        await ref.update({
-            ocultadaPeloSolicitante: true,
-            ocultadaEm: new Date().toISOString(),
-            ocultadaPorUid: firebaseAuth.currentUser.uid
-        });
-
-        alert("✅ Solicitação removida da sua lista. O registro continua armazenado para o administrador.");
 
     }catch(erro){
 
         console.error(
-            "Erro ao excluir solicitação do usuário externo:",
+            'Erro ao ocultar solicitação do usuário externo:',
             erro
         );
 
         alert(
-            "❌ Não foi possível excluir a solicitação.\n\n" +
+            '❌ Não foi possível ocultar a solicitação.\n\n' +
             erro.message
         );
     }
 }
 
-
 // ======================================================
-// OCULTAR TODAS AS FINALIZADAS DO USUÁRIO EXTERNO (SEM APAGAR DO ADMIN)
+// OCULTAR TODAS AS FINALIZADAS
+// NÃO APAGA DO FIREBASE / NÃO AFETA O ADMIN
 // ======================================================
 
 async function excluirMinhasSolicitacoesExterno(){
 
     if(!firebaseAuth.currentUser){
-        alert("❌ Sua sessão expirou. Faça login novamente.");
+        alert('❌ Sua sessão expirou. Faça login novamente.');
         return;
     }
 
@@ -7510,276 +7592,232 @@ async function excluirMinhasSolicitacoesExterno(){
 
     const finalizadas = lista.filter(function(item){
         return item &&
-            (item.status === "atendido" ||
-             item.status === "cancelado");
+            (item.status === 'atendido' ||
+             item.status === 'cancelado');
     });
 
     if(!finalizadas.length){
-        alert("📭 Não existem solicitações finalizadas para excluir.");
+        alert('📭 Não existem solicitações finalizadas para excluir.');
         return;
     }
 
     if(!confirm(
-        "Excluir definitivamente " +
-        finalizadas.length +
-        " solicitação(ões) finalizada(s) do seu histórico?\n\n" +
-        "Solicitações pendentes serão preservadas.\n\n" +
-        "Essa ação não poderá ser desfeita."
+        'Ocultar ' + finalizadas.length +
+        ' solicitação(ões) finalizada(s) da sua lista?\n\n' +
+        'As solicitações pendentes serão preservadas.\n' +
+        'Os registros continuarão armazenados para o administrador.'
     )){
         return;
     }
 
     try{
 
-        const atualizacoes = {};
-        const agora = new Date().toISOString();
-        const uid = firebaseAuth.currentUser.uid;
+        const idsOcultos =
+            carregarIdsOcultosSolicitacoesExterno();
 
         finalizadas.forEach(function(item){
-            if(item.id != null){
-                atualizacoes[String(item.id) + "/ocultadaPeloSolicitante"] = true;
-                atualizacoes[String(item.id) + "/ocultadaEm"] = agora;
-                atualizacoes[String(item.id) + "/ocultadaPorUid"] = uid;
+            const id = String(item.id || '');
+            if(id && idsOcultos.indexOf(id) === -1){
+                idsOcultos.push(id);
             }
         });
 
-        await firebaseDB
-            .ref("solicitacoesMercadoria")
-            .update(atualizacoes);
+        // Somente localStorage: nenhum registro é removido do Firebase.
+        salvarIdsOcultosSolicitacoesExterno(idsOcultos);
+
+        const novas =
+            (Array.isArray(window.__minhasSolicitacoesExterno)
+                ? window.__minhasSolicitacoesExterno
+                : []
+            ).filter(function(item){
+                return !idsOcultos.includes(String(item.id || ''));
+            });
+
+        window.__minhasSolicitacoesExterno = novas;
+        renderizarMinhasSolicitacoesExterno(novas);
 
         alert(
-            "✅ Solicitações finalizadas removidas da sua lista.\n\n" +
-            "Os registros continuam armazenados para o administrador."
+            '✅ Solicitações finalizadas removidas da sua lista.\n\n' +
+            'Os registros continuam armazenados para o administrador.'
         );
 
     }catch(erro){
 
         console.error(
-            "Erro ao excluir solicitações externas:",
+            'Erro ao ocultar solicitações externas:',
             erro
         );
 
         alert(
-            "❌ Não foi possível excluir as solicitações.\n\n" +
+            '❌ Não foi possível ocultar as solicitações.\n\n' +
             erro.message
         );
     }
 }
 
+// ======================================================
+// RENDERIZAR MINHAS SOLICITAÇÕES
+// ======================================================
 
-function renderizarMinhasSolicitacoesExterno(
-    lista
-){
+function renderizarMinhasSolicitacoesExterno(lista){
 
     const area =
         document.getElementById(
-            "lista-minhas-solicitacoes"
+            'lista-minhas-solicitacoes'
         );
 
     if(!area){
         return;
     }
 
+    const idsOcultos =
+        carregarIdsOcultosSolicitacoesExterno();
 
-    if(!lista.length){
+    const visiveis =
+        (Array.isArray(lista) ? lista : [])
+            .filter(function(pedido){
+                return pedido &&
+                    idsOcultos.indexOf(String(pedido.id || '')) === -1;
+            });
 
-        area.innerHTML = `
+    if(!visiveis.length){
 
-            <div class="vazio">
-                Nenhuma solicitação enviada.
-            </div>
-
-        `;
+        area.innerHTML =
+            '<div class="vazio">' +
+            'Nenhuma solicitação enviada.' +
+            '</div>';
 
         return;
     }
 
-
     const ordenada =
-        lista
+        visiveis
             .slice()
-            .sort(
-                function(a,b){
-
-                    return String(
-                        b.dataHora || ""
-                    ).localeCompare(
-                        String(
-                            a.dataHora || ""
-                        )
-                    );
-
-                }
-            );
-
+            .sort(function(a,b){
+                return String(b.dataHora || '')
+                    .localeCompare(String(a.dataHora || ''));
+            });
 
     area.innerHTML =
-        ordenada
-            .map(
-                function(pedido){
+        ordenada.map(function(pedido){
 
-                    let classeStatus =
-                        "status-pendente";
+            let classeStatus = 'status-pendente';
+            let textoStatus = '⏳ Pendente';
 
-                    let textoStatus =
-                        "⏳ Pendente";
+            if(pedido.status === 'atendido'){
+                classeStatus = 'status-atendido';
+                textoStatus = '✅ Atendido';
+            }else if(pedido.status === 'cancelado'){
+                classeStatus = 'status-cancelado';
+                textoStatus = '❌ Cancelado';
+            }
 
+            const idSeguro =
+                escaparHtmlExterno(String(pedido.id || ''));
 
-                    if(
-                        pedido.status ===
-                        "atendido"
-                    ){
+            let botaoExcluir = '';
 
-                        classeStatus =
-                            "status-atendido";
+            if(
+                pedido.status === 'atendido' ||
+                pedido.status === 'cancelado'
+            ){
+                botaoExcluir =
+                    '<div style="margin-top:12px;">' +
+                    '<button type="button" ' +
+                    'class="btn-apagar-historico" ' +
+                    'onclick="excluirMinhaSolicitacaoExterno(\'' +
+                    idSeguro.replace(/'/g,'&#039;') +
+                    '\')">' +
+                    '🗑️ Excluir este registro' +
+                    '</button>' +
+                    '</div>';
+            }
 
-                        textoStatus =
-                            "✅ Atendido";
+            return `
+                <div class="movimento">
 
-                    }else if(
-                        pedido.status ===
-                        "cancelado"
-                    ){
+                    <div class="tipo ${classeStatus}">
+                        ${textoStatus}
+                    </div>
 
-                        classeStatus =
-                            "status-cancelado";
+                    <br>
 
-                        textoStatus =
-                            "❌ Cancelado";
+                    <strong>
+                        📦 Container
+                        ${String(pedido.container || '').padStart(2,'0')}
+                    </strong>
 
+                    <br>
+
+                    📋
+                    ${escaparHtmlExterno(pedido.produto || '')}
+
+                    ${
+                        pedido.codigo
+                            ? ' (' +
+                              escaparHtmlExterno(pedido.codigo) +
+                              ')'
+                            : ''
                     }
 
+                    <br>
 
-                    return `
+                    🏷️ Lote:
+                    ${escaparHtmlExterno(pedido.lote || '')}
 
-                        <div class="movimento">
+                    <br>
 
-                            <div
-                                class="tipo ${classeStatus}"
-                            >
-                                ${textoStatus}
-                            </div>
+                    🔢 Solicitado:
+                    ${Number(pedido.quantidadeSolicitada || 0)}
 
-                            <br>
+                    <br>
 
-                            <strong>
-                                📦 Container
-                                ${String(
-                                    pedido.container || ""
-                                ).padStart(2,"0")}
-                            </strong>
+                    ⚖️ Peso:
+                    ${Number(pedido.pesoSolicitado || 0).toLocaleString(
+                        'pt-BR',
+                        {minimumFractionDigits:2}
+                    )}
+                    KG
 
-                            <br>
+                    <br>
 
-                            📋
-                            ${escaparHtmlExterno(
-                                pedido.produto || ""
-                            )}
+                    📅
+                    ${pedido.dataHora
+                        ? new Date(pedido.dataHora).toLocaleString('pt-BR')
+                        : ''}
 
-                            ${
-                                pedido.codigo
-                                ?
-                                " (" +
-                                escaparHtmlExterno(
-                                    pedido.codigo
-                                ) +
-                                ")"
-                                :
-                                ""
-                            }
+                    ${
+                        pedido.status === 'atendido'
+                            ? `
+                                <br>
+                                🧾 Nota Fiscal:
+                                <strong>
+                                    ${escaparHtmlExterno(
+                                        pedido.nfFinalizacao ||
+                                        pedido.nf ||
+                                        'Não informada'
+                                    )}
+                                </strong>
+                              `
+                            : ''
+                    }
 
-                            <br>
-
-                            🏷️ Lote:
-                            ${escaparHtmlExterno(
-                                pedido.lote || ""
-                            )}
-
-                            <br>
-
-                            🔢 Solicitado:
-                            ${Number(
-                                pedido.quantidadeSolicitada || 0
-                            )}
-
-                            <br>
-
-                            ⚖️ Peso:
-                            ${Number(
-                                pedido.pesoSolicitado || 0
-                            ).toLocaleString(
-                                "pt-BR",
-                                {
-                                    minimumFractionDigits:2
-                                }
-                            )}
-                            KG
-
-                            <br>
-
-                            📅
-                            ${pedido.dataHora
-                                ?
-                                new Date(
-                                    pedido.dataHora
-                                ).toLocaleString(
-                                    "pt-BR"
-                                )
-                                :
-                                ""
-                            }
-
-                            ${
-                                pedido.status === "atendido"
-                                ? `
-                                    <br>
-                                    🧾 Nota Fiscal:
-                                    <strong>${escaparHtmlExterno(
-                                        pedido.nfFinalizacao || pedido.nf || "Não informada"
-                                    )}</strong>
-                                  `
-                                : ""
-                            }
-
-                            ${
-                                pedido.observacao
-                                ?
-                                `
+                    ${
+                        pedido.observacao
+                            ? `
                                 <hr>
-
                                 💬
-                                ${escaparHtmlExterno(
-                                    pedido.observacao
-                                )}
-                                `
-                                :
-                                ""
-                            }
+                                ${escaparHtmlExterno(pedido.observacao)}
+                              `
+                            : ''
+                    }
 
-                            ${
-                                (pedido.status === "atendido" || pedido.status === "cancelado")
-                                ? `
-                                    <div style="margin-top:12px;">
-                                        <button
-                                            type="button"
-                                            class="btn-apagar-historico"
-                                            onclick="excluirMinhaSolicitacaoExterno('${escaparHtmlExterno(String(pedido.id || ""))}')"
-                                        >
-                                            🗑️ Excluir este registro
-                                        </button>
-                                    </div>
-                                  `
-                                : ""
-                            }
+                    ${botaoExcluir}
 
-                        </div>
-
-                    `;
-
-                }
-            )
-            .join("");
-
+                </div>
+            `;
+        })
+        .join('');
 }
 
 
