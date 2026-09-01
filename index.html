@@ -2852,7 +2852,8 @@ function renderizarSolicitacoesMercadoriaAdmin(){
                 'id="nf-solicitacao-' +
                 String(item.id).replace(/"/g,"&quot;") +
                 '" placeholder="Digite o Nº da NF" ' +
-                'style="width:100%;margin-top:8px;padding:10px;box-sizing:border-box;">' +
+                'autocomplete="off" inputmode="numeric" ' +
+                'style="width:260px;max-width:100%;margin-top:8px;padding:8px;box-sizing:border-box;">' +
 
                 '<div class="container-botoes" style="margin-top:10px;">' +
 
@@ -7218,11 +7219,10 @@ tratarEnvioLogin();
 
 
 setInterval(function(){
-    if(usuarioEhAdmin() && document.getElementById("painel-admin-usuarios")?.style.display !== "none"){
-        renderizarSolicitacoesAcessoAdmin();
-        renderizarSolicitacoesAlteracoesAdmin();
-        renderizarSolicitacoesMercadoriaAdmin();
-    }
+    // NÃO recriar a lista de solicitações aqui.
+    // O listener do Firebase já atualiza a lista em tempo real.
+    // Recriar a lista a cada 2 segundos destruía o campo de NF
+    // enquanto o administrador tentava digitar.
     atualizarIndicadorAdmin();
 }, 2000);
 
