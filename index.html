@@ -7261,9 +7261,16 @@ function iniciarSolicitacoesExterno(){
 
         const dados = snapshot.val();
 
-        const minhas = normalizarListaFirebase(
+        const todas = normalizarListaFirebase(
             dados
         );
+
+        // O usuário pode ocultar suas solicitações finalizadas da própria tela,
+        // mas NUNCA apagamos o registro do Firebase. O Admin continua sendo
+        // a fonte oficial e consegue consultar/exportar o registro completo.
+        const minhas = todas.filter(function(item){
+            return item && item.ocultadaPeloSolicitante !== true;
+        });
 
         window.__minhasSolicitacoesExterno = minhas.slice();
 
@@ -7411,7 +7418,7 @@ function exportarMinhasSolicitacoesExternoExcel(){
 
 
 // ======================================================
-// EXCLUIR UMA SOLICITAÇÃO DO USUÁRIO EXTERNO
+// OCULTAR UMA SOLICITAÇÃO DA TELA DO USUÁRIO EXTERNO (SEM APAGAR DO ADMIN)
 // ======================================================
 
 async function excluirMinhaSolicitacaoExterno(id){
@@ -7463,9 +7470,15 @@ async function excluirMinhaSolicitacaoExterno(id){
             return;
         }
 
-        await ref.remove();
+        // NÃO remover do Firebase.
+        // Apenas ocultar para este usuário. O Admin continua vendo o registro.
+        await ref.update({
+            ocultadaPeloSolicitante: true,
+            ocultadaEm: new Date().toISOString(),
+            ocultadaPorUid: firebaseAuth.currentUser.uid
+        });
 
-        alert("✅ Solicitação excluída do seu histórico.");
+        alert("✅ Solicitação removida da sua lista. O registro continua armazenado para o administrador.");
 
     }catch(erro){
 
@@ -7483,7 +7496,7 @@ async function excluirMinhaSolicitacaoExterno(id){
 
 
 // ======================================================
-// EXCLUIR TODAS AS FINALIZADAS DO USUÁRIO EXTERNO
+// OCULTAR TODAS AS FINALIZADAS DO USUÁRIO EXTERNO (SEM APAGAR DO ADMIN)
 // ======================================================
 
 async function excluirMinhasSolicitacoesExterno(){
@@ -7519,10 +7532,14 @@ async function excluirMinhasSolicitacoesExterno(){
     try{
 
         const atualizacoes = {};
+        const agora = new Date().toISOString();
+        const uid = firebaseAuth.currentUser.uid;
 
         finalizadas.forEach(function(item){
             if(item.id != null){
-                atualizacoes[String(item.id)] = null;
+                atualizacoes[String(item.id) + "/ocultadaPeloSolicitante"] = true;
+                atualizacoes[String(item.id) + "/ocultadaEm"] = agora;
+                atualizacoes[String(item.id) + "/ocultadaPorUid"] = uid;
             }
         });
 
@@ -7531,7 +7548,8 @@ async function excluirMinhasSolicitacoesExterno(){
             .update(atualizacoes);
 
         alert(
-            "✅ Solicitações finalizadas excluídas do seu histórico."
+            "✅ Solicitações finalizadas removidas da sua lista.\n\n" +
+            "Os registros continuam armazenados para o administrador."
         );
 
     }catch(erro){
