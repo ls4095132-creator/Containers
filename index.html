@@ -1308,7 +1308,43 @@ id="grade"
 >
 </div>
 
+<!-- SOLICITAÇÕES RECEBIDAS -->
 
+<div class="painel">
+
+    <h2>📦 Solicitações Recebidas</h2>
+
+    <div class="container-botoes">
+
+        <button
+            type="button"
+            onclick="toggleSolicitacoes()"
+            class="btn-historico"
+            id="btn-toggle-solicitacoes"
+        >
+            👁️ Mostrar Solicitações
+        </button>
+
+    </div>
+
+    <div
+        id="conteudo-solicitacoes"
+        style="display:none;margin-top:15px;"
+    >
+
+        <div id="lista-solicitacoes">
+            <!-- As solicitações serão carregadas aqui pelo Firebase -->
+        </div>
+
+    </div>
+
+</div>
+
+<!-- FIM SOLICITAÇÕES RECEBIDAS -->
+
+
+<!-- HISTÓRICO -->
+    
 <!-- HISTÓRICO -->
 
 <div class="painel">
