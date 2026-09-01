@@ -3364,57 +3364,265 @@ async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
     }
 }
 
+// ======================================================
+// ATUALIZAR STATUS DA SOLICITAÇÃO DE MERCADORIA
+// ======================================================
 
+async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
 
-
-async function atenderSolicitacaoMercadoriaAdmin(id){
-
-    await atualizarStatusSolicitacaoMercadoriaAdmin(
-        id,
-        "atendido"
-    );
-
-}
-
-
-async function cancelarSolicitacaoMercadoriaAdmin(id){
-
-    await atualizarStatusSolicitacaoMercadoriaAdmin(
-        id,
-        "cancelado"
-    );
-
-}
-    
-function toggleAdminUsuarios(){
-    if(!usuarioEhAdmin()) return;
-    const painel=document.getElementById("painel-admin-usuarios");
-    const botao=document.getElementById("btn-abrir-painel-admin");
-    if(!painel) return;
-    const aberto = painel.style.display !== "none" && painel.style.display !== "";
-    if(aberto){
-        painel.style.display="none";
-        if(botao) botao.innerText="👑 Usuários Cadastrados";
+    if(!usuarioEhAdmin()){
+        alert("❌ Apenas o administrador pode processar solicitações.");
         return;
     }
-    painel.style.display="block";
-    if(botao) botao.innerText="🙈 Ocultar Usuários";
-    Promise.all([
-        carregarPerfisUsuariosFirebase().catch(function(e){console.error("Perfis Firebase:",e);}),
-        (typeof renderizarSolicitacoesAcessoAdmin === "function" ? renderizarSolicitacoesAcessoAdmin() : Promise.resolve()),
-        (typeof renderizarSolicitacoesAlteracoesAdmin === "function" ? renderizarSolicitacoesAlteracoesAdmin() : Promise.resolve()),
-        (typeof renderizarUsuariosCadastradosAdmin === "function" ? renderizarUsuariosCadastradosAdmin() : Promise.resolve())
-    ]).catch(function(e){console.error("Erro ao abrir painel admin:",e);});
+
+    if(!id){
+        alert("❌ Solicitação inválida.");
+        return;
+    }
+
+    const ref = firebaseDB.ref(
+        "solicitacoesMercadoria/" + id
+    );
+
+    try{
+
+        const snapshot = await ref.once("value");
+
+        if(!snapshot.exists()){
+            alert("❌ Esta solicitação não existe mais.");
+            return;
+        }
+
+        const pedido = snapshot.val() || {};
+
+        if(pedido.status !== "pendente"){
+            alert("⚠️ Esta solicitação já foi processada.");
+            return;
+        }
+
+        // ==================================================
+        // IDENTIFICAR TIPO DO USUÁRIO
+        // ==================================================
+
+        const tipoUsuario = String(
+            pedido.tipoUsuario ||
+            pedido.tipo ||
+            pedido.usuarioTipo ||
+            pedido.perfil ||
+            ""
+        )
+        .trim()
+        .toLowerCase();
+
+
+        // ==================================================
+        // ATENDIMENTO
+        // ==================================================
+
+        if(novoStatus === "atendido"){
+
+            let numeroNF = "";
+
+
+            // ==============================================
+            // USUÁRIO EXTERNO → NF OBRIGATÓRIA
+            // ==============================================
+
+            if(
+                tipoUsuario === "externo" ||
+                tipoUsuario === "usuario externo" ||
+                tipoUsuario === "usuário externo"
+            ){
+
+                numeroNF = prompt(
+                    "🧾 Informe o número da Nota Fiscal para finalizar:"
+                );
+
+                if(numeroNF === null){
+                    return;
+                }
+
+                numeroNF = numeroNF.trim();
+
+                if(!numeroNF){
+
+                    alert(
+                        "❌ É obrigatório informar o número da Nota Fiscal."
+                    );
+
+                    return;
+                }
+
+            }
+
+
+            // ==============================================
+            // USUÁRIO COMUM → SOMENTE ACEITE
+            // ==============================================
+
+            const mensagemConfirmacao =
+                tipoUsuario === "comum"
+                    ? "Deseja aceitar esta solicitação?"
+                    : "Deseja finalizar esta solicitação?";
+
+
+            if(!confirm(mensagemConfirmacao)){
+                return;
+            }
+
+
+            // ==============================================
+            // DADOS PARA ATUALIZAÇÃO
+            // ==============================================
+
+            const atualizacao = {
+
+                status: "atendido",
+
+                processadoEm:
+                    new Date().toISOString(),
+
+                processadoPorUid:
+                    firebaseAuth.currentUser
+                        ? firebaseAuth.currentUser.uid
+                        : "",
+
+                processadoPor:
+                    typeof operadorAtual === "function"
+                        ? operadorAtual()
+                        : "Administrador"
+
+            };
+
+
+            // ==============================================
+            // NF SOMENTE PARA EXTERNO
+            // ==============================================
+
+            if(numeroNF){
+
+                atualizacao.nfFinalizacao =
+                    numeroNF;
+
+                atualizacao.nf =
+                    numeroNF;
+
+            }
+
+
+            await ref.update(atualizacao);
+
+
+            alert(
+                tipoUsuario === "comum"
+                    ? "✅ Solicitação aceita com sucesso!"
+                    : "✅ Solicitação finalizada com sucesso!"
+            );
+
+
+            // Atualiza a lista imediatamente
+            solicitacoesMercadoriaAdminCache =
+                solicitacoesMercadoriaAdminCache.filter(
+                    function(item){
+                        return item.id !== id;
+                    }
+                );
+
+
+            if(
+                typeof renderizarSolicitacoesMercadoriaAdmin ===
+                "function"
+            ){
+
+                renderizarSolicitacoesMercadoriaAdmin();
+
+            }
+
+
+            atualizarIndicadorAdmin();
+
+            return;
+        }
+
+
+        // ==================================================
+        // CANCELAMENTO
+        // ==================================================
+
+        if(novoStatus === "cancelado"){
+
+            if(!confirm(
+                "Deseja cancelar esta solicitação?"
+            )){
+                return;
+            }
+
+
+            await ref.update({
+
+                status: "cancelado",
+
+                processadoEm:
+                    new Date().toISOString(),
+
+                processadoPorUid:
+                    firebaseAuth.currentUser
+                        ? firebaseAuth.currentUser.uid
+                        : "",
+
+                processadoPor:
+                    typeof operadorAtual === "function"
+                        ? operadorAtual()
+                        : "Administrador"
+
+            });
+
+
+            alert(
+                "❌ Solicitação cancelada."
+            );
+
+
+            solicitacoesMercadoriaAdminCache =
+                solicitacoesMercadoriaAdminCache.filter(
+                    function(item){
+                        return item.id !== id;
+                    }
+                );
+
+
+            if(
+                typeof renderizarSolicitacoesMercadoriaAdmin ===
+                "function"
+            ){
+
+                renderizarSolicitacoesMercadoriaAdmin();
+
+            }
+
+
+            atualizarIndicadorAdmin();
+
+        }
+
+    }catch(erro){
+
+        console.error(
+            "❌ Erro ao atualizar solicitação de mercadoria:",
+            erro
+        );
+
+        alert(
+            "❌ Não foi possível processar a solicitação.\n\n"+
+            erro.message
+        );
+
+    }
+
 }
 
-function atualizarIndicadorAdmin(){
-    const botao=document.getElementById("btn-abrir-painel-admin");
-    if(!botao || !usuarioEhAdmin())return;
-    const acessos=carregarSolicitacoesAcesso().filter(function(item){ return item.status==="pendente"; }).length;
-    const alteracoes=carregarSolicitacoesAlteracoes().filter(function(item){ return item.status==="pendente"; }).length;
-    const painel=document.getElementById("painel-admin-usuarios");
-    botao.innerText = (acessos+alteracoes)>0 ? "👑 Usuários / 🔔 "+(acessos+alteracoes)+" pendente(s)" : (painel && painel.style.display !== "none" ? "🙈 Ocultar Usuários" : "👑 Usuários Cadastrados");
-}
+
+
 
 // ======================================================
 // DATA E HORA
