@@ -6029,7 +6029,6 @@ function obterItemSolicitacaoExterno(){
 
 }
 
-
 // ======================================================
 // ENVIAR SOLICITAÇÃO DE MERCADORIA
 // ======================================================
@@ -6198,11 +6197,68 @@ async function enviarSolicitacaoMercadoria(){
             .slice(2,8);
 
 
+    // ==================================================
+    // IDENTIFICAR TIPO DO USUÁRIO
+    // ==================================================
+
+    const tipoUsuarioOriginal =
+        usuarioLogadoAtual.tipo ||
+        usuarioLogadoAtual.tipoUsuario ||
+        usuarioLogadoAtual.perfil ||
+        "";
+
+    const tipoUsuario =
+        String(tipoUsuarioOriginal)
+            .trim()
+            .toLowerCase();
+
+    let tipoUsuarioPedido = "";
+
+    if(
+        tipoUsuario === "admin" ||
+        tipoUsuario === "administrador"
+    ){
+
+        // Admin não deve aparecer como solicitante externo/comum
+        tipoUsuarioPedido = "admin";
+
+    }else if(
+        tipoUsuario === "comum" ||
+        tipoUsuario === "usuario comum" ||
+        tipoUsuario === "usuário comum"
+    ){
+
+        tipoUsuarioPedido = "comum";
+
+    }else if(
+        tipoUsuario === "externo" ||
+        tipoUsuario === "usuario externo" ||
+        tipoUsuario === "usuário externo"
+    ){
+
+        tipoUsuarioPedido = "externo";
+
+    }else{
+
+        // Mantém o usuário sem tipo identificado,
+        // mas não inventa um perfil.
+        tipoUsuarioPedido = "nao_identificado";
+
+    }
+
+
     const pedido = {
 
         id: idPedido,
 
         status: "pendente",
+
+        // ==============================================
+        // NOVO — TIPO DO SOLICITANTE
+        // ==============================================
+
+        tipoUsuario:
+            tipoUsuarioPedido,
 
         solicitanteUid:
             firebaseAuth.currentUser.uid,
@@ -6322,6 +6378,7 @@ async function enviarSolicitacaoMercadoria(){
     }
 
 }
+
 
 
 // ======================================================
