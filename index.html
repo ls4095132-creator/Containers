@@ -7063,6 +7063,70 @@ function escaparHtmlExterno(valor){
 }
     
 // ======================================================
+// PAINEL DE USUÁRIOS — CONTROLE DO BOTÃO E INDICADORES
+// ======================================================
+function toggleAdminUsuarios(){
+    if(!usuarioEhAdmin()){
+        alert("Apenas o administrador pode acessar os usuários cadastrados.");
+        return;
+    }
+
+    const painel=document.getElementById("painel-admin-usuarios");
+    const botao=document.getElementById("btn-abrir-painel-admin");
+    if(!painel)return;
+
+    const aberto=painel.style.display !== "none" && painel.style.display !== "";
+
+    if(aberto){
+        painel.style.display="none";
+        if(botao)botao.innerHTML="👑 Usuários Cadastrados";
+    }else{
+        painel.style.display="block";
+        if(botao)botao.innerHTML="👑 Ocultar Usuários Cadastrados";
+        renderizarUsuariosCadastradosAdmin();
+        if(typeof renderizarSolicitacoesAcessoAdmin === "function") renderizarSolicitacoesAcessoAdmin();
+        if(typeof renderizarSolicitacoesAlteracoesAdmin === "function") renderizarSolicitacoesAlteracoesAdmin();
+        if(typeof renderizarSolicitacoesMercadoriaAdmin === "function") renderizarSolicitacoesMercadoriaAdmin();
+        atualizarIndicadorAdmin();
+        setTimeout(function(){ painel.scrollIntoView({behavior:"smooth",block:"start"}); },50);
+    }
+}
+
+function atualizarIndicadorAdmin(){
+    if(!usuarioEhAdmin())return;
+
+    const acesso=Array.isArray(solicitacoesAcessoCache)
+        ? solicitacoesAcessoCache.filter(function(x){return x && String(x.status||"").toLowerCase()==="pendente";}).length
+        : 0;
+
+    const alteracoes=Array.isArray(solicitacoesAlteracoesCache)
+        ? solicitacoesAlteracoesCache.filter(function(x){return x && String(x.status||"").toLowerCase()==="pendente";}).length
+        : 0;
+
+    const mercadorias=Array.isArray(solicitacoesMercadoriaAdminCache)
+        ? solicitacoesMercadoriaAdminCache.filter(function(x){return x && String(x.status||"").toLowerCase()==="pendente";}).length
+        : 0;
+
+    const c1=document.getElementById("contador-solicitacoes-admin");
+    const c2=document.getElementById("contador-alteracoes-admin");
+    const c3=document.getElementById("contador-solicitacoes-mercadoria-admin");
+
+    if(c1)c1.innerText=acesso ? "("+acesso+" pendente(s))" : "(nenhuma pendente)";
+    if(c2)c2.innerText=alteracoes ? "("+alteracoes+" pendente(s))" : "(nenhuma pendente)";
+    if(c3)c3.innerText=mercadorias ? "("+mercadorias+" pendente(s))" : "(nenhuma pendente)";
+
+    const botao=document.getElementById("btn-abrir-painel-admin");
+    if(botao){
+        botao.style.display="inline-block";
+        if(document.getElementById("painel-admin-usuarios")?.style.display === "block"){
+            botao.innerHTML="👑 Ocultar Usuários Cadastrados";
+        }else{
+            botao.innerHTML="👑 Usuários Cadastrados";
+        }
+    }
+}
+
+// ======================================================
 // INICIALIZAÇÃO DA AUTENTICAÇÃO
 // ======================================================
 // O Firebase Authentication usa persistência NONE.
