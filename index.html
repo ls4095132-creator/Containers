@@ -679,6 +679,220 @@ button:disabled {
     font-size: 12px;
 }
 
+
+/* ======================================================
+   VISUALIZAÇÃO DOS CONTAINERS — QUADRO / LISTA / FILTROS
+   ====================================================== */
+.painel-visualizacao {
+    background: var(--bg-painel);
+    border: 1px solid var(--borda-forte);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin: 10px 0 16px;
+}
+.visualizacao-linha {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+}
+.visualizacao-linha strong { color:var(--azul); }
+.visualizacao-botoes { display:flex; gap:7px; flex-wrap:wrap; }
+.btn-vis {
+    background:var(--bg-painel-2);
+    color:var(--texto);
+    border:1px solid var(--borda-forte);
+    padding:7px 11px;
+}
+.btn-vis.ativo {
+    background:var(--azul-forte);
+    color:#041521;
+    border-color:var(--azul-forte);
+}
+.select-status {
+    width:auto; min-width:145px; padding:7px 9px; margin:0;
+}
+.seletor-containers {
+    display:flex; align-items:center; gap:8px; margin-top:9px;
+    flex-wrap:wrap;
+}
+.lista-checkbox-containers {
+    display:flex; gap:5px; overflow-x:auto; max-width:100%;
+    padding:3px 0 6px;
+}
+.chk-container {
+    display:inline-flex; align-items:center; gap:3px;
+    background:var(--bg-painel-2); border:1px solid var(--borda);
+    border-radius:6px; padding:4px 7px; white-space:nowrap;
+    font-size:11px; color:var(--texto); cursor:pointer;
+}
+.chk-container input { width:auto; margin:0; accent-color:#2fb6ec; }
+.btn-mini-vis {
+    padding:6px 9px; font-size:11px; background:var(--bg-painel-2);
+    color:var(--texto); border:1px solid var(--borda-forte);
+}
+.resumo-visualizacao { color:var(--texto-fraco); font-size:11px; margin-top:5px; }
+
+/* modo lista: cada container vira uma linha compacta */
+.grid.modo-lista {
+    display:flex; flex-direction:column; gap:7px;
+}
+.grid.modo-lista .box {
+    min-height:0; padding:9px 12px; border-radius:8px;
+    display:block; width:100%;
+}
+.grid.modo-lista .titulo {
+    display:inline-block; min-width:145px; margin:0 12px 0 0;
+    padding:0 10px 0 0; border-bottom:0; border-right:1px solid var(--borda);
+    vertical-align:top;
+}
+.grid.modo-lista .lista-produtos {
+    display:inline-block; vertical-align:top;
+    font-size:11px; width:calc(100% - 170px);
+}
+.grid.modo-lista .produto-item {
+    display:inline-block; vertical-align:top; width:auto; min-width:300px;
+    padding:2px 18px 2px 0; margin-right:12px; border-bottom:0;
+}
+.grid.modo-lista .vazio { display:inline; margin:0; font-size:11px; }
+
+@media(max-width:700px){
+    .grid.modo-lista .titulo, .grid.modo-lista .lista-produtos {
+        display:block; width:100%; border:0; margin:0 0 5px;
+    }
+    .grid.modo-lista .produto-item { min-width:0; width:100%; }
+}
+
+
+/* ======================================================
+   SOLICITAÇÃO EXTERNA EM MODAL COMPACTO
+   ====================================================== */
+.externo-acoes-solicitacao{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    padding:14px 18px;
+    margin:14px 0;
+    border:1px solid var(--borda-forte);
+    border-radius:12px;
+    background:var(--bg-painel);
+}
+.texto-apoio-solicitacao{
+    color:var(--texto-fraco);
+    font-size:13px;
+}
+.btn-abrir-solicitacao-externo{
+    white-space:nowrap;
+    min-width:190px;
+}
+.modal-solicitacao-externo{
+    position:fixed;
+    inset:0;
+    z-index:99999;
+    background:rgba(0,0,0,.62);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+}
+.modal-solicitacao-caixa{
+    width:min(820px,96vw);
+    max-height:90vh;
+    overflow:auto;
+    background:#fff;
+    color:#182033;
+    border-radius:14px;
+    box-shadow:0 22px 70px rgba(0,0,0,.45);
+}
+.modal-solicitacao-cabecalho{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:15px;
+    padding:18px 22px 14px;
+    border-bottom:1px solid #ddd;
+}
+.modal-solicitacao-cabecalho h2{
+    margin:0 0 4px;
+    color:#111827;
+}
+.modal-fechar{
+    border:0;
+    background:transparent;
+    color:#555;
+    font-size:27px;
+    cursor:pointer;
+    line-height:1;
+    padding:2px 5px;
+}
+.modal-solicitacao-corpo{
+    padding:18px 22px;
+}
+.modal-grid-solicitacao{
+    display:grid;
+    grid-template-columns:1.2fr 1.8fr .8fr .9fr;
+    gap:12px;
+}
+.modal-solicitacao-caixa .campo label{
+    display:block;
+    margin-bottom:6px;
+    font-weight:600;
+    color:#1f2937;
+}
+.modal-solicitacao-caixa input,
+.modal-solicitacao-caixa select,
+.modal-solicitacao-caixa textarea{
+    width:100%;
+    border:1px solid #cbd5e1;
+    border-radius:8px;
+    background:#fff;
+    color:#111827;
+    padding:10px 11px;
+    font:inherit;
+}
+.modal-solicitacao-caixa textarea{resize:vertical;min-height:78px;}
+.resumo-container-solicitacao{
+    margin:14px 0;
+    padding:12px 14px;
+    border:1px solid #d6dee9;
+    border-radius:9px;
+    background:#f5f8fc;
+    color:#334155;
+    font-size:13px;
+    line-height:1.55;
+}
+.modal-solicitacao-rodape{
+    display:flex;
+    justify-content:flex-end;
+    gap:12px;
+    padding:14px 22px 18px;
+    border-top:1px solid #ddd;
+}
+.modal-solicitacao-rodape button{
+    min-width:150px;
+}
+.cabecalho-minhas-solicitacoes-externo{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:15px;
+}
+.painel-minhas-solicitacoes-externo{
+    margin-bottom:14px;
+}
+@media(max-width:850px){
+    .modal-grid-solicitacao{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:560px){
+    .externo-acoes-solicitacao,.cabecalho-minhas-solicitacoes-externo{align-items:stretch;flex-direction:column;}
+    .btn-abrir-solicitacao-externo{width:100%;}
+    .modal-grid-solicitacao{grid-template-columns:1fr;}
+    .modal-solicitacao-caixa{width:100%;max-height:94vh;}
+    .modal-solicitacao-cabecalho,.modal-solicitacao-corpo,.modal-solicitacao-rodape{padding-left:14px;padding-right:14px;}
+    .modal-solicitacao-rodape{flex-direction:column-reverse;}
+    .modal-solicitacao-rodape button{width:100%;}
+}
 </style>
 
 <!-- FIREBASE: conexão do sistema -->
@@ -811,64 +1025,6 @@ Entrar
         Não permite alterar, excluir ou cadastrar estoque.
     </div>
 
-    <!-- ==================================================
-         SOLICITAÇÃO DE MERCADORIA — ACESSO RÁPIDO
-         ================================================== -->
-
-    <div class="painel" style="margin-bottom:16px;">
-
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-            <div>
-                <h2 style="margin:0 0 5px 0;">📨 Solicitações</h2>
-                <div style="font-size:12px;color:var(--texto-fraco);">
-                    Solicite uma mercadoria diretamente a partir do saldo dos containers.
-                </div>
-            </div>
-
-            <button
-                type="button"
-                class="btn-salvar"
-                onclick="abrirTelaSolicitarMercadoriaExterno()"
-            >
-                📨 Solicitar Mercadoria
-            </button>
-        </div>
-
-        <div class="container-botoes" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-            <button
-                type="button"
-                class="btn-historico"
-                onclick="toggleMinhasSolicitacoesExterno()"
-                id="btn-toggle-minhas-solicitacoes"
-            >
-                📋 Minhas Solicitações
-            </button>
-
-            <button
-                type="button"
-                class="btn-historico"
-                onclick="exportarMinhasSolicitacoesExternoExcel()"
-            >
-                📊 Exportar Excel
-            </button>
-
-            <button
-                type="button"
-                class="btn-apagar-historico"
-                onclick="excluirMinhasSolicitacoesExterno()"
-            >
-                🗑️ Excluir Finalizadas
-            </button>
-        </div>
-
-        <div id="painel-minhas-solicitacoes-externo" style="display:none;margin-top:12px;">
-            <div id="lista-minhas-solicitacoes"></div>
-        </div>
-
-    </div>
-
-
-    <!-- A solicitação fica acima dos containers para acesso rápido. -->
     <!-- PESQUISA -->
 
     <div class="painel-busca">
@@ -896,6 +1052,31 @@ Entrar
         Containers ocupados: 0 / 60
     </div>
 
+
+<!-- CONTROLES DE VISUALIZAÇÃO DOS CONTAINERS EXTERNOS -->
+<div class="painel-visualizacao" id="painel-visualizacao-externo">
+    <div class="visualizacao-linha">
+        <strong>👁️ Visualização:</strong>
+        <div class="visualizacao-botoes">
+            <button type="button" class="btn-vis ativo" id="btn-vis-quadro-externo" onclick="alterarVisualizacaoContainers('externo','quadro')">▦ Quadro</button>
+            <button type="button" class="btn-vis" id="btn-vis-lista-externo" onclick="alterarVisualizacaoContainers('externo','lista')">☷ Lista</button>
+        </div>
+        <strong style="margin-left:8px;">Status:</strong>
+        <select id="filtro-status-containers-externo" class="select-status" onchange="aplicarFiltrosContainers('externo')">
+            <option value="todos">Todos</option>
+            <option value="cheios">🟢 Cheios</option>
+            <option value="vazios">⚪ Vazios</option>
+        </select>
+    </div>
+    <div class="seletor-containers">
+        <strong>☑️ Mostrar:</strong>
+        <button type="button" class="btn-mini-vis" onclick="selecionarTodosContainers('externo',true)">Todos</button>
+        <button type="button" class="btn-mini-vis" onclick="selecionarTodosContainers('externo',false)">Nenhum</button>
+        <div class="lista-checkbox-containers" id="checkbox-containers-externo"></div>
+    </div>
+    <div class="resumo-visualizacao" id="resumo-visualizacao-externo"></div>
+</div>
+
     <!-- CONTAINERS -->
 
     <div
@@ -905,92 +1086,89 @@ Entrar
 
 
     <!-- ==================================================
-         JANELA DE SOLICITAÇÃO — FORMATO TABELA/CADASTRO
+         SOLICITAÇÃO DE MERCADORIA — ACESSO POR MODAL
          ================================================== -->
 
-    <div
-        id="modal-solicitacao-mercadoria-externo"
-        class="painel"
-        style="display:none;margin-bottom:16px;"
-    >
-
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
-            <h2 style="margin:0;">📦 Nova Solicitação de Mercadoria</h2>
-            <button
-                type="button"
-                class="btn-cancelar"
-                onclick="fecharTelaSolicitarMercadoriaExterno()"
-            >
-                ✖ Fechar
-            </button>
+    <div class="externo-acoes-solicitacao">
+        <div>
+            <h2 style="margin:0 0 4px 0;">📨 Solicitações</h2>
+            <div class="texto-apoio-solicitacao">Solicite uma mercadoria diretamente a partir do saldo dos containers.</div>
         </div>
-
-        <div class="aviso-armazenamento" style="margin-top:12px;">
-            Selecione o container e a mercadoria. Os dados abaixo são preenchidos a partir do estoque integrado ao container.
-        </div>
-
-        <div style="overflow-x:auto;margin-top:14px;">
-            <table style="width:100%;border-collapse:collapse;font-size:13px;">
-                <thead>
-                    <tr>
-                        <th style="text-align:left;padding:10px;border:1px solid var(--borda);">📦 Container</th>
-                        <th style="text-align:left;padding:10px;border:1px solid var(--borda);">📋 Mercadoria</th>
-                        <th style="text-align:left;padding:10px;border:1px solid var(--borda);">🔢 Código</th>
-                        <th style="text-align:left;padding:10px;border:1px solid var(--borda);">🏷️ Lote</th>
-                        <th style="text-align:left;padding:10px;border:1px solid var(--borda);">📊 Saldo</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td style="padding:8px;border:1px solid var(--borda);min-width:150px;">
-                            <select id="solicitacao-container" style="width:100%;padding:9px;">
-                                <option value="">Selecione o container</option>
-                            </select>
-                        </td>
-                        <td style="padding:8px;border:1px solid var(--borda);min-width:220px;">
-                            <select id="solicitacao-produto" style="width:100%;padding:9px;">
-                                <option value="">Selecione a mercadoria</option>
-                            </select>
-                        </td>
-                        <td style="padding:8px;border:1px solid var(--borda);" id="solicitacao-detalhe-codigo">—</td>
-                        <td style="padding:8px;border:1px solid var(--borda);" id="solicitacao-detalhe-lote">—</td>
-                        <td style="padding:8px;border:1px solid var(--borda);" id="solicitacao-detalhe-saldo">—</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div class="linha-form" style="margin-top:12px;">
-            <div class="campo">
-                <label>🔢 Quantidade solicitada:</label>
-                <input type="number" id="solicitacao-qtd" min="0" step="1" placeholder="Quantidade">
-            </div>
-
-            <div class="campo">
-                <label>⚖️ Peso solicitado (KG):</label>
-                <input type="number" id="solicitacao-peso" min="0" step="0.01" placeholder="Peso em KG">
-            </div>
-        </div>
-
-        <div class="campo">
-            <label>💬 Observação:</label>
-            <textarea id="solicitacao-observacao" rows="3" placeholder="Informe alguma observação..."></textarea>
-        </div>
-
-        <div class="container-botoes">
-            <button type="button" class="btn-salvar" onclick="enviarSolicitacaoMercadoria()">
-                📨 Enviar Solicitação
-            </button>
-            <button type="button" class="btn-cancelar" onclick="limparSolicitacaoMercadoria()">
-                🧹 Limpar
-            </button>
-        </div>
-
+        <button type="button" class="btn-salvar btn-abrir-solicitacao-externo" onclick="abrirModalSolicitacaoMercadoria()">
+            📨 Solicitar Mercadoria
+        </button>
     </div>
 
-</div>
-<!-- fim de #app-externo -->
+    <!-- Solicitação do usuário externo: agora fica em uma janela pequena -->
+    <div id="modal-solicitacao-externo" class="modal-solicitacao-externo" style="display:none;" aria-hidden="true">
+        <div class="modal-solicitacao-caixa" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-solicitacao">
+            <div class="modal-solicitacao-cabecalho">
+                <div>
+                    <h2 id="titulo-modal-solicitacao">📨 Nova Solicitação de Mercadoria</h2>
+                    <div class="texto-apoio-solicitacao">Selecione o container e a mercadoria disponível. Os dados são preenchidos pelo estoque.</div>
+                </div>
+                <button type="button" class="modal-fechar" onclick="fecharModalSolicitacaoMercadoria()" aria-label="Fechar">✕</button>
+            </div>
 
+            <div class="modal-solicitacao-corpo">
+                <div class="linha-form modal-grid-solicitacao">
+                    <div class="campo">
+                        <label>📦 Container:</label>
+                        <select id="solicitacao-container">
+                            <option value="">Selecione o container</option>
+                        </select>
+                    </div>
+
+                    <div class="campo">
+                        <label>📋 Mercadoria:</label>
+                        <select id="solicitacao-produto">
+                            <option value="">Selecione a mercadoria</option>
+                        </select>
+                    </div>
+
+                    <div class="campo">
+                        <label>🔢 Quantidade:</label>
+                        <input type="number" id="solicitacao-qtd" min="1" placeholder="Quantidade">
+                    </div>
+
+                    <div class="campo">
+                        <label>⚖️ Peso solicitado (KG):</label>
+                        <input type="number" id="solicitacao-peso" min="0" step="0.01" placeholder="Peso em KG">
+                    </div>
+                </div>
+
+                <div id="resumo-container-solicitacao" class="resumo-container-solicitacao">
+                    <span>📦 Selecione um container para visualizar os dados.</span>
+                </div>
+
+                <div class="campo">
+                    <label>💬 Observação:</label>
+                    <textarea id="solicitacao-observacao" rows="3" placeholder="Informe alguma observação sobre a solicitação..."></textarea>
+                </div>
+            </div>
+
+            <div class="modal-solicitacao-rodape">
+                <button type="button" class="btn-cancelar" onclick="limparSolicitacaoMercadoria(); fecharModalSolicitacaoMercadoria();">🧹 Cancelar</button>
+                <button type="button" class="btn-salvar" onclick="enviarSolicitacaoMercadoria()">📨 Enviar Solicitação</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Minhas solicitações permanece acima dos containers -->
+    <div class="painel painel-minhas-solicitacoes-externo">
+        <div class="cabecalho-minhas-solicitacoes">
+            <div>
+                <h2 style="margin:0;">📋 Minhas Solicitações</h2>
+                <div class="texto-apoio-solicitacao">Histórico das solicitações enviadas por este usuário.</div>
+            </div>
+            <button type="button" class="btn-vis" id="btn-toggle-minhas-solicitacoes-externo" onclick="toggleMinhasSolicitacoesExterno()">👁️ Ocultar Minhas Solicitações</button>
+        </div>
+        <div id="lista-minhas-solicitacoes"></div>
+    </div>
+
+
+</div>
+    
 <div id="app-principal" style="display:none;">
 
 <div class="barra-usuario">
@@ -1024,28 +1202,25 @@ Entrar
 </div>
 
 <!-- ======================================================
-     SOLICITAÇÕES DE MERCADORIA — PAINEL ADMIN
+     SOLICITAÇÕES DE MERCADORIA
+     USUÁRIOS COMUNS E EXTERNOS
      ====================================================== -->
 
-<div
-    id="painel-solicitacoes-mercadoria-admin"
-    style="
-        background:rgba(86,210,255,.07);
-        border:1px solid var(--azul-forte);
-        padding:12px;
-        border-radius:8px;
-        margin-bottom:18px;
-    "
->
-    <h2 style="margin-top:0;">
+<div class="painel" id="painel-solicitacoes-mercadoria-admin">
+
+    <h2>
         📦 Solicitações de Mercadoria
         <span
             id="contador-solicitacoes-mercadoria-admin"
-            style="font-size:12px;color:var(--texto-fraco);"
+            style="
+                font-size:12px;
+                color:var(--texto-fraco);
+            "
         ></span>
     </h2>
 
     <div class="container-botoes">
+
         <button
             type="button"
             onclick="toggleSolicitacoes()"
@@ -1055,57 +1230,87 @@ Entrar
             👁️ Mostrar Solicitações
         </button>
 
-        <button
-            type="button"
-            onclick="toggleHistoricoSolicitacoesAdmin()"
-            class="btn-historico"
-            id="btn-toggle-historico-solicitacoes-admin"
-        >
-            📁 Ver Finalizadas
-        </button>
-
-        <button
-            type="button"
-            class="btn-excel"
-            onclick="exportarMovimentacoesESolicitacoesExcel()"
-        >
-            📊 Exportar Excel
-        </button>
-
-        <button
-            type="button"
-            class="btn-apagar-historico"
-            onclick="excluirSolicitacoesFinalizadasAdmin()"
-        >
-            🗑️ Excluir Finalizadas
-        </button>
     </div>
 
     <div
         id="conteudo-solicitacoes"
-        style="display:none;margin-top:15px;"
+        style="
+            display:none;
+            margin-top:15px;
+        "
     >
-        <div id="lista-solicitacoes"></div>
+
+        <div
+            id="lista-solicitacoes"
+        ></div>
+
     </div>
 
-    <div
-        id="historico-solicitacoes-admin"
-        style="display:none;margin-top:15px;"
-    >
-        <div id="lista-historico-solicitacoes-admin"></div>
+</div>
+    
+<!-- ======================================================
+     SOLICITAÇÕES DE MERCADORIA DOS USUÁRIOS EXTERNOS
+     ====================================================== -->
+
+<div
+    id="painel-solicitacoes-mercadoria-admin"
+    style="background:rgba(86,210,255,.07);
+           border:1px solid var(--azul-forte);
+           padding:12px;
+           border-radius:8px;
+           margin-bottom:18px;"
+>
+
+    <h2 style="margin-top:0;">
+        📨 Solicitações de Mercadoria
+        <span
+            id="contador-solicitacoes-mercadoria-admin"
+            style="font-size:12px;
+                   color:var(--texto-fraco);"
+        >
+        </span>
+    </h2>
+
+    <div id="lista-solicitacoes-mercadoria-admin">
+
+        <div class="vazio">
+            📭 Nenhuma solicitação de mercadoria.
+        </div>
+
     </div>
+
+</div>
+    
+<div class="linha-form">
+
+<div class="campo">
+<label>👤 Novo usuário:</label>
+<input type="text" id="admin-novo-usuario" placeholder="E-mail do usuário" autocomplete="off">
 </div>
 
-<!-- LISTA DE USUÁRIOS CADASTRADOS -->
-<div style="margin-top:20px;padding-top:15px;border-top:1px dashed #cbd5e1;">
-    <div class="container-botoes">
-        <button type="button" class="btn-historico" id="btn-toggle-lista-usuarios" onclick="toggleListaUsuariosAdmin()">
-            👁️ Mostrar Usuários Cadastrados
-        </button>
-    </div>
-    <div id="conteudo-lista-usuarios-admin" style="display:none;margin-top:15px;">
-        <div id="lista-usuarios-cadastrados"></div>
-    </div>
+<div class="campo">
+<label>🔒 Senha:</label>
+<input type="password" id="admin-nova-senha" placeholder="Senha (mín. 6 caracteres)" autocomplete="off">
+</div>
+
+<div class="campo">
+<label>🏷️ Tipo de acesso:</label>
+<select id="admin-novo-tipo">
+<option value="usuario">Usuário comum</option>
+<option value="externo">Usuário externo</option>
+<option value="admin">Administrador</option>
+</select>
+</div>
+
+</div>
+
+<div class="container-botoes">
+<button type="button" class="btn-produto" onclick="cadastrarUsuarioAdmin()">
+➕ Cadastrar Usuário
+</button>
+</div>
+
+<div id="lista-usuarios-cadastrados" style="margin-top:20px;">
 </div>
 
 <div class="container-botoes" style="margin-top:20px;padding-top:15px;border-top:1px dashed #cbd5e1;">
@@ -1331,11 +1536,71 @@ oninput="filtrarEstoque()"
 Containers ocupados: 0 / 60
 </div>
 
+
+<!-- CONTROLES DE VISUALIZAÇÃO DOS CONTAINERS -->
+<div class="painel-visualizacao" id="painel-visualizacao-admin">
+    <div class="visualizacao-linha">
+        <strong>👁️ Visualização:</strong>
+        <div class="visualizacao-botoes">
+            <button type="button" class="btn-vis ativo" id="btn-vis-quadro-admin" onclick="alterarVisualizacaoContainers('admin','quadro')">▦ Quadro</button>
+            <button type="button" class="btn-vis" id="btn-vis-lista-admin" onclick="alterarVisualizacaoContainers('admin','lista')">☷ Lista</button>
+        </div>
+        <strong style="margin-left:8px;">Status:</strong>
+        <select id="filtro-status-containers-admin" class="select-status" onchange="aplicarFiltrosContainers('admin')">
+            <option value="todos">Todos</option>
+            <option value="cheios">🟢 Cheios</option>
+            <option value="vazios">⚪ Vazios</option>
+        </select>
+    </div>
+    <div class="seletor-containers">
+        <strong>☑️ Mostrar:</strong>
+        <button type="button" class="btn-mini-vis" onclick="selecionarTodosContainers('admin',true)">Todos</button>
+        <button type="button" class="btn-mini-vis" onclick="selecionarTodosContainers('admin',false)">Nenhum</button>
+        <div class="lista-checkbox-containers" id="checkbox-containers-admin"></div>
+    </div>
+    <div class="resumo-visualizacao" id="resumo-visualizacao-admin"></div>
+</div>
+
 <div
 class="grid"
 id="grade"
 >
 </div>
+
+<!-- SOLICITAÇÕES RECEBIDAS -->
+
+<div class="painel">
+
+    <h2>📦 Solicitações Recebidas</h2>
+
+    <div class="container-botoes">
+
+        <button
+            type="button"
+            onclick="toggleSolicitacoes()"
+            class="btn-historico"
+            id="btn-toggle-solicitacoes"
+        >
+            👁️ Mostrar Solicitações
+        </button>
+
+    </div>
+
+    <div
+        id="conteudo-solicitacoes"
+        style="display:none;margin-top:15px;"
+    >
+
+        <div id="lista-solicitacoes">
+            <!-- As solicitações serão carregadas aqui pelo Firebase -->
+        </div>
+
+    </div>
+
+</div>
+
+<!-- FIM SOLICITAÇÕES RECEBIDAS -->
+
 
 <!-- HISTÓRICO -->
     
@@ -1378,10 +1643,9 @@ oninput="filtrarHistorico()"
 </div>
 
 
-<div class="container-botoes" style="display:flex;gap:8px;flex-wrap:wrap;">
+<div class="container-botoes">
 
 <button
-type="button"
 onclick="mostrarHistorico()"
 class="btn-historico"
 >
@@ -1389,19 +1653,10 @@ class="btn-historico"
 </button>
 
 <button
-type="button"
-onclick="exportarHistoricoExcel()"
-class="btn-historico"
->
-📊 Exportar Excel
-</button>
-
-<button
-type="button"
 onclick="limparHistorico()"
 class="btn-apagar-historico"
 >
-🗑️ <span id="texto-btn-limpar-historico">Limpar Histórico</span>
+🗑️ Limpar Histórico
 </button>
 
 </div>
@@ -1432,9 +1687,6 @@ style="margin-top:20px;"
 
 let estoque = [];
 let historico = [];
-// Registros que o usuário comum escolheu ocultar somente da própria tela.
-// Nunca são removidos de /historico, portanto o Admin continua com o histórico completo.
-let historicoOcultoUsuario = {};
 let produtosCadastrados = [];
 let solicitacoesAlteracoesCache = [];
 let solicitacoesAcessoCache = [];
@@ -1537,11 +1789,6 @@ async function iniciarSincronizacaoFirebase(){
         const alteracoesRef=firebaseDB.ref("solicitacoesAlteracoes");
         const acessoRef=firebaseDB.ref("solicitacoesAcesso");
         const solicitacoesMercadoriaRef=firebaseDB.ref("solicitacoesMercadoria");
-        // Área individual: o usuário comum grava somente os IDs que deseja
-        // ocultar da própria tela. O histórico central continua intacto.
-        const historicoOcultoRef = souAdmin
-            ? null
-            : firebaseDB.ref("historicoOculto/" + usuarioFirebase.uid);
         
         const ler=async function(ref,nome){
             try{
@@ -1560,9 +1807,6 @@ async function iniciarSincronizacaoFirebase(){
             ler(produtosRef,"produtos"),
             ler(alteracoesRef,"solicitações de alteração")
         ];
-        if(!souAdmin){
-            resultados.push(ler(historicoOcultoRef,"histórico oculto do usuário"));
-        }
         if(souAdmin){
     resultados.push(ler(acessoRef,"solicitações de acesso"));
     resultados.push(ler(solicitacoesMercadoriaRef,"solicitações de mercadoria"));
@@ -1575,16 +1819,9 @@ async function iniciarSincronizacaoFirebase(){
         const alteracoesSnap=valores[3];
         const acessoSnap=souAdmin ? valores[4] : null;
         const solicitacoesMercadoriaSnap=souAdmin ? valores[5] : null;
-        const historicoOcultoSnap=!souAdmin ? valores[4] : null;
 
         estoque=estoqueSnap ? normalizarListaFirebase(estoqueSnap.val()) : [];
         historico=historicoSnap ? normalizarListaFirebase(historicoSnap.val()) : [];
-        historicoOcultoUsuario = !souAdmin
-            ? carregarHistoricoOcultoLocal()
-            : {};
-        if(!souAdmin && historicoOcultoSnap && historicoOcultoSnap.exists()){
-            Object.assign(historicoOcultoUsuario, historicoOcultoSnap.val() || {});
-        }
         produtosCadastrados=produtosSnap ? normalizarListaFirebase(produtosSnap.val()) : [];
         solicitacoesAlteracoesCache=alteracoesSnap ? normalizarListaFirebase(alteracoesSnap.val()) : [];
         solicitacoesAcessoCache=souAdmin && acessoSnap ? normalizarListaFirebase(acessoSnap.val()) : [];
@@ -1592,27 +1829,15 @@ async function iniciarSincronizacaoFirebase(){
     ? normalizarListaFirebase(solicitacoesMercadoriaSnap.val())
     : [];
 
-        if(souAdmin && typeof PRODUTOS_CADASTRADOS_HTML !== "undefined") {
-            const catalogoCodigo=PRODUTOS_CADASTRADOS_HTML
-                .map(normalizarProdutoCatalogo)
-                .filter(function(p){ return p.codigo && p.nome; });
-            const atuais=produtosSnap ? normalizarListaFirebase(produtosSnap.val())
-                .map(normalizarProdutoCatalogo) : [];
-            const codigosAtuais=new Set(atuais.map(function(p){ return p.codigo; }));
-            const novos=catalogoCodigo.filter(function(p){ return !codigosAtuais.has(p.codigo); });
-
-            if(!produtosSnap || !produtosSnap.exists()) {
-                if(catalogoCodigo.length){
-                    try{ await produtosRef.set(catalogoCodigo); produtosCadastrados=catalogoCodigo.slice(); }
-                    catch(e){ console.error("Firebase produtos: carga inicial não gravada:",e); }
-                }
-            } else if(novos.length) {
+        if(produtosSnap && !produtosSnap.exists() && souAdmin){
+            const carga=(typeof PRODUTOS_CADASTRADOS_HTML!=="undefined" ? PRODUTOS_CADASTRADOS_HTML : []).map(function(p){
+                return {codigo:String(p.codigo||"").trim(),nome:String(p.nome||"").trim()};
+            });
+            if(carga.length){
                 try{
-                    const mesclados=atuais.concat(novos);
-                    await produtosRef.set(mesclados);
-                    produtosCadastrados=mesclados;
-                    console.log("☁️ Firebase: "+novos.length+" novo(s) produto(s) do código adicionados.");
-                }catch(e){ console.error("Firebase produtos: novos produtos não gravados:",e); }
+                    await produtosRef.set(carga);
+                    produtosCadastrados=carga;
+                }catch(e){console.error("Firebase produtos: carga inicial não gravada:",e);}
             }
         }
 
@@ -1633,18 +1858,8 @@ async function iniciarSincronizacaoFirebase(){
             mostrarHistorico();
         },function(e){console.error("Firebase histórico:",e);});
 
-        if(!souAdmin && historicoOcultoRef){
-            registrar(historicoOcultoRef,"value",function(snapshot){
-                Object.assign(historicoOcultoUsuario, snapshot.val() || {});
-                salvarHistoricoOcultoLocal();
-                mostrarHistorico();
-            },function(e){
-                console.error("Firebase histórico oculto do usuário:",e);
-            });
-        }
-
         registrar(produtosRef,"value",function(snapshot){
-            produtosCadastrados=normalizarListaFirebase(snapshot.val()).map(normalizarProdutoCatalogo);
+            produtosCadastrados=normalizarListaFirebase(snapshot.val());
             atualizarListaProdutos();
             atualizarContadorProdutos();
             if(typeof renderizarProdutosCadastrados==="function") renderizarProdutosCadastrados();
@@ -1694,7 +1909,6 @@ async function iniciarSincronizacaoFirebase(){
         atualizarContadorProdutos();
         mostrarEstoque();
         mostrarHistorico();
-        atualizarBotaoLimparHistorico();
         atualizarContador();
         atualizarIndicadorAdmin();
         console.log("☁️ Firebase: sincronização em tempo real ativa.");
@@ -1779,8 +1993,8 @@ async function solicitarAlteracaoAdmin(tipo, dados, descricao){
 // Edite esta lista para cadastrar, alterar ou remover produtos.
 // Exemplo: { codigo:"0001", nome:"Açúcar Cristal" }
 // A pesquisa do campo Produto usa esta lista automaticamente.
-// Catálogo PA existente + 334 matérias-primas (MP) importadas de Lista de ProdutosMP.xlsx.
-// Códigos e descrições preservados conforme as planilhas.
+// Total de produtos carregados do arquivo Produtos.xlsx: 850.
+// Códigos e descrições preservados conforme a planilha.
 
 const PRODUTOS_CADASTRADOS_HTML = [
     { codigo:"PA000001", nome:"AIPO MARROM MOIDO 10 KG" },
@@ -2633,360 +2847,16 @@ const PRODUTOS_CADASTRADOS_HTML = [
     { codigo:"PA000856", nome:"CEBOLA EM PO 10 KG" },
     { codigo:"PA000857", nome:"TEMPERO MINEIRO FLOCOS 25 KG" },
     { codigo:"PA000858", nome:"MOSTARDA AMARELA CANADENSE 45,36 KG" }
-,
-
-    // ======================================================
-    // MATÉRIAS-PRIMAS (MP) — importadas de Lista de ProdutosMP.xlsx
-    // ======================================================
-    { codigo:"MP000001", nome:"ACIDO CITRICO", tipo:"MP" },
-    { codigo:"MP000002", nome:"ACUCAR REFINADO", tipo:"MP" },
-    { codigo:"MP000003", nome:"AIN ALHO EM PO", tipo:"MP" },
-    { codigo:"MP000004", nome:"AIN BARBECUE EM PO", tipo:"MP" },
-    { codigo:"MP000005", nome:"EMBALAGEM N2 - VIDA EM GRAOS", tipo:"MP" },
-    { codigo:"MP000007", nome:"AIN DE CARNE EM PO", tipo:"MP" },
-    { codigo:"MP000008", nome:"AIN DE COSTELA  PO", tipo:"MP" },
-    { codigo:"MP000009", nome:"EMBALAGEM N1 - VIDA EM GRAOS", tipo:"MP" },
-    { codigo:"MP000010", nome:"AIN FUMACA PO", tipo:"MP" },
-    { codigo:"MP000012", nome:"AIN LARANJA EM PO", tipo:"MP" },
-    { codigo:"MP000013", nome:"AIN GALINHA EM PO", tipo:"MP" },
-    { codigo:"MP000014", nome:"AIN LIMAO EM PO", tipo:"MP" },
-    { codigo:"MP000015", nome:"AIN PEIXE EM PO", tipo:"MP" },
-    { codigo:"MP000016", nome:"ALECRIM", tipo:"MP" },
-    { codigo:"MP000017", nome:"NAO UTILIZAR", tipo:"MP" },
-    { codigo:"MP000018", nome:"ALHO DESIDRATADO  FLOCOS", tipo:"MP" },
-    { codigo:"MP000019", nome:"ALHO FRITO GRANULADO", tipo:"MP" },
-    { codigo:"MP000020", nome:"ALHO PORO", tipo:"MP" },
-    { codigo:"MP000021", nome:"AMACIANTE PARA CARNE", tipo:"MP" },
-    { codigo:"MP000022", nome:"AMIDO DE MILHO", tipo:"MP" },
-    { codigo:"MP000023", nome:"ANIS ESTRELADO", tipo:"MP" },
-    { codigo:"MP000024", nome:"AIN BACON", tipo:"MP" },
-    { codigo:"MP000025", nome:"AIN NATURAL DE CAMARAO", tipo:"MP" },
-    { codigo:"MP000026", nome:"UTILIZAR MP000008", tipo:"MP" },
-    { codigo:"MP000027", nome:"BACON DESIDRATADO", tipo:"MP" },
-    { codigo:"MP000028", nome:"BICARBONATO SODIO EXTRA FINO", tipo:"MP" },
-    { codigo:"MP000029", nome:"CACAU EM PO ALCALINO", tipo:"MP" },
-    { codigo:"MP000030", nome:"CACAU EM PO NATURAL", tipo:"MP" },
-    { codigo:"MP000031", nome:"CAMOMILA EM FLOR NACIONAL", tipo:"MP" },
-    { codigo:"MP000032", nome:"CAMOMILA FLOR NACIONAL EXTRA", tipo:"MP" },
-    { codigo:"MP000033", nome:"CANELA GRANULADA", tipo:"MP" },
-    { codigo:"MP000034", nome:"CANELA JAWA  6 CM A", tipo:"MP" },
-    { codigo:"MP000035", nome:"CANELA JAWA  6 CM AA", tipo:"MP" },
-    { codigo:"MP000036", nome:"CANELA JAWA  8 AA CM", tipo:"MP" },
-    { codigo:"MP000037", nome:"CANELA JAWA 15 CM", tipo:"MP" },
-    { codigo:"MP000038", nome:"CANELA JAWA 25 CM", tipo:"MP" },
-    { codigo:"MP000039", nome:"CANELA JAWA 25 CM", tipo:"MP" },
-    { codigo:"MP000040", nome:"CANELA JAWA 35 CM", tipo:"MP" },
-    { codigo:"MP000041", nome:"CANELA JAWA 45 CM", tipo:"MP" },
-    { codigo:"MP000042", nome:"CANELA JAWA 50 CM", tipo:"MP" },
-    { codigo:"MP000043", nome:"CANELA JAWA 55 CM", tipo:"MP" },
-    { codigo:"MP000044", nome:"CANELA JAWA INTEIRA", tipo:"MP" },
-    { codigo:"MP000045", nome:"CANELA QUEBRADA 1%", tipo:"MP" },
-    { codigo:"MP000046", nome:"CANELA QUEBRADA KBBC", tipo:"MP" },
-    { codigo:"MP000047", nome:"CLORETO DE POTASSIO", tipo:"MP" },
-    { codigo:"MP000048", nome:"CANJICAO DE ARROZ POLIDO", tipo:"MP" },
-    { codigo:"MP000049", nome:"CASCA BERINJELA", tipo:"MP" },
-    { codigo:"MP000050", nome:"CASCA DE CACAU", tipo:"MP" },
-    { codigo:"MP000051", nome:"CASQUILLHO DE GUARANA", tipo:"MP" },
-    { codigo:"MP000052", nome:"CEBOLA  FLOCOS FRITA", tipo:"MP" },
-    { codigo:"MP000053", nome:"CEBOLA DES PICADA MIUDA 1-3MM", tipo:"MP" },
-    { codigo:"MP000054", nome:"CEBOLA EM PO", tipo:"MP" },
-    { codigo:"MP000055", nome:"CEBOLA G MED CHOPPED IN ROXA", tipo:"MP" },
-    { codigo:"MP000056", nome:"CEBOLA G.MIUDA MINCED IN ROXA", tipo:"MP" },
-    { codigo:"MP000057", nome:"CEBOLA GRAN.MEDIA CHOPEDIND", tipo:"MP" },
-    { codigo:"MP000058", nome:"CEBOLA GRAN.MIUDA MINCED IND", tipo:"MP" },
-    { codigo:"MP000059", nome:"CEBOLA GRANULADA AREIA", tipo:"MP" },
-    { codigo:"MP000060", nome:"CEBOLA GRANULADA MEDIA", tipo:"MP" },
-    { codigo:"MP000061", nome:"CEBOLA GRANULADA MIUDA", tipo:"MP" },
-    { codigo:"MP000062", nome:"CEBOLA TIRAS KIMBBLED IN ROXA", tipo:"MP" },
-    { codigo:"MP000063", nome:"CEBOLA TIRAS KIMBBLED IND", tipo:"MP" },
-    { codigo:"MP000064", nome:"CEBOLINHA DESIDRATADA ANEIS", tipo:"MP" },
-    { codigo:"MP000065", nome:"CEBOLINHA VERDE 5MM IMP", tipo:"MP" },
-    { codigo:"MP000066", nome:"CEBOLINHA VERDE DES EXTRA", tipo:"MP" },
-    { codigo:"MP000067", nome:"CEBOLINHA VERDE MOIDA", tipo:"MP" },
-    { codigo:"MP000068", nome:"COENTRO EM GRAO ARGENTINO", tipo:"MP" },
-    { codigo:"MP000069", nome:"COENTRO EM GRAO MARROQUINO", tipo:"MP" },
-    { codigo:"MP000070", nome:"COENTRO FOLHA", tipo:"MP" },
-    { codigo:"MP000071", nome:"COMINHO EM GRAO 95", tipo:"MP" },
-    { codigo:"MP000072", nome:"COMINHO EM GRAO 99", tipo:"MP" },
-    { codigo:"MP000073", nome:"UTILIZAR MP000072", tipo:"MP" },
-    { codigo:"MP000074", nome:"CORANTE NATURAL MARROM", tipo:"MP" },
-    { codigo:"MP000075", nome:"CRAVO FLOR", tipo:"MP" },
-    { codigo:"MP000076", nome:"CURCUMA QUEBRADA RAIZ", tipo:"MP" },
-    { codigo:"MP000077", nome:"UTILIZAR MP000076", tipo:"MP" },
-    { codigo:"MP000078", nome:"DIOXIDO DE SILICIO", tipo:"MP" },
-    { codigo:"MP000079", nome:"ERVA DOCE", tipo:"MP" },
-    { codigo:"MP000080", nome:"ERVA DOCE EGIPCIA", tipo:"MP" },
-    { codigo:"MP000081", nome:"ERVA DOCE SIRIA", tipo:"MP" },
-    { codigo:"MP000082", nome:"ERVA DOCE TURCA", tipo:"MP" },
-    { codigo:"MP000083", nome:"FARELO DE AVEIA", tipo:"MP" },
-    { codigo:"MP000084", nome:"FARINHA ARROZ INTEGRAL", tipo:"MP" },
-    { codigo:"MP000085", nome:"FARINHA BANANA VERDE", tipo:"MP" },
-    { codigo:"MP000086", nome:"FARINHA CENOURA", tipo:"MP" },
-    { codigo:"MP000087", nome:"FARINHA DE AVEIA INTEGRAL", tipo:"MP" },
-    { codigo:"MP000088", nome:"FARINHA DE AVEIA L", tipo:"MP" },
-    { codigo:"MP000089", nome:"FARINHA DE BATATA DOCE", tipo:"MP" },
-    { codigo:"MP000090", nome:"FARINHA DE BERINJELA", tipo:"MP" },
-    { codigo:"MP000091", nome:"FARINHA DE MACA PERUANA", tipo:"MP" },
-    { codigo:"MP000092", nome:"FARINHA DE MANDIOCA FINA", tipo:"MP" },
-    { codigo:"MP000093", nome:"FEIJAO BRANCO", tipo:"MP" },
-    { codigo:"MP000094", nome:"FENO GREGO EM GRAOS", tipo:"MP" },
-    { codigo:"MP000095", nome:"FOSFATO TRICALCIO", tipo:"MP" },
-    { codigo:"MP000096", nome:"FUBA MIMOSO", tipo:"MP" },
-    { codigo:"MP000097", nome:"FUMACA PO (UTILIZAR O MP000010)", tipo:"MP" },
-    { codigo:"MP000098", nome:"FUNCHO", tipo:"MP" },
-    { codigo:"MP000099", nome:"FUNGHI SECCHI", tipo:"MP" },
-    { codigo:"MP000100", nome:"GENGIBRE EM LASCAS", tipo:"MP" },
-    { codigo:"MP000101", nome:"GENGIBRE RAIZ", tipo:"MP" },
-    { codigo:"MP000102", nome:"GENGIBRE RAIZ IMP FATIADO", tipo:"MP" },
-    { codigo:"MP000103", nome:"GERGELIM BRANCO NACIONAL", tipo:"MP" },
-    { codigo:"MP000104", nome:"GERGELIM INDIANO", tipo:"MP" },
-    { codigo:"MP000105", nome:"GINKGO BILOBA", tipo:"MP" },
-    { codigo:"MP000106", nome:"GLUTAMATO MONOSSODICO", tipo:"MP" },
-    { codigo:"MP000107", nome:"GLUTAMATO MONOSSODICO TIRA80", tipo:"MP" },
-    { codigo:"MP000108", nome:"GRAO BICO TORRA MOSTARDA  MEL", tipo:"MP" },
-    { codigo:"MP000109", nome:"GRAO DE BICO 9MM", tipo:"MP" },
-    { codigo:"MP000110", nome:"GRAO DE BICO TORRADO E SALG", tipo:"MP" },
-    { codigo:"MP000111", nome:"GUARANA EM GRAO", tipo:"MP" },
-    { codigo:"MP000112", nome:"HIBISCO", tipo:"MP" },
-    { codigo:"MP000113", nome:"HIBISCO TRITURADO", tipo:"MP" },
-    { codigo:"MP000114", nome:"HORTELA EGIPCIA", tipo:"MP" },
-    { codigo:"MP000115", nome:"LINHACA DOURADA", tipo:"MP" },
-    { codigo:"MP000116", nome:"LINHACA MARRON", tipo:"MP" },
-    { codigo:"MP000117", nome:"LOURO EM FOLHA EGIPCIO", tipo:"MP" },
-    { codigo:"MP000118", nome:"LOURO EM FOLHA TURCO", tipo:"MP" },
-    { codigo:"MP000119", nome:"LOURO SEMI SELECIONADO", tipo:"MP" },
-    { codigo:"MP000120", nome:"LOURO TRITURADO", tipo:"MP" },
-    { codigo:"MP000121", nome:"MALTO DEXTRINA 1920", tipo:"MP" },
-    { codigo:"MP000122", nome:"MANJERICAO FLOCOS", tipo:"MP" },
-    { codigo:"MP000123", nome:"MENTA", tipo:"MP" },
-    { codigo:"MP000124", nome:"MILHO TORRAD MOSTARDA COM MEL", tipo:"MP" },
-    { codigo:"MP000125", nome:"MILHO TORRADO COM SAL", tipo:"MP" },
-    { codigo:"MP000126", nome:"MILHO TORRADO PIMENTA LIMAO", tipo:"MP" },
-    { codigo:"MP000127", nome:"MILHO TORRADO SAB BARBECUE", tipo:"MP" },
-    { codigo:"MP000128", nome:"MOSTARDA AMARELA INDIANA", tipo:"MP" },
-    { codigo:"MP000129", nome:"MOSTARDA MARROM CANADENSE", tipo:"MP" },
-    { codigo:"MP000130", nome:"MOSTARDA MARRON INDIANA", tipo:"MP" },
-    { codigo:"MP000131", nome:"NOZ MOSCADA BOLA", tipo:"MP" },
-    { codigo:"MP000132", nome:"NOZ MOSCADA GRANULADA", tipo:"MP" },
-    { codigo:"MP000133", nome:"NOZ MOSCADA QUEBRADA", tipo:"MP" },
-    { codigo:"MP000134", nome:"OLEO DE SOJA REFINADO EM BOMBO", tipo:"MP" },
-    { codigo:"MP000135", nome:"OREGANO ARGENTINO", tipo:"MP" },
-    { codigo:"MP000136", nome:"OREGANO EGIPCIO", tipo:"MP" },
-    { codigo:"MP000137", nome:"OREGANO PERUANO", tipo:"MP" },
-    { codigo:"MP000138", nome:"OREGANO SECO EM FOLHAS", tipo:"MP" },
-    { codigo:"MP000139", nome:"PAREDE CELULAR BW", tipo:"MP" },
-    { codigo:"MP000140", nome:"OREGANO TURCO", tipo:"MP" },
-    { codigo:"MP000142", nome:"PAPRICA DOCE ASTA 120", tipo:"MP" },
-    { codigo:"MP000143", nome:"PIMENTA CALABREZA  FLOCOS T2", tipo:"MP" },
-    { codigo:"MP000144", nome:"PIMENTA CALABREZA FLO CHINESA", tipo:"MP" },
-    { codigo:"MP000145", nome:"PIMENTA CALABREZA FLOCOS IND", tipo:"MP" },
-    { codigo:"MP000146", nome:"PIMENTA JAMAICA EM GRAO", tipo:"MP" },
-    { codigo:"MP000147", nome:"PIMENTA JAMAICA GRAO IMPORTAD", tipo:"MP" },
-    { codigo:"MP000148", nome:"PIMENTA PRETA XOXA QUEBRAD", tipo:"MP" },
-    { codigo:"MP000149", nome:"PIMENTA REINO BRANCA EM GRAO", tipo:"MP" },
-    { codigo:"MP000150", nome:"PIMENTA REINO BRANCA XOXA", tipo:"MP" },
-    { codigo:"MP000151", nome:"PIMENTA REINO PRETA  GRAO B1", tipo:"MP" },
-    { codigo:"MP000152", nome:"PIMENTA REINO PRETA GRAO ASTA", tipo:"MP" },
-    { codigo:"MP000153", nome:"PIMENTA ROSA PREMIUM", tipo:"MP" },
-    { codigo:"MP000154", nome:"PIMENTAO AMARELO 9x9", tipo:"MP" },
-    { codigo:"MP000155", nome:"PIMENTAO VERDE FLOCOS", tipo:"MP" },
-    { codigo:"MP000156", nome:"UTILIZAR MP000155", tipo:"MP" },
-    { codigo:"MP000157", nome:"PIMENTAO VERMELHO FLOCO 9X9", tipo:"MP" },
-    { codigo:"MP000158", nome:"PIMENTAO VERMELHO FLOCOS 5X5", tipo:"MP" },
-    { codigo:"MP000159", nome:"PIMENTAO VERMELHO FLOCOS 6X6", tipo:"MP" },
-    { codigo:"MP000160", nome:"PO DE CRAVO", tipo:"MP" },
-    { codigo:"MP000161", nome:"PO DE PIMENTA PRETA", tipo:"MP" },
-    { codigo:"MP000162", nome:"PSYLLIUM HUSK", tipo:"MP" },
-    { codigo:"MP000163", nome:"QUINOA FLOCOS BRANCA NACIONAL", tipo:"MP" },
-    { codigo:"MP000164", nome:"QUINOA GRAO BRANCA NACIONAL", tipo:"MP" },
-    { codigo:"MP000165", nome:"QUIRERA DE ARROZ POLIDO", tipo:"MP" },
-    { codigo:"MP000166", nome:"EMBALAGEM - REINO 25 MAIOR", tipo:"MP" },
-    { codigo:"MP000167", nome:"SACO PAPEL ENC 80 REINO ALIMEN", tipo:"MP" },
-    { codigo:"MP000168", nome:"EMBALAGEM - REINO 10 MENOR", tipo:"MP" },
-    { codigo:"MP000169", nome:"EMBALAGEM - BELL 10 MAIOR", tipo:"MP" },
-    { codigo:"MP000170", nome:"EMBALAGEM - REINO 10 MAIOR", tipo:"MP" },
-    { codigo:"MP000171", nome:"SAL GR T PARRILLA C/IODO ZIZO", tipo:"MP" },
-    { codigo:"MP000172", nome:"SAL GRAN T01 C/ IODO ZIZO", tipo:"MP" },
-    { codigo:"MP000173", nome:"SAL GRAN T01 S/ IODO ZIZO", tipo:"MP" },
-    { codigo:"MP000174", nome:"SAL GRAN TP 2  C/ IODO", tipo:"MP" },
-    { codigo:"MP000175", nome:"SAL GROSSO", tipo:"MP" },
-    { codigo:"MP000176", nome:"SAL MARINHO", tipo:"MP" },
-    { codigo:"MP000177", nome:"SAL REFINADO COM IODO 25 KG", tipo:"MP" },
-    { codigo:"MP000178", nome:"SAL MICRONIZADO C/ IODO", tipo:"MP" },
-    { codigo:"MP000179", nome:"SAL MICRONIZADO S/ IODO", tipo:"MP" },
-    { codigo:"MP000180", nome:"SAL REFINADO  S/ IODO", tipo:"MP" },
-    { codigo:"MP000181", nome:"SAL REFINADO C/ IODO", tipo:"MP" },
-    { codigo:"MP000182", nome:"SAL ROSA DO HIMALAIA FINO", tipo:"MP" },
-    { codigo:"MP000183", nome:"SAL ROSA DO HIMALAIA GROSSO", tipo:"MP" },
-    { codigo:"MP000184", nome:"SALSA DESIDRATADA EGIPCIA", tipo:"MP" },
-    { codigo:"MP000185", nome:"SALSA DESIDRATADA EXTRA", tipo:"MP" },
-    { codigo:"MP000186", nome:"SALSA DESIDRATADA TIPO 2", tipo:"MP" },
-    { codigo:"MP000187", nome:"SALVIA  FLOCOS", tipo:"MP" },
-    { codigo:"MP000188", nome:"SALVIA  FOLHA", tipo:"MP" },
-    { codigo:"MP000189", nome:"SALVIA TRITURADA", tipo:"MP" },
-    { codigo:"MP000190", nome:"SEGURELHA", tipo:"MP" },
-    { codigo:"MP000192", nome:"SEMENTE DE CALABRESA", tipo:"MP" },
-    { codigo:"MP000193", nome:"UTILIZAR MP000267 // SEMENTE DE URUCUM", tipo:"MP" },
-    { codigo:"MP000194", nome:"SEMOLA DE MILHO", tipo:"MP" },
-    { codigo:"MP000195", nome:"TALO NOZ DE COLA", tipo:"MP" },
-    { codigo:"MP000196", nome:"TOMATE  FLOCOS", tipo:"MP" },
-    { codigo:"MP000197", nome:"TOMATE  FLOCOS 2x5", tipo:"MP" },
-    { codigo:"MP000198", nome:"TOMATE  FLOCOS 5mm", tipo:"MP" },
-    { codigo:"MP000199", nome:"TOMATE  FLOCOS", tipo:"MP" },
-    { codigo:"MP000200", nome:"TOMATE  FLOCOS CHINES", tipo:"MP" },
-    { codigo:"MP000201", nome:"TOMILHO", tipo:"MP" },
-    { codigo:"MP000202", nome:"TRIBULLUS TERRESTRIS", tipo:"MP" },
-    { codigo:"MP000203", nome:"TRIBULLUS TERRESTRIS MOIDO", tipo:"MP" },
-    { codigo:"MP000204", nome:"TRIGO P/KIBE MARROCOS", tipo:"MP" },
-    { codigo:"MP000205", nome:"MANJERONA FLOCOS", tipo:"MP" },
-    { codigo:"MP000206", nome:"ALHO DESIDRATADO PO CHINES", tipo:"MP" },
-    { codigo:"MP000207", nome:"ALHO DESIDRATADO PO INDIANO", tipo:"MP" },
-    { codigo:"MP000208", nome:"COENTRO PARTIDO", tipo:"MP" },
-    { codigo:"MP000209", nome:"ALHO DESIDRATADO PO", tipo:"MP" },
-    { codigo:"MP000210", nome:"CENOURA FLOCOS 5X5", tipo:"MP" },
-    { codigo:"MP000211", nome:"CARVAO VEGETAL", tipo:"MP" },
-    { codigo:"MP000212", nome:"AIPO MARRON SEMENTE", tipo:"MP" },
-    { codigo:"MP000213", nome:"PAPAYNA", tipo:"MP" },
-    { codigo:"MP000214", nome:"AIN CANELA", tipo:"MP" },
-    { codigo:"MP000215", nome:"ALECRIM TRITURADO", tipo:"MP" },
-    { codigo:"MP000216", nome:"NÃO UTILIZAR", tipo:"MP" },
-    { codigo:"MP000217", nome:"AIN DE LEGUMES EM PO", tipo:"MP" },
-    { codigo:"MP000218", nome:"AIN GALINHA CAIPIRA", tipo:"MP" },
-    { codigo:"MP000219", nome:"CASCA DE BANANA VERDE 25 KG", tipo:"MP" },
-    { codigo:"MP000220", nome:"AIN CHURRASCO EM PO", tipo:"MP" },
-    { codigo:"MP000221", nome:"AIN ABACAXI  EM PO 20 KG", tipo:"MP" },
-    { codigo:"MP000222", nome:"AIN CARNE EM PO SEM SAL 20KG", tipo:"MP" },
-    { codigo:"MP000223", nome:"AIN DE BEEF RIBS 20 KG", tipo:"MP" },
-    { codigo:"MP000224", nome:"AIN DE PICANHA 20 KG", tipo:"MP" },
-    { codigo:"MP000225", nome:"UTILIZAR MP000014 // AIN LIMAO EM PO 20KG", tipo:"MP" },
-    { codigo:"MP000226", nome:"AIN MARACUJA EM PO 20 KG AIN M", tipo:"MP" },
-    { codigo:"MP000227", nome:"AIN MEL EM PO 20KG", tipo:"MP" },
-    { codigo:"MP000228", nome:"AIN TOMATE EM PO 20KG", tipo:"MP" },
-    { codigo:"MP000229", nome:"ULTILIZAR MP000249", tipo:"MP" },
-    { codigo:"MP000230", nome:"ALHO DES. GRAN 8/16 INDIANO", tipo:"MP" },
-    { codigo:"MP000231", nome:"ALHO DES AREIA  26/40 CHINES", tipo:"MP" },
-    { codigo:"MP000232", nome:"ALHO DES AREIA 16/26 CHINES", tipo:"MP" },
-    { codigo:"MP000233", nome:"ALHO DES AREIA 26/40 INDIANO", tipo:"MP" },
-    { codigo:"MP000234", nome:"ALHO DES AREIA 40/80", tipo:"MP" },
-    { codigo:"MP000235", nome:"AIN LIMAO SICILIANO EM PO", tipo:"MP" },
-    { codigo:"MP000236", nome:"AN LIMAO THAITI EM PO 20KG", tipo:"MP" },
-    { codigo:"MP000237", nome:"AIN BACALHAU", tipo:"MP" },
-    { codigo:"MP000238", nome:"AROMA DE FUMACA 20 KG", tipo:"MP" },
-    { codigo:"MP000239", nome:"AROMA NATURAL DE BACON PO 20 K", tipo:"MP" },
-    { codigo:"MP000240", nome:"AIN BOLONHESA", tipo:"MP" },
-    { codigo:"MP000241", nome:"AROMA NATURAL DE CAMARAO 20 KG", tipo:"MP" },
-    { codigo:"MP000242", nome:"AROMA NATURAL DE COSTELA  PO", tipo:"MP" },
-    { codigo:"MP000243", nome:"ARROZ MANINHO BENEF INTEGRAL G", tipo:"MP" },
-    { codigo:"MP000244", nome:"AVEIA FLOCOS FINOS SEM GLUTEN", tipo:"MP" },
-    { codigo:"MP000245", nome:"CEBOLA AREIA", tipo:"MP" },
-    { codigo:"MP000246", nome:"ALHO DES. GRAN 8/16 CHINES", tipo:"MP" },
-    { codigo:"MP000247", nome:"UTILIZAR MP000249", tipo:"MP" },
-    { codigo:"MP000248", nome:"ALHO DES AREIA", tipo:"MP" },
-    { codigo:"MP000249", nome:"ALHO DES AREIA 40/60", tipo:"MP" },
-    { codigo:"MP000250", nome:"ALHO DES AREIA 16/26 INDIANO", tipo:"MP" },
-    { codigo:"MP000251", nome:"ALHO DES AREIA 26/40", tipo:"MP" },
-    { codigo:"MP000252", nome:"UTILIZAR MP000234", tipo:"MP" },
-    { codigo:"MP000253", nome:"UTILIZAR MP000131 // NOZ MOSCADA BOLA 25KG", tipo:"MP" },
-    { codigo:"MP000254", nome:"MILHO TORRADO A BARBECUE", tipo:"MP" },
-    { codigo:"MP000255", nome:"GRAO DE BICO", tipo:"MP" },
-    { codigo:"MP000256", nome:"FAVA TORRADA SALGADA", tipo:"MP" },
-    { codigo:"MP000257", nome:"UTILIZAR MP000071", tipo:"MP" },
-    { codigo:"MP000258", nome:"CARDOMOMO SEMENTE 5KG", tipo:"MP" },
-    { codigo:"MP000259", nome:"OLEO GIRASOL REF  HEL ANN", tipo:"MP" },
-    { codigo:"MP000260", nome:"BICARBONATO AMONIA", tipo:"MP" },
-    { codigo:"MP000261", nome:"FAVA MOSTARDA MEL", tipo:"MP" },
-    { codigo:"MP000262", nome:"BENZOATO DE SODIO 25KG", tipo:"MP" },
-    { codigo:"MP000263", nome:"CLORETO DE SODIO REF", tipo:"MP" },
-    { codigo:"MP000264", nome:"CANELA QUEBRADA 2%", tipo:"MP" },
-    { codigo:"MP000265", nome:"CANELA MOIDA PREMIUM IMPORT", tipo:"MP" },
-    { codigo:"MP000266", nome:"ACUCAR MASCAVO", tipo:"MP" },
-    { codigo:"MP000267", nome:"SEMENTE DE URUCUM", tipo:"MP" },
-    { codigo:"MP000268", nome:"CASCA DE MARACUJA", tipo:"MP" },
-    { codigo:"MP000269", nome:"CANELA 6CM 20KG", tipo:"MP" },
-    { codigo:"MP000270", nome:"OREGANO TURCO B", tipo:"MP" },
-    { codigo:"MP000271", nome:"SEMENTE DE CHIA", tipo:"MP" },
-    { codigo:"MP000272", nome:"GOMA XANTANA 200 MESH  25", tipo:"MP" },
-    { codigo:"MP000273", nome:"CANELA 6 CM", tipo:"MP" },
-    { codigo:"MP000274", nome:"FOLHAS DE SENE", tipo:"MP" },
-    { codigo:"MP000275", nome:"ALECRIM PREMIUM", tipo:"MP" },
-    { codigo:"MP000276", nome:"MANJERICAO FLOCOS PREMIUM", tipo:"MP" },
-    { codigo:"MP000277", nome:"MANJERONA FLOCOS PREMIUM", tipo:"MP" },
-    { codigo:"MP000278", nome:"HORTELA EGIPCIA PREMIUM", tipo:"MP" },
-    { codigo:"MP000279", nome:"TOMILHO PREMIUM", tipo:"MP" },
-    { codigo:"MP000280", nome:"PIMENTA MALAGUETA", tipo:"MP" },
-    { codigo:"MP000281", nome:"CONDIMENTO PIMENTA PRETA 90%", tipo:"MP" },
-    { codigo:"MP000282", nome:"ALHO FRITO", tipo:"MP" },
-    { codigo:"MP000283", nome:"EMBALAGEM - BELL 10 MENOR", tipo:"MP" },
-    { codigo:"MP000284", nome:"UTILIZAR MP000076", tipo:"MP" },
-    { codigo:"MP000286", nome:"ENDRO SEMENTE", tipo:"MP" },
-    { codigo:"MP000287", nome:"EMBALAGEM - REINO 25 MENOR", tipo:"MP" },
-    { codigo:"MP000288", nome:"MOSTARDA AMARELA CANADENSE", tipo:"MP" },
-    { codigo:"MP000289", nome:"EMALAGEM COMER BEM - 10 MENOR", tipo:"MP" },
-    { codigo:"MP000290", nome:"EMBALAGEM - COMER BEM 10 MAIOR", tipo:"MP" },
-    { codigo:"MP000291", nome:"CEBOLA CRISPY FRITA", tipo:"MP" },
-    { codigo:"MP000292", nome:"SORBATO DE POTÁSSIO 25 KG", tipo:"MP" },
-    { codigo:"MP000293", nome:"CURCUMA MOIDA PURA", tipo:"MP" },
-    { codigo:"MP000294", nome:"FUBA ITALIANO 25 KG", tipo:"MP" },
-    { codigo:"MP000295", nome:"CREME DE MILHO 25 KG", tipo:"MP" },
-    { codigo:"MP000296", nome:"PASTA DE URUCUM", tipo:"MP" },
-    { codigo:"MP000297", nome:"AIN PORCO", tipo:"MP" },
-    { codigo:"MP000298", nome:"FEIJAO PRETO", tipo:"MP" },
-    { codigo:"MP000299", nome:"AIN LIMAO ACIDO", tipo:"MP" },
-    { codigo:"MP000300", nome:"FARINHA DE UVA", tipo:"MP" },
-    { codigo:"MP000301", nome:"GENGIBRE EM PO IMPORTADO", tipo:"MP" },
-    { codigo:"MP000302", nome:"GENGIBRE EM PO IMPORTADO PREMIUM", tipo:"MP" },
-    { codigo:"MP000303", nome:"CANELA MOIDA IMPORT", tipo:"MP" },
-    { codigo:"MP000304", nome:"LOURO EM FOLHA INDIANO", tipo:"MP" },
-    { codigo:"MP000305", nome:"GENGIBRE TRITURADO IMPORT", tipo:"MP" },
-    { codigo:"MP000306", nome:"GENGIBRE RAIZ IMP FATIADO PREMIUM", tipo:"MP" },
-    { codigo:"MP000307", nome:"URUCUM MOIDO 3%", tipo:"MP" },
-    { codigo:"MP000308", nome:"EMBALAGEM - MERX 10 MAIOR", tipo:"MP" },
-    { codigo:"MP000309", nome:"SEMENTE DE CHIA PREMIUM", tipo:"MP" },
-    { codigo:"MP000310", nome:"PAPRICA PICANTE ASTA 120", tipo:"MP" },
-    { codigo:"MP000311", nome:"SACO DE RAFIA 70X100", tipo:"MP" },
-    { codigo:"MP000312", nome:"EMBALAGEM PAPEL KRAFT - 10 MAIOR", tipo:"MP" },
-    { codigo:"MP000313", nome:"CANELA INTEIRA 60 %", tipo:"MP" },
-    { codigo:"MP000314", nome:"EMBALAGEM - MERX  25 MENOR", tipo:"MP" },
-    { codigo:"MP000315", nome:"EMBALAGEM - REINO 5KG", tipo:"MP" },
-    { codigo:"MP000316", nome:"EMBALAGEM - BELL 25 MENOR", tipo:"MP" },
-    { codigo:"MP000317", nome:"EMBALAGEM", tipo:"MP" },
-    { codigo:"MP000318", nome:"EMBALAGEM - VIMACEDO MAIOR", tipo:"MP" },
-    { codigo:"MP000319", nome:"EMBALAGEM - VIMACEDO MENOR", tipo:"MP" },
-    { codigo:"MP000320", nome:"EMBALAGEM - MATIAS 10 MAIOR", tipo:"MP" },
-    { codigo:"MP000321", nome:"EMBALAGEM - MATIAS 10 MENOR", tipo:"MP" },
-    { codigo:"MP000322", nome:"EMBALAGEM - GA ALIMENTOS", tipo:"MP" },
-    { codigo:"MP000323", nome:"EMBALAGEM - QUALLY 10 MAIOR", tipo:"MP" },
-    { codigo:"MP000324", nome:"EMBALAGEM - QUALLY 10 MENOR", tipo:"MP" },
-    { codigo:"MP000325", nome:"EMBALAGEM - QUALLY 25 MAIOR", tipo:"MP" },
-    { codigo:"MP000326", nome:"EMBALAGEM - SANTA TERESA", tipo:"MP" },
-    { codigo:"MP000327", nome:"EMBALAGEM - CABANA N02", tipo:"MP" },
-    { codigo:"MP000328", nome:"SACO PAPEL KRAFT BA 109X90 25KG", tipo:"MP" },
-    { codigo:"MP000329", nome:"EMBALAGEM - MERX 10 MAIOR", tipo:"MP" },
-    { codigo:"MP000330", nome:"EMBALAGEM - MERX 10 MENOR", tipo:"MP" },
-    { codigo:"MP000331", nome:"EMBALAGEM - PITANGUEIRA", tipo:"MP" },
-    { codigo:"MP000332", nome:"LOURO FOLHA INTEIRO", tipo:"MP" },
-    { codigo:"MP000333", nome:"EMBALAGEM - CABANA N01", tipo:"MP" },
-    { codigo:"MP000334", nome:"EMBALAGEM - REINO 25 MAIOR", tipo:"MP" },
-    { codigo:"MP000335", nome:"FARDO QUALLY 5KG", tipo:"MP" },
-    { codigo:"MP000336", nome:"CEBOLA G MED CHOPPED IN ROSA", tipo:"MP" },
-    { codigo:"MP000337", nome:"CEBOLA G.MIUDA MINCED IN ROSA", tipo:"MP" },
-    { codigo:"MP000338", nome:"CASCA DE GUARANA", tipo:"MP" },
-    { codigo:"MP001270", nome:"PROTEÇÃO DAS RODAS SEM FURO", tipo:"MP" }
 ];
 
 const CHAVE_SOLICITACOES_ALTERACOES = "solicitacoesAlteracoesAdmin";
 
-function normalizarProdutoCatalogo(item){
-    const codigo=String(item && item.codigo || "").trim().toUpperCase();
-    const nome=String(item && item.nome || "").trim();
-    const tipoInformado=String(item && item.tipo || "").trim().toUpperCase();
-    const tipo=(tipoInformado === "MP" || tipoInformado === "PA")
-        ? tipoInformado
-        : (codigo.startsWith("MP") ? "MP" : "PA");
-    return {codigo:codigo,nome:nome,tipo:tipo};
-}
-
-produtosCadastrados = PRODUTOS_CADASTRADOS_HTML.map(normalizarProdutoCatalogo);
+produtosCadastrados = PRODUTOS_CADASTRADOS_HTML.map(function(item){
+    return {
+        codigo: String(item.codigo || "").trim(),
+        nome: String(item.nome || "").trim()
+    };
+});
 
 // Dados e solicitações são persistidos diretamente no Firebase.
 
@@ -3142,8 +3012,8 @@ function escaparHtmlSolicitacao(valor){
 }
 
 function renderizarSolicitacoesAcessoAdmin(){
-    const area=document.getElementById("lista-solicitacoes-admin");
-    const contador=document.getElementById("contador-solicitacoes-admin");
+    const area=document.getElementById("lista-solicitacoes-acesso-admin");
+    const contador=document.getElementById("contador-solicitacoes-acesso-admin");
     if(!area||!usuarioEhAdmin())return;
     const pendentes=carregarSolicitacoesAcesso().filter(function(item){return item.status==="pendente";});
     if(contador)contador.innerText=pendentes.length?"("+pendentes.length+" pendente(s))":"(nenhuma pendente)";
@@ -3153,8 +3023,12 @@ function renderizarSolicitacoesAcessoAdmin(){
 
 function renderizarSolicitacoesMercadoriaAdmin(){
 
-    const area = document.getElementById("lista-solicitacoes");
-    const contador = document.getElementById("contador-solicitacoes-mercadoria-admin");
+    const area =
+        document.getElementById("lista-solicitacoes") ||
+        document.getElementById("lista-solicitacoes-mercadoria-admin");
+
+    const contador =
+        document.getElementById("contador-solicitacoes-mercadoria-admin");
 
     if(!area || !usuarioEhAdmin()) return;
 
@@ -3162,201 +3036,308 @@ function renderizarSolicitacoesMercadoriaAdmin(){
         ? solicitacoesMercadoriaAdminCache.slice()
         : [];
 
-    const pendentes = lista
-        .filter(function(item){
-            return item &&
-                String(item.status || "").toLowerCase() === "pendente";
-        })
-        .sort(function(a,b){
-            return String(b.dataHora || "")
-                .localeCompare(String(a.dataHora || ""));
-        });
+   // ======================================================
+// SOMENTE SOLICITAÇÕES PENDENTES
+// ======================================================
+
+const pendentes = lista.filter(function(item){
+
+    if(!item) return false;
+
+    const status = String(
+        item.status || ""
+    ).trim().toLowerCase();
+
+    return status === "pendente";
+
+});
+
+    // ======================================================
+    // CONTADOR
+    // ======================================================
 
     if(contador){
         contador.innerText =
             " — " + pendentes.length + " pendente(s)";
     }
 
+    // ======================================================
+    // NENHUMA SOLICITAÇÃO
+    // ======================================================
+
     if(!pendentes.length){
-        area.innerHTML =
-            '<div class="vazio" style="margin-top:10px;">' +
-            '📭 Nenhuma solicitação pendente.' +
-            '</div>';
+
+        area.innerHTML = `
+            <div class="vazio" style="margin-top:10px;">
+                📭 Nenhuma solicitação pendente.
+            </div>
+        `;
+
         return;
     }
 
+    // ======================================================
+    // ORDENAR — MAIS RECENTE PRIMEIRO
+    // ======================================================
+
+    pendentes.sort(function(a,b){
+
+        return String(b.dataHora || "")
+            .localeCompare(String(a.dataHora || ""));
+
+    });
+
+    // ======================================================
+    // MONTAR LISTA
+    // ======================================================
+
     area.innerHTML = pendentes.map(function(item){
 
-        const tipo = obterTipoUsuarioSolicitacao(item);
+        const container =
+            item.container || "—";
 
-        const container = escaparHtmlSolicitacao(item.container || "—");
-        const produto = escaparHtmlSolicitacao(item.produto || "—");
-        const codigo = escaparHtmlSolicitacao(item.codigo || "—");
-        const lote = escaparHtmlSolicitacao(item.lote || "—");
-        const fornecedor = escaparHtmlSolicitacao(item.fornecedor || "—");
-        const solicitante = escaparHtmlSolicitacao(
+        const produto =
+            item.produto || "—";
+
+        const codigo =
+            item.codigo || "—";
+
+        const lote =
+            item.lote || "—";
+
+        const fornecedor =
+            item.fornecedor || "—";
+
+        const solicitante =
             item.solicitanteNome ||
             item.solicitante ||
-            "—"
-        );
+            "—";
 
-        const quantidade = Number(item.quantidadeSolicitada || 0);
-        const peso = Number(item.pesoSolicitado || 0);
-        const saldoQuantidade = Number(item.saldoQuantidade || 0);
-        const saldoPeso = Number(item.saldoPeso || 0);
+        const quantidade =
+            Number(item.quantidadeSolicitada || 0);
+
+        const peso =
+            Number(item.pesoSolicitado || 0);
+
+        const saldoQuantidade =
+            Number(item.saldoQuantidade || 0);
+
+        const saldoPeso =
+            Number(item.saldoPeso || 0);
 
         const dataHora = item.dataHora
             ? new Date(item.dataHora).toLocaleString("pt-BR")
             : "—";
 
-        const observacao = item.observacao
-            ? '<br><strong>💬 Observação:</strong> ' +
-              escaparHtmlSolicitacao(item.observacao)
-            : "";
+        // ==================================================
+        // IDENTIFICAR TIPO DE USUÁRIO
+        // ==================================================
 
-        let acao = "";
+        const tipoUsuario = String(
+            item.tipoUsuario ||
+            item.tipo ||
+            item.usuarioTipo ||
+            item.perfil ||
+            ""
+        ).trim().toLowerCase();
 
-        if(tipo === "comum"){
+        const ehExterno =
+            tipoUsuario === "externo" ||
+            tipoUsuario === "usuario externo" ||
+            tipoUsuario === "usuário externo";
 
-            acao =
-                '<div class="container-botoes" style="margin-top:12px;">' +
-                '<button type="button" class="btn-salvar" ' +
-                'onclick="aceitarSolicitacaoMercadoriaAdmin(\'' +
-                String(item.id).replace(/'/g,"\'") +
-                '\')">' +
-                '✅ Aceitar Solicitação' +
-                '</button>' +
-                '<button type="button" class="btn-apagar-historico" ' +
-                'onclick="cancelarSolicitacaoMercadoriaAdmin(\'' +
-                String(item.id).replace(/'/g,"\'") +
-                '\')">' +
-                '❌ Cancelar' +
-                '</button>' +
-                '</div>';
+        const ehComum =
+            tipoUsuario === "comum" ||
+            tipoUsuario === "usuario comum" ||
+            tipoUsuario === "usuário comum";
 
-        }else{
+        // ==================================================
+        // BOTÃO CONFORME O TIPO
+        // ==================================================
 
-            acao =
-                '<div style="margin-top:12px;padding:12px;' +
-                'border:1px solid var(--borda);border-radius:8px;">' +
+        let botoes = "";
 
-                '<strong>🧾 Nº da Nota Fiscal:</strong>' +
+        if(ehComum){
 
-                '<input type="text" ' +
-                'id="nf-solicitacao-' +
-                String(item.id).replace(/"/g,"&quot;") +
-                '" placeholder="Digite o Nº da NF" ' +
-                'autocomplete="off" inputmode="numeric" ' +
-                'style="width:260px;max-width:100%;margin-top:8px;padding:8px;box-sizing:border-box;">' +
+            botoes = `
+                <div class="container-botoes"
+                     style="margin-top:12px;">
 
-                '<div class="container-botoes" style="margin-top:10px;">' +
+                    <button
+                        type="button"
+                        class="btn-salvar"
+                        onclick="aceitarSolicitacaoMercadoriaAdmin('${item.id}')">
 
-                '<button type="button" class="btn-salvar" ' +
-                'onclick="finalizarSolicitacaoMercadoriaAdmin(\'' +
-                String(item.id).replace(/'/g,"\'") +
-                '\')">' +
-                '✅ Finalizar Solicitação' +
-                '</button>' +
+                        ✅ Aceitar Solicitação
 
-                '<button type="button" class="btn-apagar-historico" ' +
-                'onclick="cancelarSolicitacaoMercadoriaAdmin(\'' +
-                String(item.id).replace(/'/g,"\'") +
-                '\')">' +
-                '❌ Cancelar' +
-                '</button>' +
+                    </button>
 
-                '</div></div>';
+                    <button
+                        type="button"
+                        class="btn-apagar-historico"
+                        onclick="cancelarSolicitacaoMercadoriaAdmin('${item.id}')">
+
+                        ❌ Cancelar
+
+                    </button>
+
+                </div>
+            `;
+
         }
 
-        return (
-            '<div class="produto-item" style="' +
-            'margin-bottom:10px;padding:12px;' +
-            'border:1px solid var(--borda);border-radius:8px;">' +
+        if(ehExterno){
 
-            '<div style="margin-bottom:8px;">' +
-            '<span class="tipo tipo-alteracao">⏳ Pendente</span>' +
-            '</div>' +
+            botoes = `
+                <div
+                    style="
+                        margin-top:12px;
+                        padding:12px;
+                        border:1px solid var(--borda);
+                        border-radius:8px;
+                    "
+                >
 
-            '<div style="font-size:12px;line-height:1.8;">' +
+                    <strong>🧾 Nº da Nota Fiscal:</strong>
 
-            '<strong>📦 Container:</strong> ' + container + '<br>' +
-            '<strong>📋 Produto:</strong> ' + produto + '<br>' +
-            '<strong>🔢 Código:</strong> ' + codigo + '<br>' +
-            '<strong>🏷️ Lote:</strong> ' + lote + '<br>' +
-            '<strong>🏢 Fornecedor:</strong> ' + fornecedor + '<br>' +
-            '<strong>👤 Solicitante:</strong> ' + solicitante + '<br>' +
-            '<strong>👥 Tipo:</strong> ' +
-            (tipo === "comum" ? "Usuário comum" : "Usuário externo") +
-            '<br>' +
-            '<strong>🔢 Quantidade solicitada:</strong> ' +
-            quantidade + '<br>' +
-            '<strong>⚖️ Peso solicitado:</strong> ' +
-            peso.toLocaleString("pt-BR",{minimumFractionDigits:2}) +
-            ' KG<br>' +
-            '<strong>📦 Saldo no container:</strong> ' +
-            saldoQuantidade + ' volume(s) / ' +
-            saldoPeso.toLocaleString("pt-BR",{minimumFractionDigits:2}) +
-            ' KG<br>' +
-            '<strong>🕐 Data:</strong> ' + dataHora +
-            observacao +
+                    <input
+                        type="text"
+                        id="nf-solicitacao-${item.id}"
+                        placeholder="Digite o Nº da NF"
+                        style="
+                            width:100%;
+                            margin-top:8px;
+                            padding:10px;
+                            box-sizing:border-box;
+                        "
+                    >
 
-            '</div>' +
-            acao +
-            '</div>'
-        );
+                    <div class="container-botoes"
+                         style="margin-top:10px;">
+
+                        <button
+                            type="button"
+                            class="btn-salvar"
+                            onclick="finalizarSolicitacaoMercadoriaAdmin('${item.id}')">
+
+                            ✅ Finalizar Solicitação
+
+                        </button>
+
+                        <button
+                            type="button"
+                            class="btn-apagar-historico"
+                            onclick="cancelarSolicitacaoMercadoriaAdmin('${item.id}')">
+
+                            ❌ Cancelar
+
+                        </button>
+
+                    </div>
+
+                </div>
+            `;
+
+        }
+
+        return `
+            <div
+                class="produto-item"
+                style="
+                    margin-bottom:10px;
+                    padding:12px;
+                    border:1px solid var(--borda);
+                    border-radius:8px;
+                "
+            >
+
+                <div style="margin-bottom:8px;">
+
+                    <span class="tipo tipo-alteracao">
+                        ⏳ Pendente
+                    </span>
+
+                </div>
+
+                <div style="font-size:12px;line-height:1.8;">
+
+                    <strong>📦 Container:</strong>
+                    ${container}
+
+                    <br>
+
+                    <strong>📋 Produto:</strong>
+                    ${produto}
+
+                    <br>
+
+                    <strong>🔢 Código:</strong>
+                    ${codigo}
+
+                    <br>
+
+                    <strong>🏷️ Lote:</strong>
+                    ${lote}
+
+                    <br>
+
+                    <strong>🏢 Fornecedor:</strong>
+                    ${fornecedor}
+
+                    <br>
+
+                    <strong>👤 Solicitante:</strong>
+                    ${solicitante}
+
+                    <br>
+
+                    <strong>👥 Tipo:</strong>
+                    ${ehExterno ? "Usuário externo" : "Usuário comum"}
+
+                    <br>
+
+                    <strong>🔢 Quantidade solicitada:</strong>
+                    ${quantidade}
+
+                    <br>
+
+                    <strong>⚖️ Peso solicitado:</strong>
+                    ${peso.toLocaleString("pt-BR",{
+                        minimumFractionDigits:2
+                    })} KG
+
+                    <br>
+
+                    <strong>📦 Saldo no container:</strong>
+                    ${saldoQuantidade} volume(s)
+                    /
+                    ${saldoPeso.toLocaleString("pt-BR",{
+                        minimumFractionDigits:2
+                    })} KG
+
+                    <br>
+
+                    <strong>🕐 Data:</strong>
+                    ${dataHora}
+
+                    ${
+                        item.observacao
+                        ? `
+                            <br>
+                            <strong>💬 Observação:</strong>
+                            ${item.observacao}
+                        `
+                        : ""
+                    }
+
+                </div>
+
+                ${botoes}
+
+            </div>
+        `;
 
     }).join("");
-}
-
-function obterTipoUsuarioSolicitacao(item){
-
-    const tipo = String(
-        item.tipoUsuario ||
-        item.tipo ||
-        item.usuarioTipo ||
-        item.perfil ||
-        ""
-    ).trim().toLowerCase();
-
-    if(
-        tipo === "comum" ||
-        tipo === "usuario" ||
-        tipo === "usuario comum" ||
-        tipo === "usuário comum"
-    ){
-        return "comum";
-    }
-
-    if(
-        tipo === "externo" ||
-        tipo === "usuario externo" ||
-        tipo === "usuário externo"
-    ){
-        return "externo";
-    }
-
-    const uid = item.solicitanteUid;
-
-    if(uid && perfisUsuariosCache && perfisUsuariosCache[uid]){
-
-        const perfil =
-            perfisUsuariosCache[uid];
-
-        const tipoPerfil =
-            String(perfil.tipo || "")
-                .trim()
-                .toLowerCase();
-
-        if(tipoPerfil === "externo"){
-            return "externo";
-        }
-
-        return "comum";
-    }
-
-    // Solicitações antigas sem tipo identificado:
-    // tratamos como externo para exigir a NF.
-    return "externo";
 }
 
 // ======================================================
@@ -3366,11 +3347,395 @@ function obterTipoUsuarioSolicitacao(item){
 async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
 
     if(!usuarioEhAdmin() || !id){
+        return;
+    }
+
+    const ref = firebaseDB.ref(
+        "solicitacoesMercadoria/" + id
+    );
+
+    try{
+
+        const snapshot = await ref.once("value");
+
+        if(!snapshot.exists()){
+
+            alert("❌ Esta solicitação não existe mais.");
+
+            return;
+        }
+
+        const pedido = snapshot.val() || {};
+
+        if(pedido.status !== "pendente"){
+
+            alert("⚠️ Esta solicitação já foi processada.");
+
+            return;
+        }
+
+        // ==============================================
+        // FINALIZAR SOLICITAÇÃO
+        // ==============================================
+
+        if(novoStatus === "atendido"){
+
+            const tipo = String(
+                pedido.tipoUsuario || ""
+            ).trim().toLowerCase();
+
+            let nf = "";
+
+            // Usuário externo precisa de NF
+            if(
+                tipo === "externo" ||
+                tipo === "usuario externo" ||
+                tipo === "usuário externo"
+            ){
+
+                nf = prompt(
+                    "🧾 Informe o número da Nota Fiscal:"
+                );
+
+                if(nf === null){
+                    return;
+                }
+
+                nf = nf.trim();
+
+                if(!nf){
+
+                    alert(
+                        "❌ Informe o número da Nota Fiscal."
+                    );
+
+                    return;
+                }
+
+            }
+
+            const confirmar = confirm(
+                tipo === "comum"
+                    ? "Deseja aceitar esta solicitação?"
+                    : "Deseja finalizar esta solicitação?"
+            );
+
+            if(!confirmar){
+                return;
+            }
+
+            const dados = {
+
+                status: "atendido",
+
+                processadoEm:
+                    new Date().toISOString(),
+
+                processadoPorUid:
+                    firebaseAuth.currentUser
+                        ? firebaseAuth.currentUser.uid
+                        : "",
+
+                processadoPor:
+                    typeof operadorAtual === "function"
+                        ? operadorAtual()
+                        : "Administrador"
+
+            };
+
+            if(nf){
+
+                dados.nf = nf;
+
+                dados.nfFinalizacao = nf;
+
+            }
+
+            await ref.update(dados);
+
+            alert(
+                tipo === "comum"
+                    ? "✅ Solicitação aceita com sucesso!"
+                    : "✅ Solicitação finalizada com sucesso!"
+            );
+
+            return;
+        }
+
+        // ==============================================
+        // CANCELAR
+        // ==============================================
+
+        if(novoStatus === "cancelado"){
+
+            if(!confirm(
+                "Deseja cancelar esta solicitação?"
+            )){
+
+                return;
+            }
+
+            await ref.update({
+
+                status: "cancelado",
+
+                processadoEm:
+                    new Date().toISOString(),
+
+                processadoPorUid:
+                    firebaseAuth.currentUser
+                        ? firebaseAuth.currentUser.uid
+                        : "",
+
+                processadoPor:
+                    typeof operadorAtual === "function"
+                        ? operadorAtual()
+                        : "Administrador"
+
+            });
+
+            alert(
+                "❌ Solicitação cancelada."
+            );
+
+        }
+
+    }catch(erro){
+
+        console.error(
+            "Erro ao processar solicitação:",
+            erro
+        );
+
+        alert(
+            "❌ Não foi possível processar a solicitação.\n\n" +
+            erro.message
+        );
+
+    }
+
+}
+
+        // ==================================================
+        // IDENTIFICAR O TIPO DE USUÁRIO
+        // ==================================================
+
+        const tipoUsuario = String(
+            pedido.tipoUsuario ||
+            pedido.tipo ||
+            pedido.usuarioTipo ||
+            pedido.perfil ||
+            ""
+        ).trim().toLowerCase();
+
+        const ehExterno =
+            tipoUsuario === "externo" ||
+            tipoUsuario === "usuario externo" ||
+            tipoUsuario === "usuário externo";
+
+        const ehComum =
+            tipoUsuario === "comum" ||
+            tipoUsuario === "usuario comum" ||
+            tipoUsuario === "usuário comum";
+
+        // ==================================================
+        // CANCELAMENTO
+        // ==================================================
+
+        if(novoStatus === "cancelado"){
+
+            if(!confirm(
+                "Deseja CANCELAR esta solicitação?"
+            )){
+                return;
+            }
+
+            await ref.update({
+
+                status: "cancelado",
+
+                processadoEm:
+                    new Date().toISOString(),
+
+                processadoPorUid:
+                    firebaseAuth.currentUser
+                        ? firebaseAuth.currentUser.uid
+                        : "",
+
+                processadoPor:
+                    typeof operadorAtual === "function"
+                        ? operadorAtual()
+                        : "Administrador"
+
+            });
+
+            alert(
+                "❌ Solicitação cancelada."
+            );
+
+            return;
+        }
+
+        // ==================================================
+        // ATENDIMENTO
+        // ==================================================
+
+        if(novoStatus === "atendido"){
+
+            // ----------------------------------------------
+            // USUÁRIO EXTERNO — EXIGE NF
+            // ----------------------------------------------
+
+            if(ehExterno){
+
+                const campoNF =
+                    document.getElementById(
+                        "nf-solicitacao-" + id
+                    );
+
+                if(!campoNF){
+
+                    alert(
+                        "❌ Campo de Nota Fiscal não encontrado."
+                    );
+
+                    return;
+                }
+
+                const nf =
+                    String(
+                        campoNF.value || ""
+                    ).trim();
+
+                if(!nf){
+
+                    alert(
+                        "🧾 Informe o número da Nota Fiscal para finalizar esta solicitação."
+                    );
+
+                    campoNF.focus();
+
+                    return;
+                }
+
+                if(!confirm(
+                    "Finalizar esta solicitação com a NF nº " +
+                    nf +
+                    "?"
+                )){
+                    return;
+                }
+
+                await ref.update({
+
+                    status: "atendido",
+
+                    nf: nf,
+
+                    processadoEm:
+                        new Date().toISOString(),
+
+                    processadoPorUid:
+                        firebaseAuth.currentUser
+                            ? firebaseAuth.currentUser.uid
+                            : "",
+
+                    processadoPor:
+                        typeof operadorAtual === "function"
+                            ? operadorAtual()
+                            : "Administrador"
+
+                });
+
+                alert(
+                    "✅ Solicitação finalizada com sucesso!"
+                );
+
+                return;
+            }
+
+            // ----------------------------------------------
+            // USUÁRIO COMUM — NÃO EXIGE NF
+            // ----------------------------------------------
+
+            if(ehComum){
+
+                if(!confirm(
+                    "Deseja marcar esta solicitação como ATENDIDA?"
+                )){
+                    return;
+                }
+
+                await ref.update({
+
+                    status: "atendido",
+
+                    processadoEm:
+                        new Date().toISOString(),
+
+                    processadoPorUid:
+                        firebaseAuth.currentUser
+                            ? firebaseAuth.currentUser.uid
+                            : "",
+
+                    processadoPor:
+                        typeof operadorAtual === "function"
+                            ? operadorAtual()
+                            : "Administrador"
+
+                });
+
+                alert(
+                    "✅ Solicitação aceita com sucesso!"
+                );
+
+                return;
+            }
+
+            // ----------------------------------------------
+            // TIPO NÃO IDENTIFICADO
+            // ----------------------------------------------
+
+            alert(
+                "⚠️ Não foi possível identificar o tipo de usuário desta solicitação."
+            );
+
+            return;
+        }
+
+    }catch(erro){
+
+        console.error(
+            "Erro ao atualizar solicitação de mercadoria:",
+            erro
+        );
+
+        alert(
+            "❌ Não foi possível atualizar a solicitação."
+        );
+
+    }
+}
+
+// ======================================================
+// ATUALIZAR STATUS DA SOLICITAÇÃO DE MERCADORIA
+// ======================================================
+
+async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
+
+    if(!usuarioEhAdmin()){
         alert("❌ Apenas o administrador pode processar solicitações.");
         return;
     }
 
-    const ref = firebaseDB.ref("solicitacoesMercadoria/" + id);
+    if(!id){
+        alert("❌ Solicitação inválida.");
+        return;
+    }
+
+    const ref = firebaseDB.ref(
+        "solicitacoesMercadoria/" + id
+    );
 
     try{
 
@@ -3383,660 +3748,237 @@ async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
 
         const pedido = snapshot.val() || {};
 
-        if(String(pedido.status || "").toLowerCase() !== "pendente"){
+        if(pedido.status !== "pendente"){
             alert("⚠️ Esta solicitação já foi processada.");
-            return;
-        }
-
-        // ==================================================
-        // CANCELAMENTO — NÃO ALTERA O ESTOQUE
-        // ==================================================
-        if(novoStatus === "cancelado"){
-
-            if(!confirm("Deseja cancelar esta solicitação?")){
-                return;
-            }
-
-            await ref.update({
-                status: "cancelado",
-                processadoEm: new Date().toISOString(),
-                processadoPorUid: firebaseAuth.currentUser ? firebaseAuth.currentUser.uid : "",
-                processadoPor: operadorAtual()
-            });
-
-            alert("❌ Solicitação cancelada.");
-            return;
-        }
-
-        if(novoStatus !== "atendido"){
             return;
         }
 
         // ==================================================
         // IDENTIFICAR TIPO DO USUÁRIO
         // ==================================================
-        const tipo = obterTipoUsuarioSolicitacao(pedido);
-        let numeroNF = "";
 
-        if(tipo === "externo"){
-            const campoNF = document.getElementById("nf-solicitacao-" + id);
-            numeroNF = campoNF ? String(campoNF.value || "").trim() : "";
+        const tipoUsuario = String(
+            pedido.tipoUsuario ||
+            pedido.tipo ||
+            pedido.usuarioTipo ||
+            pedido.perfil ||
+            ""
+        )
+        .trim()
+        .toLowerCase();
 
-            if(!numeroNF){
-                alert("❌ Para usuário externo, informe o número da Nota Fiscal.");
-                if(campoNF) campoNF.focus();
+
+        // ==================================================
+        // ATENDIMENTO
+        // ==================================================
+
+        if(novoStatus === "atendido"){
+
+            let numeroNF = "";
+
+
+            // ==============================================
+            // USUÁRIO EXTERNO → NF OBRIGATÓRIA
+            // ==============================================
+
+            if(
+                tipoUsuario === "externo" ||
+                tipoUsuario === "usuario externo" ||
+                tipoUsuario === "usuário externo"
+            ){
+
+                numeroNF = prompt(
+                    "🧾 Informe o número da Nota Fiscal para finalizar:"
+                );
+
+                if(numeroNF === null){
+                    return;
+                }
+
+                numeroNF = numeroNF.trim();
+
+                if(!numeroNF){
+
+                    alert(
+                        "❌ É obrigatório informar o número da Nota Fiscal."
+                    );
+
+                    return;
+                }
+
+            }
+
+
+            // ==============================================
+            // USUÁRIO COMUM → SOMENTE ACEITE
+            // ==============================================
+
+            const mensagemConfirmacao =
+                tipoUsuario === "comum"
+                    ? "Deseja aceitar esta solicitação?"
+                    : "Deseja finalizar esta solicitação?";
+
+
+            if(!confirm(mensagemConfirmacao)){
                 return;
             }
-        }
 
-        const mensagem = tipo === "comum"
-            ? "Deseja aceitar esta solicitação e retirar o material do estoque?"
-            : "Deseja finalizar esta solicitação com a NF " + numeroNF + " e retirar o material do estoque?";
 
-        if(!confirm(mensagem)){
+            // ==============================================
+            // DADOS PARA ATUALIZAÇÃO
+            // ==============================================
+
+            const atualizacao = {
+
+                status: "atendido",
+
+                processadoEm:
+                    new Date().toISOString(),
+
+                processadoPorUid:
+                    firebaseAuth.currentUser
+                        ? firebaseAuth.currentUser.uid
+                        : "",
+
+                processadoPor:
+                    typeof operadorAtual === "function"
+                        ? operadorAtual()
+                        : "Administrador"
+
+            };
+
+
+            // ==============================================
+            // NF SOMENTE PARA EXTERNO
+            // ==============================================
+
+            if(numeroNF){
+
+                atualizacao.nfFinalizacao =
+                    numeroNF;
+
+                atualizacao.nf =
+                    numeroNF;
+
+            }
+
+
+            await ref.update(atualizacao);
+
+
+            alert(
+                tipoUsuario === "comum"
+                    ? "✅ Solicitação aceita com sucesso!"
+                    : "✅ Solicitação finalizada com sucesso!"
+            );
+
+
+            // Atualiza a lista imediatamente
+            solicitacoesMercadoriaAdminCache =
+                solicitacoesMercadoriaAdminCache.filter(
+                    function(item){
+                        return item.id !== id;
+                    }
+                );
+
+
+            if(
+                typeof renderizarSolicitacoesMercadoriaAdmin ===
+                "function"
+            ){
+
+                renderizarSolicitacoesMercadoriaAdmin();
+
+            }
+
+
+            atualizarIndicadorAdmin();
+
             return;
         }
 
-        // ==================================================
-        // QUANTIDADES SOLICITADAS
-        // ==================================================
-        const qtdSolicitada = Number(pedido.quantidadeSolicitada || 0);
-        const pesoSolicitado = Number(pedido.pesoSolicitado || 0);
-
-        if(qtdSolicitada <= 0 && pesoSolicitado <= 0){
-            alert("❌ A solicitação não possui quantidade ou peso válido para retirada.");
-            return;
-        }
 
         // ==================================================
-        // RETIRADA REAL DO ESTOQUE NO FIREBASE
-        // Usa transaction para pegar o estoque mais atual e
-        // evitar que dois atendimentos retirem o mesmo saldo.
+        // CANCELAMENTO
         // ==================================================
-        let erroEstoque = "";
-        let itemRetirado = null;
 
-        const resultadoTransacao = await new Promise(function(resolve, reject){
+        if(novoStatus === "cancelado"){
 
-            firebaseDB.ref("estoque").transaction(function(valorAtual){
+            if(!confirm(
+                "Deseja cancelar esta solicitação?"
+            )){
+                return;
+            }
 
-                const lista = normalizarListaFirebase(valorAtual);
-                const listaNova = lista.map(function(item){ return {...item}; });
 
-                let indice = -1;
+            await ref.update({
 
-                if(pedido.itemEstoqueId){
-                    indice = listaNova.findIndex(function(item){
-                        return String(item.id || "") === String(pedido.itemEstoqueId);
-                    });
-                }
+                status: "cancelado",
 
-                // Compatibilidade com solicitações antigas sem itemEstoqueId.
-                if(indice < 0){
-                    indice = listaNova.findIndex(function(item){
-                        return Number(item.num) === Number(pedido.container) &&
-                            String(item.codigo || "") === String(pedido.codigo || "") &&
-                            String(item.prod || "") === String(pedido.produto || "") &&
-                            String(item.lote || "") === String(pedido.lote || "");
-                    });
-                }
+                processadoEm:
+                    new Date().toISOString(),
 
-                if(indice < 0){
-                    erroEstoque = "O item solicitado não foi encontrado no estoque atual.";
-                    return;
-                }
+                processadoPorUid:
+                    firebaseAuth.currentUser
+                        ? firebaseAuth.currentUser.uid
+                        : "",
 
-                const itemAtual = listaNova[indice];
-                const saldoQtd = Number(itemAtual.qtd || 0);
-                const saldoPeso = Number(itemAtual.peso || 0);
+                processadoPor:
+                    typeof operadorAtual === "function"
+                        ? operadorAtual()
+                        : "Administrador"
 
-                if(qtdSolicitada > saldoQtd){
-                    erroEstoque = "Saldo insuficiente de quantidade. Disponível: " + saldoQtd + ". Solicitado: " + qtdSolicitada + ".";
-                    return;
-                }
-
-                if(pesoSolicitado > saldoPeso){
-                    erroEstoque = "Saldo insuficiente de peso. Disponível: " + saldoPeso.toFixed(2) + " KG. Solicitado: " + pesoSolicitado.toFixed(2) + " KG.";
-                    return;
-                }
-
-                const novaQtd = Math.max(0, saldoQtd - qtdSolicitada);
-                const novoPeso = Math.max(0, saldoPeso - pesoSolicitado);
-
-                itemRetirado = {...itemAtual};
-
-                itemRetirado.qtd = qtdSolicitada;
-                itemRetirado.peso = pesoSolicitado;
-                itemRetirado.saldoAnteriorQtd = saldoQtd;
-                itemRetirado.saldoAnteriorPeso = saldoPeso;
-                itemRetirado.saldoAtualQtd = novaQtd;
-                itemRetirado.saldoAtualPeso = novoPeso;
-
-                // Se o item ficou totalmente zerado, ele sai do container.
-                if(novaQtd <= 0 && novoPeso <= 0){
-                    listaNova.splice(indice, 1);
-                }else{
-                    listaNova[indice].qtd = novaQtd;
-                    listaNova[indice].peso = novoPeso;
-                }
-
-                return listaNova;
-
-            }, function(erro, committed, snapFinal){
-
-                if(erro){
-                    reject(erro);
-                    return;
-                }
-
-                if(!committed){
-                    reject(new Error(erroEstoque || "Não foi possível atualizar o estoque. Tente novamente."));
-                    return;
-                }
-
-                resolve(snapFinal);
             });
-        });
 
-        // ==================================================
-        // ATUALIZAR MEMÓRIA LOCAL COM O ESTOQUE REAL
-        // ==================================================
-        estoque = normalizarListaFirebase(resultadoTransacao.val());
-        garantirIdsEstoque();
 
-        // ==================================================
-        // REGISTRAR A SAÍDA NO HISTÓRICO
-        // ==================================================
-        const agora = new Date();
-        const movimento = {
-            id: Date.now() + Math.floor(Math.random() * 1000),
-            data: agora.toLocaleDateString("pt-BR"),
-            hora: agora.toLocaleTimeString("pt-BR"),
-            tipo: "SAÍDA - SOLICITAÇÃO",
-            num: pedido.container,
-            fornecedor: pedido.fornecedor || "",
-            nf: numeroNF || pedido.nf || "",
-            prod: pedido.produto || "",
-            codigo: pedido.codigo || "",
-            lote: pedido.lote || "",
-            qtd: qtdSolicitada,
-            peso: pesoSolicitado,
-            detalhes:
-                "Solicitação " + id + " atendida. " +
-                "Solicitante: " + (pedido.solicitanteNome || pedido.solicitante || "—") +
-                ". Saldo anterior: " + Number(pedido.saldoQuantidade || 0) +
-                " volume(s) / " + Number(pedido.saldoPeso || 0).toFixed(2) +
-                " KG."
-        };
+            alert(
+                "❌ Solicitação cancelada."
+            );
 
-        historico.push(movimento);
 
-        // ==================================================
-        // FINALIZAR SOLICITAÇÃO E SALVAR TUDO
-        // ==================================================
-        const atualizacao = {
-            status: "atendido",
-            processadoEm: new Date().toISOString(),
-            processadoPorUid: firebaseAuth.currentUser ? firebaseAuth.currentUser.uid : "",
-            processadoPor: operadorAtual(),
-            quantidadeAtendida: qtdSolicitada,
-            pesoAtendido: pesoSolicitado,
-            saldoFinalQuantidade: itemRetirado ? Number(itemRetirado.saldoAtualQtd || 0) : 0,
-            saldoFinalPeso: itemRetirado ? Number(itemRetirado.saldoAtualPeso || 0) : 0
-        };
+            solicitacoesMercadoriaAdminCache =
+                solicitacoesMercadoriaAdminCache.filter(
+                    function(item){
+                        return item.id !== id;
+                    }
+                );
 
-        if(numeroNF){
-            atualizacao.nfFinalizacao = numeroNF;
-            atualizacao.nf = numeroNF;
+
+            if(
+                typeof renderizarSolicitacoesMercadoriaAdmin ===
+                "function"
+            ){
+
+                renderizarSolicitacoesMercadoriaAdmin();
+
+            }
+
+
+            atualizarIndicadorAdmin();
+
         }
-
-        await Promise.all([
-            firebaseDB.ref("historico").set(historico),
-            ref.update(atualizacao)
-        ]);
-
-        // Atualiza imediatamente a tela sem esperar o listener.
-        mostrarEstoque();
-        mostrarHistorico();
-        atualizarContador();
-
-        alert(
-            tipo === "comum"
-                ? "✅ Solicitação aceita e material retirado do estoque com sucesso!"
-                : "✅ Solicitação finalizada, NF registrada e material retirado do estoque com sucesso!"
-        );
 
     }catch(erro){
 
-        console.error("❌ Erro ao processar solicitação e atualizar estoque:", erro);
+        console.error(
+            "❌ Erro ao atualizar solicitação de mercadoria:",
+            erro
+        );
 
         alert(
-            "❌ Não foi possível finalizar a solicitação.\n\n" +
+            "❌ Não foi possível processar a solicitação.\n\n"+
             erro.message
         );
+
     }
-}
 
-// ======================================================
-// BOTÕES DAS SOLICITAÇÕES
-// ======================================================
-
-async function aceitarSolicitacaoMercadoriaAdmin(id){
-
-    await atualizarStatusSolicitacaoMercadoriaAdmin(
-        id,
-        "atendido"
-    );
 }
 
 
-async function finalizarSolicitacaoMercadoriaAdmin(id){
-
-    await atualizarStatusSolicitacaoMercadoriaAdmin(
-        id,
-        "atendido"
-    );
-}
-
-
-async function atenderSolicitacaoMercadoriaAdmin(id){
-
-    await atualizarStatusSolicitacaoMercadoriaAdmin(
-        id,
-        "atendido"
-    );
-}
-
-
-async function cancelarSolicitacaoMercadoriaAdmin(id){
-
-    await atualizarStatusSolicitacaoMercadoriaAdmin(
-        id,
-        "cancelado"
-    );
-}
-
-
-// ======================================================
-// HISTÓRICO OCULTO DE SOLICITAÇÕES FINALIZADAS
-// ======================================================
-
-function toggleHistoricoSolicitacoesAdmin(){
-
-    if(!usuarioEhAdmin()){
-        return;
-    }
-
-    const area =
-        document.getElementById(
-            "historico-solicitacoes-admin"
-        );
-
-    const botao =
-        document.getElementById(
-            "btn-toggle-historico-solicitacoes-admin"
-        );
-
-    if(!area){
-        return;
-    }
-
-    const fechado =
-        area.style.display === "none" ||
-        area.style.display === "";
-
-    if(fechado){
-
-        area.style.display = "block";
-
-        if(botao){
-            botao.innerText =
-                "🙈 Ocultar Finalizadas";
-        }
-
-        renderizarHistoricoSolicitacoesAdmin();
-
-    }else{
-
-        area.style.display = "none";
-
-        if(botao){
-            botao.innerText =
-                "📁 Ver Finalizadas";
-        }
-    }
-}
-
-
-function renderizarHistoricoSolicitacoesAdmin(){
-
-    const area =
-        document.getElementById(
-            "lista-historico-solicitacoes-admin"
-        );
-
-    if(!area || !usuarioEhAdmin()){
-        return;
-    }
-
-    const lista =
-        Array.isArray(solicitacoesMercadoriaAdminCache)
-            ? solicitacoesMercadoriaAdminCache
-            : [];
-
-    const finalizadas =
-        lista
-        .filter(function(item){
-
-            const status =
-                String(item.status || "")
-                    .trim()
-                    .toLowerCase();
-
-            return (
-                status === "atendido" ||
-                status === "cancelado"
-            );
-
-        })
-        .sort(function(a,b){
-
-            return String(
-                b.processadoEm ||
-                b.dataHora ||
-                ""
-            ).localeCompare(
-                String(
-                    a.processadoEm ||
-                    a.dataHora ||
-                    ""
-                )
-            );
-        });
-
-    if(!finalizadas.length){
-
-        area.innerHTML =
-            '<div class="vazio">' +
-            '📭 Nenhuma solicitação finalizada.' +
-            '</div>';
-
-        return;
-    }
-
-    area.innerHTML =
-        finalizadas.map(function(item){
-
-            const atendida =
-                String(item.status || "")
-                    .toLowerCase() === "atendido";
-
-            const tipo =
-                obterTipoUsuarioSolicitacao(item);
-
-            return `
-                <div class="produto-item"
-                     style="
-                        margin-bottom:10px;
-                        padding:12px;
-                        border:1px solid var(--borda);
-                        border-radius:8px;
-                     ">
-
-                    <strong>
-                        ${atendida ? "✅ Atendida" : "❌ Cancelada"}
-                    </strong>
-
-                    <div style="font-size:12px;line-height:1.8;margin-top:6px;">
-
-                        <strong>📦 Container:</strong>
-                        ${escaparHtmlSolicitacao(item.container || "—")}
-
-                        <br>
-
-                        <strong>📋 Produto:</strong>
-                        ${escaparHtmlSolicitacao(item.produto || "—")}
-
-                        <br>
-
-                        <strong>👤 Solicitante:</strong>
-                        ${escaparHtmlSolicitacao(
-                            item.solicitanteNome ||
-                            item.solicitante ||
-                            "—"
-                        )}
-
-                        <br>
-
-                        <strong>👥 Tipo:</strong>
-                        ${tipo === "comum"
-                            ? "Usuário comum"
-                            : "Usuário externo"}
-
-                        <br>
-
-                        <strong>🔢 Quantidade:</strong>
-                        ${Number(item.quantidadeSolicitada || 0)}
-
-                        <br>
-
-                        <strong>⚖️ Peso:</strong>
-                        ${Number(item.pesoSolicitado || 0)
-                            .toLocaleString("pt-BR",{
-                                minimumFractionDigits:2
-                            })} KG
-
-                        ${
-                            item.nfFinalizacao
-                            ? `
-                                <br>
-                                <strong>🧾 NF:</strong>
-                                ${escaparHtmlSolicitacao(item.nfFinalizacao)}
-                              `
-                            : ""
-                        }
-
-                        ${
-                            item.processadoPor
-                            ? `
-                                <br>
-                                <strong>👑 Processado por:</strong>
-                                ${escaparHtmlSolicitacao(item.processadoPor)}
-                              `
-                            : ""
-                        }
-
-                        ${
-                            item.processadoEm
-                            ? `
-                                <br>
-                                <strong>🕐 Processado em:</strong>
-                                ${new Date(item.processadoEm)
-                                    .toLocaleString("pt-BR")}
-                              `
-                            : ""
-                        }
-
-                    </div>
-
-                </div>
-            `;
-
-        }).join("");
-}
-
-
-// ======================================================
-// PAINEL ADMINISTRATIVO
-// ======================================================
-
-function toggleAdminUsuarios(){
-
-    if(!usuarioEhAdmin()){
-        return;
-    }
-
-    const painel =
-        document.getElementById(
-            "painel-admin-usuarios"
-        );
-
-    const botao =
-        document.getElementById(
-            "btn-abrir-painel-admin"
-        );
-
-    if(!painel){
-        console.error(
-            "❌ #painel-admin-usuarios não encontrado."
-        );
-        return;
-    }
-
-    const aberto =
-        painel.style.display !== "none" &&
-        painel.style.display !== "";
-
-    if(aberto){
-
-        painel.style.display = "none";
-
-        if(botao){
-            botao.innerText =
-                "👑 Usuários Cadastrados";
-        }
-
-        return;
-    }
-
-    painel.style.display = "block";
-
-    if(botao){
-        botao.innerText =
-            "🙈 Ocultar Usuários";
-    }
-
-    carregarPerfisUsuariosFirebase()
-        .catch(function(erro){
-            console.error(
-                "Erro ao carregar perfis:",
-                erro
-            );
-        })
-        .finally(function(){
-
-            renderizarSolicitacoesAcessoAdmin();
-            renderizarSolicitacoesAlteracoesAdmin();
-            renderizarSolicitacoesMercadoriaAdmin();
-            const listaUsuarios=document.getElementById("conteudo-lista-usuarios-admin");
-            if(listaUsuarios && listaUsuarios.style.display !== "none" && listaUsuarios.style.display !== "") {
-                renderizarUsuariosCadastradosAdmin();
-            }
-
-        });
-}
-
-
-function atualizarIndicadorAdmin(){
-
-    const botao =
-        document.getElementById(
-            "btn-abrir-painel-admin"
-        );
-
-    if(!botao || !usuarioEhAdmin()){
-        return;
-    }
-
-    const acessos =
-        Array.isArray(solicitacoesAcessoCache)
-            ? solicitacoesAcessoCache.filter(function(item){
-                return String(item.status || "")
-                    .toLowerCase() === "pendente";
-            }).length
-            : 0;
-
-    const alteracoes =
-        Array.isArray(solicitacoesAlteracoesCache)
-            ? solicitacoesAlteracoesCache.filter(function(item){
-                return String(item.status || "")
-                    .toLowerCase() === "pendente";
-            }).length
-            : 0;
-
-    const mercadorias =
-        Array.isArray(solicitacoesMercadoriaAdminCache)
-            ? solicitacoesMercadoriaAdminCache.filter(function(item){
-                return String(item.status || "")
-                    .toLowerCase() === "pendente";
-            }).length
-            : 0;
-
-    const total =
-        acessos +
-        alteracoes +
-        mercadorias;
-
-    const painel =
-        document.getElementById(
-            "painel-admin-usuarios"
-        );
-
-    const aberto =
-        painel &&
-        painel.style.display !== "none" &&
-        painel.style.display !== "";
-
-    if(total > 0){
-
-        botao.innerText =
-            "👑 Usuários / 🔔 " +
-            total +
-            " pendente(s)";
-
-    }else if(aberto){
-
-        botao.innerText =
-            "🙈 Ocultar Usuários";
-
-    }else{
-
-        botao.innerText =
-            "👑 Usuários Cadastrados";
-
-    }
-}
-
-
-// Disponibiliza explicitamente os handlers para o HTML.
-window.toggleAdminUsuarios =
-    toggleAdminUsuarios;
-
-window.atualizarIndicadorAdmin =
-    atualizarIndicadorAdmin;
-
-window.toggleSolicitacoes =
-    toggleSolicitacoes;
-
-window.toggleHistoricoSolicitacoesAdmin =
-    toggleHistoricoSolicitacoesAdmin;
-
-window.aceitarSolicitacaoMercadoriaAdmin =
-    aceitarSolicitacaoMercadoriaAdmin;
-
-window.finalizarSolicitacaoMercadoriaAdmin =
-    finalizarSolicitacaoMercadoriaAdmin;
-
-window.atenderSolicitacaoMercadoriaAdmin =
-    atenderSolicitacaoMercadoriaAdmin;
-
-window.cancelarSolicitacaoMercadoriaAdmin =
-    cancelarSolicitacaoMercadoriaAdmin;
 
 
 // ======================================================
 // DATA E HORA
-
 // ======================================================
 
 function preencherDataHora(){
@@ -4061,6 +4003,91 @@ document.getElementById("data").value =
 
 }
 
+
+
+// ======================================================
+// VISUALIZAÇÃO DOS CONTAINERS — QUADRO / LISTA / FILTROS
+// ======================================================
+const configuracaoVisualizacaoContainers = {
+    admin: { modo: localStorage.getItem('modoVisualizacaoAdmin') || 'quadro', status: 'todos', selecionados: new Set(Array.from({length:60},(_,i)=>i+1)) },
+    externo: { modo: localStorage.getItem('modoVisualizacaoExterno') || 'quadro', status: 'todos', selecionados: new Set(Array.from({length:60},(_,i)=>i+1)) }
+};
+
+function obterGradeVisualizacao(tipo){
+    return document.getElementById(tipo === 'admin' ? 'grade' : 'grade-externa');
+}
+function obterContainerVisualizacao(tipo,i){
+    return document.getElementById((tipo === 'admin' ? 'c-' : 'externo-c-') + i);
+}
+function construirCheckboxesContainers(tipo){
+    const area=document.getElementById('checkbox-containers-'+tipo);
+    if(!area || area.dataset.pronto==='1') return;
+    area.innerHTML='';
+    for(let i=1;i<=60;i++){
+        const label=document.createElement('label');
+        label.className='chk-container';
+        const cb=document.createElement('input');
+        cb.type='checkbox'; cb.value=String(i); cb.checked=true;
+        cb.onchange=function(){
+            if(cb.checked) configuracaoVisualizacaoContainers[tipo].selecionados.add(i);
+            else configuracaoVisualizacaoContainers[tipo].selecionados.delete(i);
+            aplicarFiltrosContainers(tipo);
+        };
+        label.appendChild(cb); label.appendChild(document.createTextNode(String(i).padStart(2,'0')));
+        area.appendChild(label);
+    }
+    area.dataset.pronto='1';
+}
+function alterarVisualizacaoContainers(tipo,modo){
+    const cfg=configuracaoVisualizacaoContainers[tipo];
+    cfg.modo=modo;
+    localStorage.setItem(tipo==='admin'?'modoVisualizacaoAdmin':'modoVisualizacaoExterno',modo);
+    const grade=obterGradeVisualizacao(tipo);
+    if(grade) grade.classList.toggle('modo-lista',modo==='lista');
+    const q=document.getElementById('btn-vis-quadro-'+tipo);
+    const l=document.getElementById('btn-vis-lista-'+tipo);
+    if(q) q.classList.toggle('ativo',modo==='quadro');
+    if(l) l.classList.toggle('ativo',modo==='lista');
+    aplicarFiltrosContainers(tipo);
+}
+function selecionarTodosContainers(tipo,marcar){
+    const cfg=configuracaoVisualizacaoContainers[tipo];
+    cfg.selecionados=marcar ? new Set(Array.from({length:60},(_,i)=>i+1)) : new Set();
+    const area=document.getElementById('checkbox-containers-'+tipo);
+    if(area) area.querySelectorAll('input[type="checkbox"]').forEach(cb=>cb.checked=marcar);
+    aplicarFiltrosContainers(tipo);
+}
+function containerEstaCheio(tipo,i){
+    const prefix=tipo==='admin'?'dados-':'externo-dados-';
+    const area=document.getElementById(prefix+i);
+    return !!(area && area.querySelector('.produto-item'));
+}
+function aplicarFiltrosContainers(tipo){
+    const cfg=configuracaoVisualizacaoContainers[tipo];
+    const filtro=(document.getElementById('filtro-status-containers-'+tipo)||{}).value || cfg.status || 'todos';
+    cfg.status=filtro;
+    const grade=obterGradeVisualizacao(tipo);
+    if(grade) grade.classList.toggle('modo-lista',cfg.modo==='lista');
+    let exibidos=0;
+    for(let i=1;i<=60;i++){
+        const el=obterContainerVisualizacao(tipo,i);
+        if(!el) continue;
+        const selecionado=cfg.selecionados.has(i);
+        const cheio=containerEstaCheio(tipo,i);
+        const passaStatus=filtro==='todos' || (filtro==='cheios' && cheio) || (filtro==='vazios' && !cheio);
+        el.classList.toggle('escondido',!(selecionado && passaStatus));
+        if(selecionado && passaStatus) exibidos++;
+    }
+    const resumo=document.getElementById('resumo-visualizacao-'+tipo);
+    if(resumo) resumo.textContent=exibidos+' container(s) exibido(s) de 60';
+}
+function inicializarVisualizacaoContainers(tipo){
+    construirCheckboxesContainers(tipo);
+    const cfg=configuracaoVisualizacaoContainers[tipo];
+    const sel=document.getElementById('filtro-status-containers-'+tipo);
+    if(sel) sel.value=cfg.status;
+    alterarVisualizacaoContainers(tipo,cfg.modo);
+}
 
 // ======================================================
 // CRIAR CONTAINERS
@@ -4102,6 +4129,8 @@ class="lista-produtos"
 grade.appendChild(box);
 
 }
+
+inicializarVisualizacaoContainers('admin');
 
 }
 
@@ -4789,6 +4818,8 @@ atualizarContador();
 
 filtrarEstoque();
 
+aplicarFiltrosContainers('admin');
+
 }
 
 
@@ -4929,47 +4960,21 @@ function esvaziarContainer(){
 
 function filtrarEstoque(){
 
-const texto =
-document.getElementById(
-"campo-busca"
-).value
-.toLowerCase()
-.trim();
-
+const campo = document.getElementById("campo-busca");
+if(!campo)return;
+const texto = campo.value.toLowerCase().trim();
+const cfg=configuracaoVisualizacaoContainers.admin;
 
 for(let i=1;i<=60;i++){
-
-const container =
-document.getElementById(
-"c-"+i
-);
-
-const conteudo =
-container.innerText
-.toLowerCase();
-
-
-if(
-texto === "" ||
-conteudo.includes(texto)
-){
-
-container.classList.remove(
-"escondido"
-);
-
+    const container=document.getElementById("c-"+i);
+    if(!container)continue;
+    const conteudo=container.innerText.toLowerCase();
+    const buscaOk=(texto==="" || conteudo.includes(texto));
+    const cheio=containerEstaCheio('admin',i);
+    const statusOk=cfg.status==='todos' || (cfg.status==='cheios' && cheio) || (cfg.status==='vazios' && !cheio);
+    const selecaoOk=cfg.selecionados.has(i);
+    container.classList.toggle("escondido",!(buscaOk && statusOk && selecaoOk));
 }
-
-else{
-
-container.classList.add(
-"escondido"
-);
-
-}
-
-}
-
 }
 
 
@@ -5045,14 +5050,13 @@ document.getElementById(
 
 area.innerHTML="";
 
-const historicoVisivel = obterHistoricoVisivelAtual();
 
-if(historicoVisivel.length===0){
+if(historico.length===0){
 
 area.innerHTML=
 `
 <div class="sem-historico">
-📋 Nenhuma movimentação registrada nesta visualização.
+📋 Nenhuma movimentação registrada.
 </div>
 `;
 
@@ -5060,7 +5064,9 @@ return;
 
 }
 
-const lista = historicoVisivel.reverse();
+
+const lista =
+[...historico].reverse();
 
 
 lista.forEach(
@@ -5187,18 +5193,6 @@ item.detalhes
 ""
 }
 
-${
-!usuarioEhAdmin() && item.id != null
-? `
-<div style="margin-top:12px;">
-<button type="button" class="btn-apagar-historico" onclick="ocultarRegistroHistoricoUsuario('${String(item.id).replace(/'/g,"\\'")}')">
-🗑️ Ocultar este registro
-</button>
-</div>
-`
-: ""
-}
-
 `;
 
 
@@ -5230,40 +5224,6 @@ return "🧹";
 
 return "📋";
 
-}
-
-
-// ======================================================
-// OCULTAR UM REGISTRO DO HISTÓRICO — USUÁRIO COMUM
-// ======================================================
-
-async function ocultarRegistroHistoricoUsuario(id){
-    if(usuarioEhAdmin()){
-        alert("⚠️ O administrador deve usar a função de limpeza do histórico central.");
-        return;
-    }
-
-    if(!firebaseAuth.currentUser || !id) return;
-
-    if(!confirm("Ocultar este registro somente da sua tela?\n\nO administrador continuará vendo o registro.")) return;
-
-    try{
-        const uid=firebaseAuth.currentUser.uid;
-        const chave=String(id);
-        historicoOcultoUsuario[chave]=true;
-        salvarHistoricoOcultoLocal();
-        try{
-            await firebaseDB.ref("historicoOculto/"+uid+"/"+chave).set(true);
-        }catch(e){
-            // O Firebase pode estar sem permissão para esta área auxiliar.
-            // O registro continua sendo ocultado localmente sem afetar o Admin.
-            console.warn("Histórico oculto não sincronizado no Firebase; usando armazenamento local:",e);
-        }
-        mostrarHistorico();
-    }catch(erro){
-        console.error("Erro ao ocultar registro do histórico:",erro);
-        alert("❌ Não foi possível ocultar o registro.\n\nVerifique as regras do Firebase Realtime Database.");
-    }
 }
 
 
@@ -5322,183 +5282,21 @@ movimento.style.display=
 // LIMPAR HISTÓRICO
 // ======================================================
 
-function chaveHistoricoOcultoLocal(){
-    const uid = firebaseAuth.currentUser ? firebaseAuth.currentUser.uid : "anonimo";
-    return "historicoOcultoUsuario_" + uid;
-}
-
-function carregarHistoricoOcultoLocal(){
-    try{
-        const bruto = localStorage.getItem(chaveHistoricoOcultoLocal());
-        const dados = bruto ? JSON.parse(bruto) : {};
-        return dados && typeof dados === "object" ? dados : {};
-    }catch(e){
-        console.warn("Não foi possível carregar histórico oculto local:",e);
-        return {};
-    }
-}
-
-function salvarHistoricoOcultoLocal(){
-    try{
-        localStorage.setItem(
-            chaveHistoricoOcultoLocal(),
-            JSON.stringify(historicoOcultoUsuario || {})
-        );
-    }catch(e){
-        console.warn("Não foi possível salvar histórico oculto local:",e);
-    }
-}
-
-function obterHistoricoVisivelAtual(){
-    if(usuarioEhAdmin()){
-        return Array.isArray(historico) ? historico.slice() : [];
-    }
-
-    const ocultos = historicoOcultoUsuario || {};
-
-    return (Array.isArray(historico) ? historico : []).filter(function(item){
-        const id = String(item && item.id != null ? item.id : "");
-        return !id || !ocultos[id];
-    });
-}
-
-function atualizarBotaoLimparHistorico(){
-    const texto = document.getElementById("texto-btn-limpar-historico");
-    if(texto){
-        texto.innerText = usuarioEhAdmin()
-            ? "Limpar Histórico"
-            : "Limpar Meu Histórico";
-    }
-}
-
-async function limparHistorico(){
-    const visiveis = obterHistoricoVisivelAtual();
-
-    if(!visiveis.length){
-        alert(usuarioEhAdmin()
-            ? "O histórico já está vazio."
-            : "Você não possui registros visíveis para ocultar.");
-        return;
-    }
-
-    if(usuarioEhAdmin()){
-        const confirmar=confirm(
-            "Tem certeza que deseja apagar TODO o histórico de movimentações?\n\n" +
-            "O estoque atual NÃO será apagado.\n\n" +
-            "Esta ação afetará o histórico central do sistema."
-        );
-        if(!confirmar)return;
-
-        try{
-            historico=[];
-            await firebaseDB.ref("historico").set([]);
-            mostrarHistorico();
-            alert("✅ Histórico central apagado com sucesso.");
-        }catch(erro){
-            console.error("Erro ao apagar histórico central:",erro);
-            alert("❌ Não foi possível apagar o histórico central.\n\n"+erro.message);
-        }
-        return;
-    }
-
-    const confirmar=confirm(
-        "Ocultar seus registros do histórico?\n\n" +
-        "Os registros NÃO serão apagados do sistema e continuarão disponíveis para o administrador."
-    );
+function limparHistorico(){
+    if(historico.length===0){ alert("O histórico já está vazio."); return; }
+    const confirmar=confirm("Tem certeza que deseja apagar todo o histórico de movimentações?\n\nO estoque atual NÃO será apagado.");
     if(!confirmar)return;
 
-    if(!firebaseAuth.currentUser){
-        alert("❌ Sua sessão expirou. Faça login novamente.");
-        return;
-    }
-
-    const uid=firebaseAuth.currentUser.uid;
-    const atualizacoes={};
-    visiveis.forEach(function(item){
-        if(item && item.id != null){
-            atualizacoes[String(item.id)] = true;
-        }
-    });
-
-    try{
-        Object.assign(historicoOcultoUsuario,atualizacoes);
-        salvarHistoricoOcultoLocal();
-        try{
-            await firebaseDB.ref("historicoOculto/"+uid).update(atualizacoes);
-        }catch(e){
-            // Sem permissão no Firebase, o ocultamento continua localmente.
-            console.warn("Histórico do usuário não sincronizado no Firebase; usando armazenamento local:",e);
-        }
+    if(usuarioEhAdmin()){
+        historico=[];
+        salvarDados();
         mostrarHistorico();
-        alert("✅ Histórico ocultado somente para o seu usuário.\n\nO administrador continua com os registros completos.");
-    }catch(erro){
-        console.error("Erro ao ocultar histórico do usuário:",erro);
-        alert("❌ Não foi possível ocultar seu histórico.\n\nVerifique as regras do Firebase Realtime Database.");
-    }
-}
-
-function exportarHistoricoExcel(){
-    if(!firebaseAuth.currentUser){
-        alert("❌ Sua sessão expirou. Faça login novamente.");
+        alert("✅ Histórico apagado com sucesso.");
         return;
     }
 
-    const lista = obterHistoricoVisivelAtual();
-
-    if(!lista.length){
-        alert("📭 Não há movimentações disponíveis para exportar.");
-        return;
-    }
-
-    const escapar = function(valor){
-        return String(valor == null ? "" : valor)
-            .replace(/&/g,"&amp;")
-            .replace(/</g,"&lt;")
-            .replace(/>/g,"&gt;")
-            .replace(/"/g,"&quot;");
-    };
-
-    let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>';
-    html += '<h2>Histórico de Movimentações</h2>';
-    html += '<table border="1"><tr>' +
-        '<th>Data</th><th>Hora</th><th>Tipo</th><th>Container</th>' +
-        '<th>Código</th><th>Produto</th><th>Lote</th><th>Fornecedor</th>' +
-        '<th>Nota Fiscal</th><th>Quantidade</th><th>Peso KG</th><th>Detalhes</th>' +
-        '</tr>';
-
-    lista.slice().reverse().forEach(function(item){
-        html += '<tr>';
-        [
-            item.data || "",
-            item.hora || "",
-            item.tipo || "",
-            item.num || "",
-            item.codigo || "",
-            item.prod || "",
-            item.lote || "",
-            item.fornecedor || "",
-            item.nf || "",
-            item.qtd || "",
-            item.peso || "",
-            item.detalhes || ""
-        ].forEach(function(valor){
-            html += '<td>'+escapar(valor)+'</td>';
-        });
-        html += '</tr>';
-    });
-
-    html += '</table></body></html>';
-
-    const blob = new Blob([html],{type:"application/vnd.ms-excel;charset=utf-8;"});
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href=url;
-    link.download = (usuarioEhAdmin() ? "historico_admin_" : "meu_historico_") +
-        new Date().toISOString().slice(0,10) + ".xls";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    solicitarAlteracaoAdmin("LIMPAR_HISTORICO", {}, "O operador solicitou a limpeza do histórico de movimentações.");
+    alert("📨 Solicitação enviada ao administrador. O histórico só será apagado após aprovação.");
 }
 
 
@@ -5626,7 +5424,6 @@ async function restaurarBackup(campoArquivo){
         };
         if(Array.isArray(dados.solicitacoesAcessoAdmin)) atualizacoes.solicitacoesAcesso=dados.solicitacoesAcessoAdmin;
         if(Array.isArray(dados.solicitacoesAlteracoesAdmin)) atualizacoes.solicitacoesAlteracoes=dados.solicitacoesAlteracoesAdmin;
-        if(Array.isArray(dados.solicitacoesMercadoriaAdmin)) atualizacoes.solicitacoesMercadoria=dados.solicitacoesMercadoriaAdmin;
         await firebaseDB.ref().update(atualizacoes);
 
         alert("✅ Backup restaurado diretamente no Firebase.\n\nTodos os dispositivos autenticados receberão os dados atualizados em tempo real.");
@@ -5638,85 +5435,6 @@ async function restaurarBackup(campoArquivo){
 }
 
 // ======================================================
-// ======================================================
-// EXPORTAR MOVIMENTAÇÕES + SOLICITAÇÕES FINALIZADAS
-// ======================================================
-
-function escaparCelulaExcel(valor){
-    return String(valor==null?"":valor).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-}
-
-function exportarMovimentacoesESolicitacoesExcel(){
-    if(!usuarioEhAdmin()){
-        alert("❌ Apenas o administrador pode exportar estes dados.");
-        return;
-    }
-
-    const movimentos=Array.isArray(historico)?historico:[];
-    const finalizadas=(Array.isArray(solicitacoesMercadoriaAdminCache)?solicitacoesMercadoriaAdminCache:[])
-        .filter(function(item){return item && (item.status==="atendido" || item.status==="cancelado");});
-
-    if(!movimentos.length && !finalizadas.length){
-        alert("📭 Não existem movimentações ou solicitações finalizadas para exportar.");
-        return;
-    }
-
-    let html='<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>';
-    html+='<h2>Movimentações</h2><table border="1"><tr><th>Data</th><th>Tipo</th><th>Container</th><th>Fornecedor</th><th>Nota Fiscal</th><th>Código</th><th>Produto</th><th>Lote</th><th>Quantidade</th><th>Peso KG</th></tr>';
-    movimentos.forEach(function(item){
-        html+='<tr>'+[
-            formatarData(item.data||item.dataHora||""),item.tipo||"",item.num||item.container||"",item.fornecedor||"",item.nf||"",item.codigo||"",item.prod||item.produto||"",item.lote||"",item.qtd||item.quantidade||"",item.peso||""
-        ].map(function(v){return '<td>'+escaparCelulaExcel(v)+'</td>';}).join('')+'</tr>';
-    });
-    html+='</table><br><h2>Solicitações Finalizadas</h2><table border="1"><tr><th>Status</th><th>Data</th><th>Pedido</th><th>Solicitante</th><th>Tipo</th><th>Container</th><th>Código</th><th>Produto</th><th>Lote</th><th>Quantidade</th><th>Peso KG</th><th>NF</th><th>Processado por</th><th>Processado em</th><th>Observação</th></tr>';
-    finalizadas.forEach(function(item){
-        html+='<tr>'+[
-            item.status==="atendido"?"Atendida":"Cancelada",item.dataHora||"",item.id||"",item.solicitanteNome||item.solicitante||"",obterTipoUsuarioSolicitacao(item)==="comum"?"Usuário comum":"Usuário externo",item.container||"",item.codigo||"",item.produto||"",item.lote||"",item.quantidadeSolicitada||"",item.pesoSolicitado||"",item.nfFinalizacao||item.nf||"",item.processadoPor||"",item.processadoEm||"",item.observacao||""
-        ].map(function(v){return '<td>'+escaparCelulaExcel(v)+'</td>';}).join('')+'</tr>';
-    });
-    html+='</table></body></html>';
-
-    const blob=new Blob([html],{type:"application/vnd.ms-excel;charset=utf-8;"});
-    const url=URL.createObjectURL(blob);
-    const link=document.createElement("a");
-    link.href=url;
-    link.download="movimentacoes_e_solicitacoes_finalizadas.xls";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-}
-
-async function excluirSolicitacoesFinalizadasAdmin(){
-    if(!usuarioEhAdmin()){
-        alert("❌ Apenas o administrador pode excluir solicitações.");
-        return;
-    }
-
-    const finalizadas=(Array.isArray(solicitacoesMercadoriaAdminCache)?solicitacoesMercadoriaAdminCache:[])
-        .filter(function(item){return item && (item.status==="atendido" || item.status==="cancelado");});
-
-    if(!finalizadas.length){
-        alert("📭 Não existem solicitações finalizadas para excluir.");
-        return;
-    }
-
-    if(!confirm("⚠️ Excluir definitivamente "+finalizadas.length+" solicitação(ões) finalizada(s) do Firebase?\n\nEssa ação não poderá ser desfeita."))return;
-
-    try{
-        const atualizacoes={};
-        finalizadas.forEach(function(item){
-            if(item.id!=null)atualizacoes[String(item.id)]=null;
-        });
-        await firebaseDB.ref("solicitacoesMercadoria").update(atualizacoes);
-        alert("✅ Solicitações finalizadas excluídas com sucesso.");
-        renderizarHistoricoSolicitacoesAdmin();
-    }catch(erro){
-        console.error("Erro ao excluir solicitações finalizadas:",erro);
-        alert("❌ Não foi possível excluir as solicitações.\n\n"+erro.message);
-    }
-}
-
 // EXPORTAR EXCEL
 // ======================================================
 // ======================================================
@@ -6217,23 +5935,6 @@ async function cadastrarUsuarioAdmin(){
     }
 }
 
-function toggleListaUsuariosAdmin(){
-    if(!usuarioEhAdmin()) return;
-    const area=document.getElementById("conteudo-lista-usuarios-admin");
-    const botao=document.getElementById("btn-toggle-lista-usuarios");
-    if(!area) return;
-    const aberto=area.style.display !== "none" && area.style.display !== "";
-    if(aberto){
-        area.style.display="none";
-        if(botao) botao.innerText="👁️ Mostrar Usuários Cadastrados";
-        return;
-    }
-    area.style.display="block";
-    if(botao) botao.innerText="🙈 Ocultar Usuários Cadastrados";
-    renderizarUsuariosCadastradosAdmin();
-}
-window.toggleListaUsuariosAdmin=toggleListaUsuariosAdmin;
-
 async function renderizarUsuariosCadastradosAdmin(){
     const area=document.getElementById("lista-usuarios-cadastrados");
     if(!area || !usuarioEhAdmin())return;
@@ -6244,7 +5945,7 @@ async function renderizarUsuariosCadastradosAdmin(){
         const status=item.ativo === false ? "🚫 Bloqueado" : "✅ Ativo";
         return '<div class="produto-item">'+
             '<strong>'+escaparHtmlSolicitacao(item.email || item.usuario)+'</strong> — '+
-            (item.tipo === "admin" ? "👑 Administrador" : (item.tipo === "externo" ? "🌐 Usuário externo" : "👤 Usuário comum"))+'<br>'+
+            (item.tipo === "admin" ? "👑 Administrador" : "👤 Usuário comum")+'<br>'+
             '<span style="font-size:11px;color:var(--texto-fraco);">'+status+'</span>'+
             '<div class="acoes-item">'+
             '<button class="btn-acao" onclick="redefinirSenhaUsuarioAdmin('+index+')" title="Enviar redefinição de senha">🔑</button>'+
@@ -6320,6 +6021,59 @@ function garantirAdminPadrao(){return carregarUsuariosCadastrados();}
 
 let listenerEstoqueExterno = null;
 
+function abrirModalSolicitacaoMercadoria(){
+    const modal=document.getElementById("modal-solicitacao-externo");
+    if(!modal)return;
+    modal.style.display="flex";
+    modal.setAttribute("aria-hidden","false");
+    document.body.style.overflow="hidden";
+    preencherContainersSolicitacaoExterno();
+    carregarMercadoriasContainerExterno();
+}
+
+function fecharModalSolicitacaoMercadoria(){
+    const modal=document.getElementById("modal-solicitacao-externo");
+    if(!modal)return;
+    modal.style.display="none";
+    modal.setAttribute("aria-hidden","true");
+    document.body.style.overflow="";
+}
+
+function toggleMinhasSolicitacoesExterno(){
+    const area=document.getElementById("lista-minhas-solicitacoes");
+    const botao=document.getElementById("btn-toggle-minhas-solicitacoes-externo");
+    if(!area)return;
+    const oculto=area.style.display==="none";
+    area.style.display=oculto?"":"none";
+    if(botao)botao.innerText=oculto?"👁️ Ocultar Minhas Solicitações":"👁️ Mostrar Minhas Solicitações";
+}
+
+function atualizarResumoContainerSolicitacaoExterno(item){
+    const area=document.getElementById("resumo-container-solicitacao");
+    if(!area)return;
+    if(!item){
+        area.innerHTML="<span>📦 Selecione uma mercadoria para visualizar o saldo disponível.</span>";
+        return;
+    }
+    area.innerHTML=
+        "📦 <strong>Container "+String(item.num||"").padStart(2,"0")+"</strong>"+
+        " &nbsp;|&nbsp; 📋 "+escaparHtmlExterno(item.prod||"")+
+        (item.codigo?" &nbsp;|&nbsp; 🔢 Código: "+escaparHtmlExterno(item.codigo):"")+
+        " &nbsp;|&nbsp; 🏷️ Lote: "+escaparHtmlExterno(item.lote||"")+
+        "<br>"+
+        "📦 Saldo: "+Number(item.qtd||0)+
+        " volume(s) &nbsp;|&nbsp; ⚖️ "+Number(item.peso||0).toLocaleString("pt-BR",{minimumFractionDigits:2})+" KG";
+}
+
+document.addEventListener("click",function(e){
+    const modal=document.getElementById("modal-solicitacao-externo");
+    if(modal && e.target===modal)fecharModalSolicitacaoMercadoria();
+});
+
+document.addEventListener("keydown",function(e){
+    if(e.key==="Escape")fecharModalSolicitacaoMercadoria();
+});
+
 function iniciarTelaUsuarioExterno(){
 
     criarContainersExternos();
@@ -6342,16 +6096,18 @@ function iniciarTelaUsuarioExterno(){
 
         campoContainer.onchange =
             function(){
+
                 carregarMercadoriasContainerExterno();
-                atualizarDetalhesSolicitacaoExterno();
+                atualizarResumoContainerSolicitacaoExterno(null);
+
             };
 
     }
 
-    const campoProduto=document.getElementById("solicitacao-produto");
+    const campoProduto = document.getElementById("solicitacao-produto");
     if(campoProduto){
-        campoProduto.onchange=function(){
-            atualizarDetalhesSolicitacaoExterno();
+        campoProduto.onchange = function(){
+            atualizarResumoContainerSolicitacaoExterno(obterItemSolicitacaoExterno());
         };
     }
 
@@ -6400,6 +6156,8 @@ function criarContainersExternos(){
 
         grade.appendChild(box);
     }
+
+    inicializarVisualizacaoContainers('externo');
 
 }
 
@@ -6630,6 +6388,7 @@ function renderizarEstoqueExterno(){
     atualizarContadorExterno();
 
     filtrarEstoqueExterno();
+    aplicarFiltrosContainers('externo');
 
 }
 
@@ -6675,54 +6434,23 @@ function atualizarContadorExterno(){
 
 function filtrarEstoqueExterno(){
 
-    const campo =
-        document.getElementById(
-            "campo-busca-externo"
-        );
+const campo=document.getElementById("campo-busca-externo");
+if(!campo)return;
+const texto=campo.value.toLowerCase().trim();
+const cfg=configuracaoVisualizacaoContainers.externo;
 
-    if(!campo)return;
-
-    const texto =
-        campo.value
-            .toLowerCase()
-            .trim();
-
-
-    for(let i = 1; i <= 60; i++){
-
-        const container =
-            document.getElementById(
-                "externo-c-" + i
-            );
-
-        if(!container)continue;
-
-
-        const conteudo =
-            container.innerText
-                .toLowerCase();
-
-
-        if(
-            texto === "" ||
-            conteudo.includes(texto)
-        ){
-
-            container.classList.remove(
-                "escondido"
-            );
-
-        }else{
-
-            container.classList.add(
-                "escondido"
-            );
-
-        }
-
-    }
-
+for(let i=1;i<=60;i++){
+    const container=document.getElementById("externo-c-"+i);
+    if(!container)continue;
+    const conteudo=container.innerText.toLowerCase();
+    const buscaOk=(texto==="" || conteudo.includes(texto));
+    const cheio=containerEstaCheio('externo',i);
+    const statusOk=cfg.status==='todos' || (cfg.status==='cheios' && cheio) || (cfg.status==='vazios' && !cheio);
+    const selecaoOk=cfg.selecionados.has(i);
+    container.classList.toggle("escondido",!(buscaOk && statusOk && selecaoOk));
 }
+}
+
 
 
 // ======================================================
@@ -6999,68 +6727,6 @@ function obterItemSolicitacaoExterno(){
         }
     ) || null;
 
-}
-
-// ======================================================
-// TELA DE SOLICITAÇÃO DE MERCADORIA — USUÁRIO EXTERNO
-// ======================================================
-
-function abrirTelaSolicitarMercadoriaExterno(){
-    const modal=document.getElementById("modal-solicitacao-mercadoria-externo");
-    if(!modal)return;
-    modal.style.display="block";
-    carregarContainersSolicitacaoExterno();
-    atualizarDetalhesSolicitacaoExterno();
-    modal.scrollIntoView({behavior:"smooth",block:"start"});
-}
-
-function fecharTelaSolicitarMercadoriaExterno(){
-    const modal=document.getElementById("modal-solicitacao-mercadoria-externo");
-    if(modal) modal.style.display="none";
-}
-
-function toggleMinhasSolicitacoesExterno(){
-    const area=document.getElementById("painel-minhas-solicitacoes-externo");
-    const botao=document.getElementById("btn-toggle-minhas-solicitacoes");
-    if(!area)return;
-    const fechado=area.style.display==="none" || area.style.display==="";
-    area.style.display=fechado?"block":"none";
-    if(botao)botao.innerText=fechado?"🙈 Ocultar Minhas Solicitações":"📋 Minhas Solicitações";
-}
-
-function atualizarDetalhesSolicitacaoExterno(){
-    const produto=document.getElementById("solicitacao-produto");
-    const codigo=document.getElementById("solicitacao-detalhe-codigo");
-    const lote=document.getElementById("solicitacao-detalhe-lote");
-    const saldo=document.getElementById("solicitacao-detalhe-saldo");
-    if(!produto)return;
-    const id=produto.value;
-    const item=(estoque||[]).find(function(x){return String(x.id||"")===String(id);});
-    if(!item){
-        if(codigo)codigo.innerText="—";
-        if(lote)lote.innerText="—";
-        if(saldo)saldo.innerText="—";
-        return;
-    }
-    if(codigo)codigo.innerText=item.codigo||"—";
-    if(lote)lote.innerText=item.lote||"—";
-    if(saldo)saldo.innerText=Number(item.qtd||0)+" vol. / "+Number(item.peso||0).toLocaleString("pt-BR",{minimumFractionDigits:2})+" KG";
-}
-
-function carregarContainersSolicitacaoExterno(){
-    const select=document.getElementById("solicitacao-container");
-    if(!select)return;
-    const atual=select.value;
-    const containers=[];
-    (estoque||[]).forEach(function(item){
-        const num=String(item.num||"").trim();
-        if(num && !containers.includes(num))containers.push(num);
-    });
-    containers.sort(function(a,b){return Number(a)-Number(b);});
-    select.innerHTML='<option value="">Selecione o container</option>'+
-        containers.map(function(num){return '<option value="'+escaparHtmlSolicitacao(num)+'">Container '+escaparHtmlSolicitacao(num)+'</option>';}).join("");
-    if(containers.includes(atual))select.value=atual;
-    carregarMercadoriasContainerExterno();
 }
 
 // ======================================================
@@ -7384,6 +7050,7 @@ async function enviarSolicitacaoMercadoria(){
 
 
         limparSolicitacaoMercadoria();
+        fecharModalSolicitacaoMercadoria();
 
 
     }catch(erro){
@@ -7475,61 +7142,16 @@ function limparSolicitacaoMercadoria(){
         observacao.value = "";
     }
 
+    atualizarResumoContainerSolicitacaoExterno(null);
+
 }
 
 
 // ======================================================
-// MINHAS SOLICITAÇÕES — USUÁRIO EXTERNO
+// CARREGAR "MINHAS SOLICITAÇÕES"
 // ======================================================
-// IMPORTANTE:
-// A exclusão feita pelo usuário externo NÃO apaga e NÃO altera
-// o registro do Firebase. O registro continua disponível para o Admin.
-// A ocultação é salva somente no navegador do próprio usuário.
 
 let listenerSolicitacoesExterno = null;
-let refSolicitacoesExterno = null;
-
-function chaveOcultasSolicitacoesExterno(){
-    const uid = firebaseAuth.currentUser
-        ? String(firebaseAuth.currentUser.uid || '')
-        : '';
-    return 'solicitacoesMercadoriaOcultas_' + uid;
-}
-
-function carregarIdsOcultosSolicitacoesExterno(){
-    try{
-        const bruto = localStorage.getItem(
-            chaveOcultasSolicitacoesExterno()
-        );
-        const lista = bruto ? JSON.parse(bruto) : [];
-        return Array.isArray(lista)
-            ? lista.map(function(id){ return String(id); })
-            : [];
-    }catch(e){
-        console.error('Erro ao carregar solicitações ocultadas:', e);
-        return [];
-    }
-}
-
-function salvarIdsOcultosSolicitacoesExterno(ids){
-    try{
-        const unicos = Array.from(
-            new Set(
-                (Array.isArray(ids) ? ids : [])
-                    .map(function(id){ return String(id); })
-                    .filter(Boolean)
-            )
-        );
-
-        localStorage.setItem(
-            chaveOcultasSolicitacoesExterno(),
-            JSON.stringify(unicos)
-        );
-    }catch(e){
-        console.error('Erro ao salvar solicitações ocultadas:', e);
-        throw e;
-    }
-}
 
 function iniciarSolicitacoesExterno(){
 
@@ -7537,533 +7159,239 @@ function iniciarSolicitacoesExterno(){
         return;
     }
 
-    const uid = String(firebaseAuth.currentUser.uid || '');
-    if(!uid) return;
+    const uid = firebaseAuth.currentUser.uid;
 
-    // Remove listener anterior corretamente, caso a tela seja reiniciada.
-    if(refSolicitacoesExterno && listenerSolicitacoesExterno){
-        try{
-            refSolicitacoesExterno.off(
-                'value',
-                listenerSolicitacoesExterno
-            );
-        }catch(e){
-            console.warn('Não foi possível remover listener anterior:', e);
-        }
-    }
-
-    refSolicitacoesExterno = firebaseDB
-        .ref('solicitacoesMercadoria')
-        .orderByChild('solicitanteUid')
+    const ref = firebaseDB
+        .ref("solicitacoesMercadoria")
+        .orderByChild("solicitanteUid")
         .equalTo(uid);
+
+    if(listenerSolicitacoesExterno){
+        try{
+            listenerSolicitacoesExterno();
+        }catch(e){}
+    }
 
     listenerSolicitacoesExterno = function(snapshot){
 
-        const todas = normalizarListaFirebase(
-            snapshot.val()
+        const dados = snapshot.val();
+
+        const minhas = normalizarListaFirebase(
+            dados
         );
 
-        const idsOcultos = carregarIdsOcultosSolicitacoesExterno();
-
-        const minhas = todas.filter(function(item){
-
-            if(!item) return false;
-
-            // Segurança adicional: só exibe solicitações do próprio UID.
-            if(String(item.solicitanteUid || '') !== uid){
-                return false;
-            }
-
-            // Se o usuário ocultou no próprio navegador, não exibe.
-            if(idsOcultos.indexOf(String(item.id || '')) !== -1){
-                return false;
-            }
-
-            return true;
-        });
-
-        window.__minhasSolicitacoesExterno = minhas.slice();
-
-        renderizarMinhasSolicitacoesExterno(minhas);
+        renderizarMinhasSolicitacoesExterno(
+            minhas
+        );
     };
 
-    refSolicitacoesExterno.on(
-        'value',
+    ref.on(
+        "value",
         listenerSolicitacoesExterno,
         function(erro){
+
             console.error(
-                'Erro nas solicitações do usuário externo:',
+                "Erro nas solicitações do usuário externo:",
                 erro
             );
+
         }
     );
 }
 
-// ======================================================
-// EXPORTAR MINHAS SOLICITAÇÕES — USUÁRIO EXTERNO
-// ======================================================
 
-function escaparExcelExterno(valor){
-    return String(valor == null ? '' : valor)
-        .replace(/&/g,'&amp;')
-        .replace(/</g,'&lt;')
-        .replace(/>/g,'&gt;')
-        .replace(/"/g,'&quot;');
-}
-
-function obterMinhasSolicitacoesExternoAtualizadas(){
-
-    const uid = firebaseAuth.currentUser
-        ? String(firebaseAuth.currentUser.uid || '')
-        : '';
-
-    if(!uid) return [];
-
-    const idsOcultos = carregarIdsOcultosSolicitacoesExterno();
-
-    return (
-        Array.isArray(window.__minhasSolicitacoesExterno)
-            ? window.__minhasSolicitacoesExterno
-            : []
-    ).filter(function(item){
-
-        return item &&
-            String(item.solicitanteUid || '') === uid &&
-            idsOcultos.indexOf(String(item.id || '')) === -1;
-    });
-}
-
-function exportarMinhasSolicitacoesExternoExcel(){
-
-    if(!firebaseAuth.currentUser){
-        alert('❌ Sua sessão expirou. Faça login novamente.');
-        return;
-    }
-
-    const lista = obterMinhasSolicitacoesExternoAtualizadas();
-
-    if(!lista.length){
-        alert('📭 Você ainda não possui solicitações para exportar.');
-        return;
-    }
-
-    let htmlExcel =
-        '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>' +
-        '<h2>Minhas Solicitações de Mercadoria</h2>' +
-        '<table border="1">' +
-        '<tr>' +
-        '<th>Status</th>' +
-        '<th>Data</th>' +
-        '<th>Container</th>' +
-        '<th>Código</th>' +
-        '<th>Produto</th>' +
-        '<th>Lote</th>' +
-        '<th>Quantidade</th>' +
-        '<th>Peso KG</th>' +
-        '<th>Nota Fiscal</th>' +
-        '<th>Observação</th>' +
-        '</tr>';
-
+function renderizarMinhasSolicitacoesExterno(
     lista
-        .slice()
-        .sort(function(a,b){
-            return String(b.dataHora || '')
-                .localeCompare(String(a.dataHora || ''));
-        })
-        .forEach(function(pedido){
-
-            const status =
-                pedido.status === 'atendido'
-                    ? 'Atendida'
-                    : pedido.status === 'cancelado'
-                        ? 'Cancelada'
-                        : 'Pendente';
-
-            const data = pedido.dataHora
-                ? new Date(pedido.dataHora).toLocaleString('pt-BR')
-                : '';
-
-            const nf =
-                pedido.status === 'atendido'
-                    ? (pedido.nfFinalizacao || pedido.nf || '')
-                    : '';
-
-            htmlExcel += '<tr>';
-
-            [
-                status,
-                data,
-                pedido.container || '',
-                pedido.codigo || '',
-                pedido.produto || '',
-                pedido.lote || '',
-                pedido.quantidadeSolicitada || '',
-                pedido.pesoSolicitado || '',
-                nf,
-                pedido.observacao || ''
-            ].forEach(function(valor){
-                htmlExcel +=
-                    '<td>' + escaparExcelExterno(valor) + '</td>';
-            });
-
-            htmlExcel += '</tr>';
-        });
-
-    htmlExcel += '</table></body></html>';
-
-    const blob = new Blob(
-        [htmlExcel],
-        {type:'application/vnd.ms-excel;charset=utf-8;'}
-    );
-
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-
-    link.href = url;
-    link.download =
-        'minhas_solicitacoes_' +
-        new Date().toISOString().slice(0,10) +
-        '.xls';
-
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    URL.revokeObjectURL(url);
-}
-
-// ======================================================
-// OCULTAR UMA SOLICITAÇÃO FINALIZADA
-// NÃO APAGA DO FIREBASE / NÃO AFETA O ADMIN
-// ======================================================
-
-async function excluirMinhaSolicitacaoExterno(id){
-
-    if(!firebaseAuth.currentUser || !id){
-        alert('❌ Não foi possível identificar sua solicitação.');
-        return;
-    }
-
-    const uid = String(firebaseAuth.currentUser.uid || '');
-    const lista = obterMinhasSolicitacoesExternoAtualizadas();
-
-    const pedido = lista.find(function(item){
-        return String(item.id || '') === String(id);
-    });
-
-    if(!pedido){
-        alert('❌ Esta solicitação não está disponível para exclusão.');
-        return;
-    }
-
-    if(String(pedido.solicitanteUid || '') !== uid){
-        alert('❌ Você não pode excluir esta solicitação.');
-        return;
-    }
-
-    if(
-        pedido.status !== 'atendido' &&
-        pedido.status !== 'cancelado'
-    ){
-        alert(
-            '⚠️ Solicitações pendentes não podem ser excluídas.\n\n' +
-            'Aguarde o processamento pelo administrador.'
-        );
-        return;
-    }
-
-    if(!confirm(
-        'Ocultar esta solicitação da sua lista?\n\n' +
-        'O registro continuará armazenado no painel do administrador.'
-    )){
-        return;
-    }
-
-    try{
-
-        const idsOcultos =
-            carregarIdsOcultosSolicitacoesExterno();
-
-        if(idsOcultos.indexOf(String(id)) === -1){
-            idsOcultos.push(String(id));
-        }
-
-        // NÃO fazemos remove(), set() ou update() no Firebase.
-        // Isso evita PERMISSION_DENIED e preserva o registro do Admin.
-        salvarIdsOcultosSolicitacoesExterno(idsOcultos);
-
-        const novas =
-            (Array.isArray(window.__minhasSolicitacoesExterno)
-                ? window.__minhasSolicitacoesExterno
-                : []
-            ).filter(function(item){
-                return String(item.id || '') !== String(id);
-            });
-
-        window.__minhasSolicitacoesExterno = novas;
-        renderizarMinhasSolicitacoesExterno(novas);
-
-        alert(
-            '✅ Solicitação removida da sua lista.\n\n' +
-            'O registro continua armazenado para o administrador.'
-        );
-
-    }catch(erro){
-
-        console.error(
-            'Erro ao ocultar solicitação do usuário externo:',
-            erro
-        );
-
-        alert(
-            '❌ Não foi possível ocultar a solicitação.\n\n' +
-            erro.message
-        );
-    }
-}
-
-// ======================================================
-// OCULTAR TODAS AS FINALIZADAS
-// NÃO APAGA DO FIREBASE / NÃO AFETA O ADMIN
-// ======================================================
-
-async function excluirMinhasSolicitacoesExterno(){
-
-    if(!firebaseAuth.currentUser){
-        alert('❌ Sua sessão expirou. Faça login novamente.');
-        return;
-    }
-
-    const lista = obterMinhasSolicitacoesExternoAtualizadas();
-
-    const finalizadas = lista.filter(function(item){
-        return item &&
-            (item.status === 'atendido' ||
-             item.status === 'cancelado');
-    });
-
-    if(!finalizadas.length){
-        alert('📭 Não existem solicitações finalizadas para excluir.');
-        return;
-    }
-
-    if(!confirm(
-        'Ocultar ' + finalizadas.length +
-        ' solicitação(ões) finalizada(s) da sua lista?\n\n' +
-        'As solicitações pendentes serão preservadas.\n' +
-        'Os registros continuarão armazenados para o administrador.'
-    )){
-        return;
-    }
-
-    try{
-
-        const idsOcultos =
-            carregarIdsOcultosSolicitacoesExterno();
-
-        finalizadas.forEach(function(item){
-            const id = String(item.id || '');
-            if(id && idsOcultos.indexOf(id) === -1){
-                idsOcultos.push(id);
-            }
-        });
-
-        // Somente localStorage: nenhum registro é removido do Firebase.
-        salvarIdsOcultosSolicitacoesExterno(idsOcultos);
-
-        const novas =
-            (Array.isArray(window.__minhasSolicitacoesExterno)
-                ? window.__minhasSolicitacoesExterno
-                : []
-            ).filter(function(item){
-                return !idsOcultos.includes(String(item.id || ''));
-            });
-
-        window.__minhasSolicitacoesExterno = novas;
-        renderizarMinhasSolicitacoesExterno(novas);
-
-        alert(
-            '✅ Solicitações finalizadas removidas da sua lista.\n\n' +
-            'Os registros continuam armazenados para o administrador.'
-        );
-
-    }catch(erro){
-
-        console.error(
-            'Erro ao ocultar solicitações externas:',
-            erro
-        );
-
-        alert(
-            '❌ Não foi possível ocultar as solicitações.\n\n' +
-            erro.message
-        );
-    }
-}
-
-// ======================================================
-// RENDERIZAR MINHAS SOLICITAÇÕES
-// ======================================================
-
-function renderizarMinhasSolicitacoesExterno(lista){
+){
 
     const area =
         document.getElementById(
-            'lista-minhas-solicitacoes'
+            "lista-minhas-solicitacoes"
         );
 
     if(!area){
         return;
     }
 
-    const idsOcultos =
-        carregarIdsOcultosSolicitacoesExterno();
 
-    const visiveis =
-        (Array.isArray(lista) ? lista : [])
-            .filter(function(pedido){
-                return pedido &&
-                    idsOcultos.indexOf(String(pedido.id || '')) === -1;
-            });
+    if(!lista.length){
 
-    if(!visiveis.length){
+        area.innerHTML = `
 
-        area.innerHTML =
-            '<div class="vazio">' +
-            'Nenhuma solicitação enviada.' +
-            '</div>';
+            <div class="vazio">
+                Nenhuma solicitação enviada.
+            </div>
+
+        `;
 
         return;
     }
 
+
     const ordenada =
-        visiveis
+        lista
             .slice()
-            .sort(function(a,b){
-                return String(b.dataHora || '')
-                    .localeCompare(String(a.dataHora || ''));
-            });
+            .sort(
+                function(a,b){
+
+                    return String(
+                        b.dataHora || ""
+                    ).localeCompare(
+                        String(
+                            a.dataHora || ""
+                        )
+                    );
+
+                }
+            );
+
 
     area.innerHTML =
-        ordenada.map(function(pedido){
+        ordenada
+            .map(
+                function(pedido){
 
-            let classeStatus = 'status-pendente';
-            let textoStatus = '⏳ Pendente';
+                    let classeStatus =
+                        "status-pendente";
 
-            if(pedido.status === 'atendido'){
-                classeStatus = 'status-atendido';
-                textoStatus = '✅ Atendido';
-            }else if(pedido.status === 'cancelado'){
-                classeStatus = 'status-cancelado';
-                textoStatus = '❌ Cancelado';
-            }
+                    let textoStatus =
+                        "⏳ Pendente";
 
-            const idSeguro =
-                escaparHtmlExterno(String(pedido.id || ''));
 
-            let botaoExcluir = '';
+                    if(
+                        pedido.status ===
+                        "atendido"
+                    ){
 
-            if(
-                pedido.status === 'atendido' ||
-                pedido.status === 'cancelado'
-            ){
-                botaoExcluir =
-                    '<div style="margin-top:12px;">' +
-                    '<button type="button" ' +
-                    'class="btn-apagar-historico" ' +
-                    'onclick="excluirMinhaSolicitacaoExterno(\'' +
-                    idSeguro.replace(/'/g,'&#039;') +
-                    '\')">' +
-                    '🗑️ Excluir este registro' +
-                    '</button>' +
-                    '</div>';
-            }
+                        classeStatus =
+                            "status-atendido";
 
-            return `
-                <div class="movimento">
+                        textoStatus =
+                            "✅ Atendido";
 
-                    <div class="tipo ${classeStatus}">
-                        ${textoStatus}
-                    </div>
+                    }else if(
+                        pedido.status ===
+                        "cancelado"
+                    ){
 
-                    <br>
+                        classeStatus =
+                            "status-cancelado";
 
-                    <strong>
-                        📦 Container
-                        ${String(pedido.container || '').padStart(2,'0')}
-                    </strong>
+                        textoStatus =
+                            "❌ Cancelado";
 
-                    <br>
-
-                    📋
-                    ${escaparHtmlExterno(pedido.produto || '')}
-
-                    ${
-                        pedido.codigo
-                            ? ' (' +
-                              escaparHtmlExterno(pedido.codigo) +
-                              ')'
-                            : ''
                     }
 
-                    <br>
 
-                    🏷️ Lote:
-                    ${escaparHtmlExterno(pedido.lote || '')}
+                    return `
 
-                    <br>
+                        <div class="movimento">
 
-                    🔢 Solicitado:
-                    ${Number(pedido.quantidadeSolicitada || 0)}
+                            <div
+                                class="tipo ${classeStatus}"
+                            >
+                                ${textoStatus}
+                            </div>
 
-                    <br>
+                            <br>
 
-                    ⚖️ Peso:
-                    ${Number(pedido.pesoSolicitado || 0).toLocaleString(
-                        'pt-BR',
-                        {minimumFractionDigits:2}
-                    )}
-                    KG
+                            <strong>
+                                📦 Container
+                                ${String(
+                                    pedido.container || ""
+                                ).padStart(2,"0")}
+                            </strong>
 
-                    <br>
+                            <br>
 
-                    📅
-                    ${pedido.dataHora
-                        ? new Date(pedido.dataHora).toLocaleString('pt-BR')
-                        : ''}
+                            📋
+                            ${escaparHtmlExterno(
+                                pedido.produto || ""
+                            )}
 
-                    ${
-                        pedido.status === 'atendido'
-                            ? `
-                                <br>
-                                🧾 Nota Fiscal:
-                                <strong>
-                                    ${escaparHtmlExterno(
-                                        pedido.nfFinalizacao ||
-                                        pedido.nf ||
-                                        'Não informada'
-                                    )}
-                                </strong>
-                              `
-                            : ''
-                    }
+                            ${
+                                pedido.codigo
+                                ?
+                                " (" +
+                                escaparHtmlExterno(
+                                    pedido.codigo
+                                ) +
+                                ")"
+                                :
+                                ""
+                            }
 
-                    ${
-                        pedido.observacao
-                            ? `
+                            <br>
+
+                            🏷️ Lote:
+                            ${escaparHtmlExterno(
+                                pedido.lote || ""
+                            )}
+
+                            <br>
+
+                            🔢 Solicitado:
+                            ${Number(
+                                pedido.quantidadeSolicitada || 0
+                            )}
+
+                            <br>
+
+                            ⚖️ Peso:
+                            ${Number(
+                                pedido.pesoSolicitado || 0
+                            ).toLocaleString(
+                                "pt-BR",
+                                {
+                                    minimumFractionDigits:2
+                                }
+                            )}
+                            KG
+
+                            <br>
+
+                            📅
+                            ${pedido.dataHora
+                                ?
+                                new Date(
+                                    pedido.dataHora
+                                ).toLocaleString(
+                                    "pt-BR"
+                                )
+                                :
+                                ""
+                            }
+
+                            <br>
+
+                            🔖 Pedido:
+                            ${escaparHtmlExterno(
+                                pedido.id || ""
+                            )}
+
+                            ${
+                                pedido.observacao
+                                ?
+                                `
                                 <hr>
+
                                 💬
-                                ${escaparHtmlExterno(pedido.observacao)}
-                              `
-                            : ''
-                    }
+                                ${escaparHtmlExterno(
+                                    pedido.observacao
+                                )}
+                                `
+                                :
+                                ""
+                            }
 
-                    ${botaoExcluir}
+                        </div>
 
-                </div>
-            `;
-        })
-        .join('');
+                    `;
+
+                }
+            )
+            .join("");
+
 }
 
 
@@ -8161,10 +7489,10 @@ tratarEnvioLogin();
 
 
 setInterval(function(){
-    // NÃO recriar a lista de solicitações aqui.
-    // O listener do Firebase já atualiza a lista em tempo real.
-    // Recriar a lista a cada 2 segundos destruía o campo de NF
-    // enquanto o administrador tentava digitar.
+    if(usuarioEhAdmin() && document.getElementById("painel-admin-usuarios")?.style.display !== "none"){
+        renderizarSolicitacoesAcessoAdmin();
+        renderizarSolicitacoesAlteracoesAdmin();
+    }
     atualizarIndicadorAdmin();
 }, 2000);
 
@@ -8173,25 +7501,6 @@ setInterval(function(){
 window.toggleAdminUsuarios = toggleAdminUsuarios;
 window.tratarEnvioLogin = tratarEnvioLogin;
 window.sairDoSistema = sairDoSistema;
-window.toggleSolicitacoes = toggleSolicitacoes;
-window.toggleHistoricoSolicitacoesAdmin = toggleHistoricoSolicitacoesAdmin;
-window.abrirTelaSolicitarMercadoriaExterno = abrirTelaSolicitarMercadoriaExterno;
-window.fecharTelaSolicitarMercadoriaExterno = fecharTelaSolicitarMercadoriaExterno;
-window.toggleMinhasSolicitacoesExterno = toggleMinhasSolicitacoesExterno;
-window.exportarMinhasSolicitacoesExternoExcel = exportarMinhasSolicitacoesExternoExcel;
-window.excluirMinhaSolicitacaoExterno = excluirMinhaSolicitacaoExterno;
-window.excluirMinhasSolicitacoesExterno = excluirMinhasSolicitacoesExterno;
-window.enviarSolicitacaoMercadoria = enviarSolicitacaoMercadoria;
-window.limparSolicitacaoMercadoria = limparSolicitacaoMercadoria;
-window.aceitarSolicitacaoMercadoriaAdmin = aceitarSolicitacaoMercadoriaAdmin;
-window.finalizarSolicitacaoMercadoriaAdmin = finalizarSolicitacaoMercadoriaAdmin;
-window.atenderSolicitacaoMercadoriaAdmin = atenderSolicitacaoMercadoriaAdmin;
-window.cancelarSolicitacaoMercadoriaAdmin = cancelarSolicitacaoMercadoriaAdmin;
-window.exportarMovimentacoesESolicitacoesExcel = exportarMovimentacoesESolicitacoesExcel;
-window.exportarHistoricoExcel = exportarHistoricoExcel;
-window.limparHistorico = limparHistorico;
-window.ocultarRegistroHistoricoUsuario = ocultarRegistroHistoricoUsuario;
-window.excluirSolicitacoesFinalizadasAdmin = excluirSolicitacoesFinalizadasAdmin;
 console.log("✅ CONTROLE DE CONTAINERS — FIREBASE V6 carregado.");
 </script>
 
