@@ -1502,6 +1502,67 @@ function normalizarListaFirebase(valor){
     return [];
 }
 
+// ======================================================
+// ABRIR / FECHAR SOLICITAÇÕES DE MERCADORIA
+// ======================================================
+
+function toggleSolicitacoes(){
+
+    const conteudo = document.getElementById(
+        "conteudo-solicitacoes"
+    );
+
+    const botao = document.getElementById(
+        "btn-toggle-solicitacoes"
+    );
+
+    if(!conteudo){
+
+        console.error(
+            "❌ Não encontrei #conteudo-solicitacoes"
+        );
+
+        return;
+    }
+
+    if(conteudo.style.display === "none"){
+
+        conteudo.style.display = "block";
+
+        if(botao){
+            botao.innerText =
+                "🙈 Ocultar Solicitações";
+        }
+
+        console.log(
+            "📦 Lista de solicitações aberta."
+        );
+
+        if(
+            typeof renderizarSolicitacoesMercadoriaAdmin ===
+            "function"
+        ){
+
+            renderizarSolicitacoesMercadoriaAdmin();
+
+        }
+
+    }else{
+
+        conteudo.style.display = "none";
+
+        if(botao){
+            botao.innerText =
+                "👁️ Mostrar Solicitações";
+        }
+
+        console.log(
+            "📦 Lista de solicitações fechada."
+        );
+    }
+
+}
+    
 async function iniciarSincronizacaoFirebase(){
     const usuarioFirebase=firebaseAuth.currentUser;
     if(firebaseListenersAtivos || !usuarioFirebase) return;
