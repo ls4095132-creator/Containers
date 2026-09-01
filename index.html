@@ -998,6 +998,71 @@ console.log("🔥 Firebase conectado!");
     .layout-admin-operacional > .painel-entrada{grid-column:1;}
 }
 </style>
+
+<style id="ajuste-layout-registro">
+/* Layout do REGISTRO seguindo o mesmo padrão compacto dos cards de Solicitações/Alterações */
+.layout-admin-operacional > .painel-entrada{
+    background:var(--bg-painel);
+    border:1px solid var(--borda-forte);
+    border-radius:12px;
+    padding:14px;
+    box-shadow:0 4px 14px rgba(0,0,0,.25);
+}
+.layout-admin-operacional > .painel-entrada h2{
+    margin:0 0 10px;
+    padding:8px 10px;
+    border-radius:8px;
+    background:var(--azul-fraco);
+    border:1px solid var(--borda);
+}
+.layout-admin-operacional > .painel-entrada .linha-form{
+    gap:8px;
+    margin-bottom:4px;
+}
+.layout-admin-operacional > .painel-entrada .linha-identificacao{
+    grid-template-columns:1fr 1fr;
+}
+.layout-admin-operacional > .painel-entrada .linha-produto{
+    grid-template-columns:.9fr 1.7fr 1fr;
+}
+.layout-admin-operacional > .painel-entrada .linha-quantidade{
+    grid-template-columns:1fr 1fr;
+    max-width:none;
+}
+.layout-admin-operacional > .painel-entrada label{
+    font-size:11px;
+}
+.layout-admin-operacional > .painel-entrada input{
+    height:29px;
+    min-height:29px;
+    margin:2px 0 4px;
+}
+.layout-admin-operacional > .painel-entrada .container-botoes{
+    margin-top:7px;
+    padding-top:8px;
+    border-top:1px solid var(--borda);
+    gap:7px;
+}
+.layout-admin-operacional > .painel-entrada .container-botoes button{
+    padding:7px 10px;
+    font-size:11.5px;
+}
+@media(max-width:1100px){
+    .layout-admin-operacional > .painel-entrada .linha-identificacao,
+    .layout-admin-operacional > .painel-entrada .linha-produto,
+    .layout-admin-operacional > .painel-entrada .linha-quantidade{
+        grid-template-columns:1fr 1fr;
+    }
+}
+@media(max-width:700px){
+    .layout-admin-operacional > .painel-entrada .linha-identificacao,
+    .layout-admin-operacional > .painel-entrada .linha-produto,
+    .layout-admin-operacional > .painel-entrada .linha-quantidade{
+        grid-template-columns:1fr;
+    }
+}
+</style>
+
 </head>
 
 <body>
