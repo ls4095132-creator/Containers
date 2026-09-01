@@ -811,41 +811,6 @@ Entrar
         Não permite alterar, excluir ou cadastrar estoque.
     </div>
 
-    <!-- PESQUISA -->
-
-    <div class="painel-busca">
-
-        <strong>
-            🔎 Pesquisar Containers:
-        </strong>
-
-        <input
-            type="text"
-            id="campo-busca-externo"
-            class="input-busca"
-            placeholder="Produto, lote, container, NF ou fornecedor..."
-            oninput="filtrarEstoqueExterno()"
-        >
-
-    </div>
-
-    <!-- CONTADOR -->
-
-    <div
-        id="contador-externo"
-        class="contador"
-    >
-        Containers ocupados: 0 / 60
-    </div>
-
-    <!-- CONTAINERS -->
-
-    <div
-        class="grid"
-        id="grade-externa"
-    ></div>
-
-
     <!-- ==================================================
          SOLICITAÇÃO DE MERCADORIA — ACESSO RÁPIDO
          ================================================== -->
@@ -885,6 +850,43 @@ Entrar
         </div>
 
     </div>
+
+
+    <!-- A solicitação fica acima dos containers para acesso rápido. -->
+    <!-- PESQUISA -->
+
+    <div class="painel-busca">
+
+        <strong>
+            🔎 Pesquisar Containers:
+        </strong>
+
+        <input
+            type="text"
+            id="campo-busca-externo"
+            class="input-busca"
+            placeholder="Produto, lote, container, NF ou fornecedor..."
+            oninput="filtrarEstoqueExterno()"
+        >
+
+    </div>
+
+    <!-- CONTADOR -->
+
+    <div
+        id="contador-externo"
+        class="contador"
+    >
+        Containers ocupados: 0 / 60
+    </div>
+
+    <!-- CONTAINERS -->
+
+    <div
+        class="grid"
+        id="grade-externa"
+    ></div>
+
 
     <!-- ==================================================
          JANELA DE SOLICITAÇÃO — FORMATO TABELA/CADASTRO
@@ -969,6 +971,9 @@ Entrar
         </div>
 
     </div>
+
+</div>
+<!-- fim de #app-externo -->
 
 <div id="app-principal" style="display:none;">
 
