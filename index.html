@@ -1074,6 +1074,73 @@ console.log("🔥 Firebase conectado!");
 }
 </style>
 
+
+<style id="ajuste-layout-usuario-comum">
+/* USUÁRIO COMUM — mantém a tela completa/original; somente o layout administrativo recebe a alteração de duas colunas. */
+body:not(.usuario-admin) .layout-admin-operacional{
+    display:block;
+    margin-bottom:18px;
+}
+body:not(.usuario-admin) .layout-admin-operacional > #painel-admin-usuarios{
+    display:none;
+}
+body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada{
+    width:100%;
+    float:none;
+    margin:0 0 20px 0;
+    min-width:0;
+    min-height:0;
+    height:auto;
+    background:var(--bg-painel);
+    border:1px solid var(--borda);
+    border-radius:12px;
+    padding:25px;
+    box-shadow:0 4px 14px rgba(0,0,0,.35);
+}
+body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-identificacao{
+    grid-template-columns:125px 135px 260px 220px;
+}
+body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-produto{
+    grid-template-columns:125px 430px 260px;
+}
+body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-quantidade{
+    grid-template-columns:170px 190px;
+    max-width:380px;
+}
+body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada input{
+    height:27px;
+    min-height:27px;
+    padding:3px 7px;
+    margin:2px 0 4px;
+    font-size:12px;
+}
+@media(max-width:1100px){
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada{
+        overflow-x:auto;
+    }
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-identificacao,
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-produto{
+        min-width:760px;
+    }
+}
+@media(max-width:700px){
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada{
+        overflow-x:visible;
+        padding:14px 12px;
+    }
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-form,
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-identificacao,
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-produto{
+        grid-template-columns:1fr;
+        min-width:0;
+    }
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-quantidade{
+        grid-template-columns:1fr 1fr;
+        max-width:none;
+    }
+}
+</style>
+
 </head>
 
 <body>
@@ -1309,7 +1376,11 @@ Entrar
                 <h2 style="margin:0;">📋 Minhas Solicitações</h2>
                 <div class="texto-apoio-solicitacao">Histórico das solicitações enviadas por este usuário.</div>
             </div>
-            <button type="button" class="btn-vis" id="btn-toggle-minhas-solicitacoes-externo" onclick="toggleMinhasSolicitacoesExterno()">👁️ Ocultar Minhas Solicitações</button>
+            <div class="container-botoes" style="margin:0;justify-content:flex-end;">
+                <button type="button" class="btn-produto" onclick="exportarMinhasSolicitacoesExternoExcel()">📊 Exportar Excel</button>
+                <button type="button" class="btn-apagar-historico" onclick="ocultarMinhasSolicitacoesExterno()">🗑️ Apagar Solicitações</button>
+                <button type="button" class="btn-vis" id="btn-toggle-minhas-solicitacoes-externo" onclick="toggleMinhasSolicitacoesExterno()">👁️ Ocultar Minhas Solicitações</button>
+            </div>
         </div>
         <div id="lista-minhas-solicitacoes"></div>
     </div>
@@ -1362,6 +1433,22 @@ Entrar
             id="btn-toggle-solicitacoes"
         >
             👁️ Mostrar Solicitações
+        </button>
+
+        <button
+            type="button"
+            onclick="exportarSolicitacoesAdminExcel()"
+            class="btn-produto"
+        >
+            📊 Exportar Excel
+        </button>
+
+        <button
+            type="button"
+            onclick="ocultarSolicitacoesAdmin()"
+            class="btn-apagar-historico"
+        >
+            🗑️ Apagar Solicitações
         </button>
 
     </div>
@@ -1695,10 +1782,26 @@ class="btn-historico"
 </button>
 
 <button
+type="button"
+onclick="exportarHistoricoParaExcel()"
+class="btn-produto"
+>
+📊 Exportar Excel
+</button>
+
+<button
+type="button"
+onclick="ocultarMovimentacoesUsuario()"
+class="btn-apagar-historico"
+>
+🗑️ Excluir Minhas Movimentações
+</button>
+
+<button
 onclick="limparHistorico()"
 class="btn-apagar-historico"
 >
-🗑️ Limpar Histórico
+🧹 Limpar Histórico
 </button>
 
 </div>
@@ -3082,9 +3185,11 @@ function renderizarSolicitacoesMercadoriaAdmin(){
 // SOMENTE SOLICITAÇÕES PENDENTES
 // ======================================================
 
+const idsOcultosSolicitacoes = new Set(obterOcultosSolicitacoesUsuario());
 const pendentes = lista.filter(function(item){
 
     if(!item) return false;
+    if(idsOcultosSolicitacoes.has(String(item.id || ""))) return false;
 
     const status = String(
         item.status || ""
@@ -4730,8 +4835,11 @@ return;
 }
 
 
+const idsOcultosHistorico = new Set(obterOcultosHistoricoUsuario());
 const lista =
-[...historico].reverse();
+[...historico].filter(function(item){
+    return !idsOcultosHistorico.has(String(item.id || item.dataHora || item.data || ""));
+}).reverse();
 
 
 lista.forEach(
@@ -5422,6 +5530,11 @@ async function tratarEnvioLogin(){
 
 async function entrarNoApp(usuarioObjeto){
     usuarioLogadoAtual=usuarioObjeto;
+
+    // O layout de duas colunas é exclusivo do administrador.
+    // Usuário comum continua com a tela completa/original.
+    document.body.classList.toggle("usuario-admin", !!(usuarioObjeto && usuarioObjeto.tipo === "admin"));
+
     const login=document.getElementById("tela-login");
     const app=document.getElementById("app-principal");
 
@@ -5489,6 +5602,7 @@ async function sairDoSistema(){
     }catch(erro){
         console.error("Erro ao sair do Firebase:", erro);
     }finally{
+        document.body.classList.remove("usuario-admin");
         desligarListenersFirebase();
         usuarioLogadoAtual=null;
         perfisUsuariosCache={};
@@ -5688,6 +5802,136 @@ async function excluirUsuarioAdmin(index){
 
 // Compatibilidade com chamadas antigas do painel.
 function garantirAdminPadrao(){return carregarUsuariosCadastrados();}
+
+// ======================================================
+// PRIVACIDADE DA VISUALIZAÇÃO POR USUÁRIO
+// ======================================================
+// Estes controles apenas ocultam registros na tela deste usuário.
+// Nada é removido do Firebase, portanto o painel administrativo
+// continua com os registros centrais intactos.
+function chaveOcultosHistoricoUsuario(){
+    const uid = firebaseAuth.currentUser ? firebaseAuth.currentUser.uid : "anonimo";
+    return "cc_ocultos_historico_" + uid;
+}
+
+function obterOcultosHistoricoUsuario(){
+    try{
+        const valor = JSON.parse(localStorage.getItem(chaveOcultosHistoricoUsuario()) || "[]");
+        return Array.isArray(valor) ? valor.map(String) : [];
+    }catch(e){ return []; }
+}
+
+function salvarOcultosHistoricoUsuario(lista){
+    try{ localStorage.setItem(chaveOcultosHistoricoUsuario(), JSON.stringify([...new Set(lista.map(String))])); }catch(e){}
+}
+
+function chaveOcultosSolicitacoesUsuario(){
+    const uid = firebaseAuth.currentUser ? firebaseAuth.currentUser.uid : "anonimo";
+    return "cc_ocultas_solicitacoes_" + uid;
+}
+
+function obterOcultosSolicitacoesUsuario(){
+    try{
+        const valor = JSON.parse(localStorage.getItem(chaveOcultosSolicitacoesUsuario()) || "[]");
+        return Array.isArray(valor) ? valor.map(String) : [];
+    }catch(e){ return []; }
+}
+
+function salvarOcultosSolicitacoesUsuario(lista){
+    try{ localStorage.setItem(chaveOcultosSolicitacoesUsuario(), JSON.stringify([...new Set(lista.map(String))])); }catch(e){}
+}
+
+function exportarHistoricoParaExcel(){
+    const idsOcultos = new Set(obterOcultosHistoricoUsuario());
+    const lista = historico.filter(function(item){
+        return !idsOcultos.has(String(item.id || item.dataHora || item.data || ""));
+    });
+    if(!lista.length){ alert("Não existem movimentações visíveis para exportar."); return; }
+    let csv="Data;Tipo;Container;Fornecedor;Nota Fiscal;Código;Produto;Lote;Quantidade;Peso KG\n";
+    lista.forEach(function(item){
+        csv += `"${formatarData(item.data || "")}";"${item.tipo || ""}";"${item.num || ""}";"${item.fornecedor || ""}";"${item.nf || ""}";"${item.codigo || ""}";"${item.prod || ""}";"${item.lote || ""}";"${item.qtd || ""}";"${item.peso || ""}"\n`;
+    });
+    baixarCsv(csv,"historico_movimentacoes.csv");
+}
+
+function baixarCsv(csv,nomeArquivo){
+    const blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8;"});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement("a");
+    link.href=url; link.download=nomeArquivo;
+    document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+function ocultarMovimentacoesUsuario(){
+    if(!firebaseAuth.currentUser){ alert("Faça login novamente."); return; }
+    const visiveis = historico.filter(function(item){
+        return !new Set(obterOcultosHistoricoUsuario()).has(String(item.id || item.dataHora || item.data || ""));
+    });
+    if(!visiveis.length){ alert("Não existem movimentações visíveis para apagar."); return; }
+    if(!confirm("Apagar as movimentações da sua tela?\n\nEsses registros não serão removidos do Firebase e não afetarão o administrador.")) return;
+    const ids = obterOcultosHistoricoUsuario();
+    visiveis.forEach(function(item){ ids.push(String(item.id || item.dataHora || item.data || "")); });
+    salvarOcultosHistoricoUsuario(ids);
+    mostrarHistorico();
+    alert("✅ Movimentações ocultadas somente desta tela.");
+}
+
+function exportarSolicitacoesAdminExcel(){
+    const ocultos = new Set(obterOcultosSolicitacoesUsuario());
+    const lista = solicitacoesMercadoriaAdminCache.filter(function(item){
+        return !ocultos.has(String(item.id || ""));
+    });
+    if(!lista.length){ alert("Não existem solicitações visíveis para exportar."); return; }
+    let csv="Status;Container;Código;Produto;Lote;Fornecedor;Solicitante;Tipo Usuário;Quantidade;Peso KG;Data/Hora;NF;Observação\n";
+    lista.forEach(function(item){
+        csv += `"${item.status || ""}";"${item.container || ""}";"${item.codigo || ""}";"${item.produto || ""}";"${item.lote || ""}";"${item.fornecedor || ""}";"${item.solicitanteNome || item.solicitante || ""}";"${item.tipoUsuario || item.tipo || ""}";"${item.quantidadeSolicitada || ""}";"${item.pesoSolicitado || ""}";"${item.dataHora || ""}";"${item.nf || item.notaFiscal || ""}";"${item.observacao || ""}"\n`;
+    });
+    baixarCsv(csv,"solicitacoes_mercadoria.csv");
+}
+
+function ocultarSolicitacoesAdmin(){
+    if(!usuarioEhAdmin()) return;
+    const visiveis = solicitacoesMercadoriaAdminCache.filter(function(item){
+        return !new Set(obterOcultosSolicitacoesUsuario()).has(String(item.id || ""));
+    });
+    if(!visiveis.length){ alert("Não existem solicitações visíveis para apagar."); return; }
+    if(!confirm("Apagar as solicitações desta tela?\n\nAs solicitações continuarão preservadas no Firebase e não serão apagadas do banco.")) return;
+    const ids=obterOcultosSolicitacoesUsuario();
+    visiveis.forEach(function(item){ ids.push(String(item.id || "")); });
+    salvarOcultosSolicitacoesUsuario(ids);
+    renderizarSolicitacoesMercadoriaAdmin();
+    alert("✅ Solicitações ocultadas somente neste painel.");
+}
+
+function exportarMinhasSolicitacoesExternoExcel(){
+    const ocultos = new Set(obterOcultosSolicitacoesUsuario());
+    const uid = firebaseAuth.currentUser ? firebaseAuth.currentUser.uid : "";
+    const origem = solicitacoesMercadoriaExternoCache.filter(function(item){
+        return String(item.solicitanteUid || "") === String(uid) && !ocultos.has(String(item.id || ""));
+    });
+    if(!origem.length){ alert("Não existem solicitações visíveis para exportar."); return; }
+    let csv="Status;Container;Código;Produto;Lote;Quantidade;Peso KG;Data/Hora;NF;Observação\n";
+    origem.forEach(function(item){
+        csv += `"${item.status || ""}";"${item.container || ""}";"${item.codigo || ""}";"${item.produto || ""}";"${item.lote || ""}";"${item.quantidadeSolicitada || ""}";"${item.pesoSolicitado || ""}";"${item.dataHora || ""}";"${item.nf || item.notaFiscal || ""}";"${item.observacao || ""}"\n`;
+    });
+    baixarCsv(csv,"minhas_solicitacoes.csv");
+}
+
+function ocultarMinhasSolicitacoesExterno(){
+    if(!firebaseAuth.currentUser){ alert("Faça login novamente."); return; }
+    const uid=firebaseAuth.currentUser.uid;
+    const ocultos=obterOcultosSolicitacoesUsuario();
+    const lista=solicitacoesMercadoriaExternoCache.filter(function(item){
+        return String(item.solicitanteUid || "") === String(uid) && !ocultos.includes(String(item.id || ""));
+    });
+    if(!lista.length){ alert("Não existem solicitações visíveis para apagar."); return; }
+    if(!confirm("Apagar suas solicitações desta tela?\n\nElas continuarão preservadas no Firebase e no painel do administrador.")) return;
+    lista.forEach(function(item){ ocultos.push(String(item.id || "")); });
+    salvarOcultosSolicitacoesUsuario(ocultos);
+    renderizarMinhasSolicitacoesExterno(solicitacoesMercadoriaExternoCache.slice());
+    alert("✅ Solicitações ocultadas somente para este usuário.");
+}
 
 // ======================================================
 // TELA DO USUÁRIO EXTERNO
@@ -6826,6 +7070,7 @@ function limparSolicitacaoMercadoria(){
 // ======================================================
 
 let listenerSolicitacoesExterno = null;
+let solicitacoesMercadoriaExternoCache = [];
 
 function iniciarSolicitacoesExterno(){
 
@@ -6853,6 +7098,8 @@ function iniciarSolicitacoesExterno(){
         const minhas = normalizarListaFirebase(
             dados
         );
+
+        solicitacoesMercadoriaExternoCache = minhas.slice();
 
         renderizarMinhasSolicitacoesExterno(
             minhas
@@ -6887,6 +7134,10 @@ function renderizarMinhasSolicitacoesExterno(
         return;
     }
 
+    const idsOcultosSolicitacoes = new Set(obterOcultosSolicitacoesUsuario());
+    lista = lista.filter(function(item){
+        return !idsOcultosSolicitacoes.has(String(item.id || ""));
+    });
 
     if(!lista.length){
 
@@ -7232,6 +7483,7 @@ async function iniciarAutenticacao(){
     try{await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.NONE);}catch(e){console.error("Erro ao configurar autenticação sem persistência:",e);}
     firebaseAuth.onAuthStateChanged(function(user){
         if(!user){
+            document.body.classList.remove("usuario-admin");
             usuarioLogadoAtual=null;perfisUsuariosCache={};desligarListenersFirebase();
             const app=document.getElementById("app-principal"),login=document.getElementById("tela-login");
             if(app){app.classList.remove("app-visivel");app.style.display="none";}
