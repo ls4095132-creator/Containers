@@ -959,6 +959,45 @@ const firebaseFunctions = firebase.functions();
 console.log("🔥 Firebase conectado!");
 </script>
 
+
+<style id="ajuste-layout-admin-final">
+/* AJUSTE FINAL — painel administrativo + entrada de mercadoria */
+.layout-admin-operacional{
+    display:grid;
+    grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);
+    gap:14px;
+    align-items:start;
+    margin-bottom:18px;
+}
+.layout-admin-operacional > #painel-admin-usuarios{
+    grid-column:1;
+    margin-bottom:0;
+}
+.layout-admin-operacional > .painel-entrada{
+    grid-column:2;
+    margin-bottom:0;
+}
+#painel-admin-usuarios .painel-entrada{
+    margin-bottom:0;
+}
+#painel-admin-usuarios .cabecalho-usuarios-admin{
+    margin-top:14px;
+}
+#lista-usuarios-cadastrados{
+    transition:opacity .15s ease;
+}
+#btn-toggle-usuarios-existentes{
+    white-space:nowrap;
+}
+/* Garante que Quadro / Lista / Status permaneçam compactos e visíveis. */
+.painel-visualizacao .visualizacao-botoes{display:flex!important;}
+.painel-visualizacao .select-status{display:inline-block!important;}
+@media(max-width:1100px){
+    .layout-admin-operacional{grid-template-columns:1fr;}
+    .layout-admin-operacional > #painel-admin-usuarios,
+    .layout-admin-operacional > .painel-entrada{grid-column:1;}
+}
+</style>
 </head>
 
 <body>
@@ -1215,6 +1254,8 @@ Entrar
 <h1>📦 Controle de Containers</h1>
 
 
+<div class="layout-admin-operacional" id="layout-admin-operacional">
+
 <!-- PAINEL ADMIN: USUÁRIOS CADASTRADOS -->
 
 <div class="painel" id="painel-admin-usuarios" style="display:none;">
@@ -1266,7 +1307,7 @@ Entrar
 
 <div class="cabecalho-usuarios-admin" style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;margin-bottom:8px;">
     <strong style="color:var(--azul);">👥 Usuários existentes</strong>
-    <button type="button" class="btn-vis" id="btn-toggle-usuarios-existentes" onclick="toggleUsuariosExistentes()">🙈 Ocultar Usuários</button>
+    <button type="button" class="btn-vis" id="btn-toggle-usuarios-existentes" onclick="toggleUsuariosExistentes()">🙈 Ocultar Usuários Existentes</button>
 </div>
 
 <div id="lista-usuarios-cadastrados" style="margin-top:20px;">
@@ -1467,6 +1508,8 @@ class="btn-produto"
 </div>
 
 </div>
+
+</div> <!-- /layout-admin-operacional -->
 
 
 <div class="limpar-flutuacao-admin"></div>
@@ -5487,7 +5530,7 @@ function toggleUsuariosExistentes(){
     if(!area) return;
     const oculto=area.style.display === "none";
     area.style.display=oculto ? "block" : "none";
-    if(botao) botao.innerText=oculto ? "🙈 Ocultar Usuários" : "👁️ Mostrar Usuários";
+    if(botao) botao.innerText=oculto ? "🙈 Ocultar Usuários Existentes" : "👁️ Mostrar Usuários Existentes";
 }
 
 async function renderizarUsuariosCadastradosAdmin(){
