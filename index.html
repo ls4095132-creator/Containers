@@ -893,6 +893,45 @@ button:disabled {
     .modal-solicitacao-rodape{flex-direction:column-reverse;}
     .modal-solicitacao-rodape button{width:100%;}
 }
+
+
+/* ======================================================
+   LAYOUT ADMINISTRATIVO — ENTRADA AO LADO DAS SOLICITAÇÕES/ALTERAÇÕES
+   ====================================================== */
+#painel-admin-usuarios {
+    width:calc(50% - 8px);
+    float:left;
+    margin-right:8px;
+}
+#painel-admin-usuarios + .painel-entrada {
+    width:calc(50% - 8px);
+    float:right;
+}
+.limpar-flutuacao-admin { clear:both; }
+#painel-admin-usuarios .painel-entrada {
+    width:auto;
+    float:none;
+    margin:0;
+}
+@media(max-width:1100px){
+    #painel-admin-usuarios,
+    #painel-admin-usuarios + .painel-entrada {
+        width:100%;
+        float:none;
+        margin-right:0;
+    }
+}
+
+
+
+/* Cards de aprovações/solicitações no painel administrativo */
+#painel-aprovacoes-alteracoes, #painel-solicitacoes-mercadoria-admin {
+    width:100%;
+}
+#painel-solicitacoes-mercadoria-admin {
+    margin-bottom:18px;
+}
+
 </style>
 
 <!-- FIREBASE: conexão do sistema -->
@@ -1068,12 +1107,6 @@ Entrar
             <option value="vazios">⚪ Vazios</option>
         </select>
     </div>
-    <div class="seletor-containers">
-        <strong>☑️ Mostrar:</strong>
-        <button type="button" class="btn-mini-vis" onclick="selecionarTodosContainers('externo',true)">Todos</button>
-        <button type="button" class="btn-mini-vis" onclick="selecionarTodosContainers('externo',false)">Nenhum</button>
-        <div class="lista-checkbox-containers" id="checkbox-containers-externo"></div>
-    </div>
     <div class="resumo-visualizacao" id="resumo-visualizacao-externo"></div>
 </div>
 
@@ -1190,10 +1223,6 @@ Entrar
 
 <div class="erro-login" id="erro-admin-usuarios" style="display:none;"></div>
 
-<div style="background:var(--azul-fraco);border:1px solid var(--azul-forte);padding:12px;border-radius:8px;margin-bottom:18px;">
-<h2 style="margin-top:0;">📨 Solicitações de acesso <span id="contador-solicitacoes-admin" style="font-size:12px;color:var(--texto-fraco);"></span></h2>
-<div id="lista-solicitacoes-admin"></div>
-</div>
 
 <div id="painel-aprovacoes-alteracoes" style="background:rgba(245,158,11,.10);border:1px solid #f59e0b;padding:12px;border-radius:8px;margin-bottom:18px;">
 <h2 style="margin-top:0;color:#fbbf24;">🔔 Alterações aguardando aprovação <span id="contador-alteracoes-admin" style="font-size:12px;color:var(--texto-fraco);"></span></h2>
@@ -1201,23 +1230,11 @@ Entrar
 <div style="margin-top:8px;font-size:11px;color:var(--texto-fraco);">As alterações feitas por usuários comuns não entram no estoque até serem aprovadas aqui.</div>
 </div>
 
-<!-- ======================================================
-     SOLICITAÇÕES DE MERCADORIA
-     USUÁRIOS COMUNS E EXTERNOS
-     ====================================================== -->
+<!-- SOLICITAÇÕES RECEBIDAS -->
 
-<div class="painel" id="painel-solicitacoes-mercadoria-admin">
+<div class="painel">
 
-    <h2>
-        📦 Solicitações de Mercadoria
-        <span
-            id="contador-solicitacoes-mercadoria-admin"
-            style="
-                font-size:12px;
-                color:var(--texto-fraco);
-            "
-        ></span>
-    </h2>
+    <h2>📦 Solicitações Recebidas</h2>
 
     <div class="container-botoes">
 
@@ -1234,80 +1251,22 @@ Entrar
 
     <div
         id="conteudo-solicitacoes"
-        style="
-            display:none;
-            margin-top:15px;
-        "
+        style="display:none;margin-top:15px;"
     >
 
-        <div
-            id="lista-solicitacoes"
-        ></div>
-
-    </div>
-
-</div>
-    
-<!-- ======================================================
-     SOLICITAÇÕES DE MERCADORIA DOS USUÁRIOS EXTERNOS
-     ====================================================== -->
-
-<div
-    id="painel-solicitacoes-mercadoria-admin"
-    style="background:rgba(86,210,255,.07);
-           border:1px solid var(--azul-forte);
-           padding:12px;
-           border-radius:8px;
-           margin-bottom:18px;"
->
-
-    <h2 style="margin-top:0;">
-        📨 Solicitações de Mercadoria
-        <span
-            id="contador-solicitacoes-mercadoria-admin"
-            style="font-size:12px;
-                   color:var(--texto-fraco);"
-        >
-        </span>
-    </h2>
-
-    <div id="lista-solicitacoes-mercadoria-admin">
-
-        <div class="vazio">
-            📭 Nenhuma solicitação de mercadoria.
+        <div id="lista-solicitacoes">
+            <!-- As solicitações serão carregadas aqui pelo Firebase -->
         </div>
 
     </div>
 
 </div>
-    
-<div class="linha-form">
 
-<div class="campo">
-<label>👤 Novo usuário:</label>
-<input type="text" id="admin-novo-usuario" placeholder="E-mail do usuário" autocomplete="off">
-</div>
+<!-- FIM SOLICITAÇÕES RECEBIDAS -->
 
-<div class="campo">
-<label>🔒 Senha:</label>
-<input type="password" id="admin-nova-senha" placeholder="Senha (mín. 6 caracteres)" autocomplete="off">
-</div>
-
-<div class="campo">
-<label>🏷️ Tipo de acesso:</label>
-<select id="admin-novo-tipo">
-<option value="usuario">Usuário comum</option>
-<option value="externo">Usuário externo</option>
-<option value="admin">Administrador</option>
-</select>
-</div>
-
-</div>
-
-<div class="container-botoes">
-<button type="button" class="btn-produto" onclick="cadastrarUsuarioAdmin()">
-➕ Cadastrar Usuário
-</button>
+<div class="cabecalho-usuarios-admin" style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;margin-bottom:8px;">
+    <strong style="color:var(--azul);">👥 Usuários existentes</strong>
+    <button type="button" class="btn-vis" id="btn-toggle-usuarios-existentes" onclick="toggleUsuariosExistentes()">🙈 Ocultar Usuários</button>
 </div>
 
 <div id="lista-usuarios-cadastrados" style="margin-top:20px;">
@@ -1510,6 +1469,8 @@ class="btn-produto"
 </div>
 
 
+<div class="limpar-flutuacao-admin"></div>
+
 <!-- PESQUISA DOS CONTAINERS -->
 
 <div class="painel-busca">
@@ -1552,12 +1513,6 @@ Containers ocupados: 0 / 60
             <option value="vazios">⚪ Vazios</option>
         </select>
     </div>
-    <div class="seletor-containers">
-        <strong>☑️ Mostrar:</strong>
-        <button type="button" class="btn-mini-vis" onclick="selecionarTodosContainers('admin',true)">Todos</button>
-        <button type="button" class="btn-mini-vis" onclick="selecionarTodosContainers('admin',false)">Nenhum</button>
-        <div class="lista-checkbox-containers" id="checkbox-containers-admin"></div>
-    </div>
     <div class="resumo-visualizacao" id="resumo-visualizacao-admin"></div>
 </div>
 
@@ -1567,39 +1522,7 @@ id="grade"
 >
 </div>
 
-<!-- SOLICITAÇÕES RECEBIDAS -->
 
-<div class="painel">
-
-    <h2>📦 Solicitações Recebidas</h2>
-
-    <div class="container-botoes">
-
-        <button
-            type="button"
-            onclick="toggleSolicitacoes()"
-            class="btn-historico"
-            id="btn-toggle-solicitacoes"
-        >
-            👁️ Mostrar Solicitações
-        </button>
-
-    </div>
-
-    <div
-        id="conteudo-solicitacoes"
-        style="display:none;margin-top:15px;"
-    >
-
-        <div id="lista-solicitacoes">
-            <!-- As solicitações serão carregadas aqui pelo Firebase -->
-        </div>
-
-    </div>
-
-</div>
-
-<!-- FIM SOLICITAÇÕES RECEBIDAS -->
 
 
 <!-- HISTÓRICO -->
@@ -5558,6 +5481,15 @@ async function cadastrarUsuarioAdmin(){
     }
 }
 
+function toggleUsuariosExistentes(){
+    const area=document.getElementById("lista-usuarios-cadastrados");
+    const botao=document.getElementById("btn-toggle-usuarios-existentes");
+    if(!area) return;
+    const oculto=area.style.display === "none";
+    area.style.display=oculto ? "block" : "none";
+    if(botao) botao.innerText=oculto ? "🙈 Ocultar Usuários" : "👁️ Mostrar Usuários";
+}
+
 async function renderizarUsuariosCadastradosAdmin(){
     const area=document.getElementById("lista-usuarios-cadastrados");
     if(!area || !usuarioEhAdmin())return;
@@ -7105,14 +7037,8 @@ function toggleAdminUsuarios(){
             console.error("Erro ao carregar perfis:", erro);
         })
         .finally(function(){
-            if(typeof renderizarSolicitacoesAcessoAdmin === "function"){
-                renderizarSolicitacoesAcessoAdmin();
-            }
             if(typeof renderizarSolicitacoesAlteracoesAdmin === "function"){
                 renderizarSolicitacoesAlteracoesAdmin();
-            }
-            if(typeof renderizarSolicitacoesMercadoriaAdmin === "function"){
-                renderizarSolicitacoesMercadoriaAdmin();
             }
             if(typeof renderizarUsuariosCadastradosAdmin === "function"){
                 renderizarUsuariosCadastradosAdmin();
@@ -7128,13 +7054,6 @@ function atualizarIndicadorAdmin(){
         return;
     }
 
-    const acessos =
-        Array.isArray(solicitacoesAcessoCache)
-            ? solicitacoesAcessoCache.filter(function(item){
-                return String(item.status || "").toLowerCase() === "pendente";
-            }).length
-            : 0;
-
     const alteracoes =
         Array.isArray(solicitacoesAlteracoesCache)
             ? solicitacoesAlteracoesCache.filter(function(item){
@@ -7149,7 +7068,7 @@ function atualizarIndicadorAdmin(){
             }).length
             : 0;
 
-    const total = acessos + alteracoes + mercadorias;
+    const total = alteracoes + mercadorias;
     const painel = document.getElementById("painel-admin-usuarios");
 
     const aberto =
@@ -7291,7 +7210,6 @@ console.log("✅ CONTROLE DE CONTAINERS — FIREBASE V6 carregado.");
                 };
 
                 const total =
-                    pendentes("solicitacoesAcessoCache") +
                     pendentes("solicitacoesAlteracoesCache") +
                     pendentes("solicitacoesMercadoriaAdminCache");
 
