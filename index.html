@@ -834,7 +834,7 @@ Entrar
             </button>
         </div>
 
-        <div class="container-botoes" style="margin-top:10px;">
+        <div class="container-botoes" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
             <button
                 type="button"
                 class="btn-historico"
@@ -842,6 +842,22 @@ Entrar
                 id="btn-toggle-minhas-solicitacoes"
             >
                 📋 Minhas Solicitações
+            </button>
+
+            <button
+                type="button"
+                class="btn-historico"
+                onclick="exportarMinhasSolicitacoesExternoExcel()"
+            >
+                📊 Exportar Excel
+            </button>
+
+            <button
+                type="button"
+                class="btn-apagar-historico"
+                onclick="excluirMinhasSolicitacoesExterno()"
+            >
+                🗑️ Excluir Finalizadas
             </button>
         </div>
 
@@ -7249,6 +7265,8 @@ function iniciarSolicitacoesExterno(){
             dados
         );
 
+        window.__minhasSolicitacoesExterno = minhas.slice();
+
         renderizarMinhasSolicitacoesExterno(
             minhas
         );
@@ -7266,6 +7284,268 @@ function iniciarSolicitacoesExterno(){
 
         }
     );
+}
+
+
+
+// ======================================================
+// EXPORTAR MINHAS SOLICITAÇÕES — USUÁRIO EXTERNO
+// ======================================================
+
+function obterMinhasSolicitacoesExternoAtualizadas(){
+    const uid = firebaseAuth.currentUser
+        ? firebaseAuth.currentUser.uid
+        : "";
+
+    if(!uid) return [];
+
+    return (Array.isArray(window.__minhasSolicitacoesExterno)
+        ? window.__minhasSolicitacoesExterno
+        : []
+    ).filter(function(item){
+        return item &&
+               String(item.solicitanteUid || "") === String(uid);
+    });
+}
+
+function escaparExcelExterno(valor){
+    return String(valor == null ? "" : valor)
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;");
+}
+
+function exportarMinhasSolicitacoesExternoExcel(){
+
+    if(!firebaseAuth.currentUser){
+        alert("❌ Sua sessão expirou. Faça login novamente.");
+        return;
+    }
+
+    const lista = obterMinhasSolicitacoesExternoAtualizadas();
+
+    if(!lista.length){
+        alert("📭 Você ainda não possui solicitações para exportar.");
+        return;
+    }
+
+    let htmlExcel =
+        '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>';
+
+    htmlExcel +=
+        '<h2>Minhas Solicitações de Mercadoria</h2>' +
+        '<table border="1">' +
+        '<tr>' +
+        '<th>Status</th>' +
+        '<th>Data</th>' +
+        '<th>Container</th>' +
+        '<th>Código</th>' +
+        '<th>Produto</th>' +
+        '<th>Lote</th>' +
+        '<th>Quantidade</th>' +
+        '<th>Peso KG</th>' +
+        '<th>Nota Fiscal</th>' +
+        '<th>Observação</th>' +
+        '</tr>';
+
+    lista.forEach(function(pedido){
+
+        const status =
+            pedido.status === "atendido"
+                ? "Atendida"
+                : pedido.status === "cancelado"
+                    ? "Cancelada"
+                    : "Pendente";
+
+        const data =
+            pedido.dataHora
+                ? new Date(pedido.dataHora).toLocaleString("pt-BR")
+                : "";
+
+        htmlExcel += '<tr>';
+
+        [
+            status,
+            data,
+            pedido.container || "",
+            pedido.codigo || "",
+            pedido.produto || "",
+            pedido.lote || "",
+            pedido.quantidadeSolicitada || "",
+            pedido.pesoSolicitado || "",
+            pedido.status === "atendido"
+                ? (pedido.nfFinalizacao || pedido.nf || "")
+                : "",
+            pedido.observacao || ""
+        ].forEach(function(valor){
+            htmlExcel +=
+                '<td>' + escaparExcelExterno(valor) + '</td>';
+        });
+
+        htmlExcel += '</tr>';
+    });
+
+    htmlExcel += '</table></body></html>';
+
+    const blob = new Blob(
+        [htmlExcel],
+        {type:"application/vnd.ms-excel;charset=utf-8;"}
+    );
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download =
+        "minhas_solicitacoes_" +
+        new Date().toISOString().slice(0,10) +
+        ".xls";
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+}
+
+
+// ======================================================
+// EXCLUIR UMA SOLICITAÇÃO DO USUÁRIO EXTERNO
+// ======================================================
+
+async function excluirMinhaSolicitacaoExterno(id){
+
+    if(!firebaseAuth.currentUser || !id){
+        alert("❌ Não foi possível identificar sua solicitação.");
+        return;
+    }
+
+    try{
+
+        const ref = firebaseDB.ref(
+            "solicitacoesMercadoria/" + id
+        );
+
+        const snapshot = await ref.once("value");
+
+        if(!snapshot.exists()){
+            alert("❌ Esta solicitação não existe mais.");
+            return;
+        }
+
+        const pedido = snapshot.val() || {};
+
+        // Segurança: o usuário só pode excluir uma solicitação
+        // pertencente ao próprio UID.
+        if(
+            String(pedido.solicitanteUid || "") !==
+            String(firebaseAuth.currentUser.uid)
+        ){
+            alert("❌ Você não pode excluir esta solicitação.");
+            return;
+        }
+
+        // Solicitações pendentes não podem ser apagadas,
+        // para não desaparecerem do painel do administrador.
+        if(pedido.status !== "atendido" && pedido.status !== "cancelado"){
+            alert(
+                "⚠️ Solicitações pendentes não podem ser excluídas.\n\n" +
+                "Aguarde o processamento pelo administrador."
+            );
+            return;
+        }
+
+        if(!confirm(
+            "Excluir definitivamente esta solicitação do seu histórico?\n\n" +
+            "Essa ação não poderá ser desfeita."
+        )){
+            return;
+        }
+
+        await ref.remove();
+
+        alert("✅ Solicitação excluída do seu histórico.");
+
+    }catch(erro){
+
+        console.error(
+            "Erro ao excluir solicitação do usuário externo:",
+            erro
+        );
+
+        alert(
+            "❌ Não foi possível excluir a solicitação.\n\n" +
+            erro.message
+        );
+    }
+}
+
+
+// ======================================================
+// EXCLUIR TODAS AS FINALIZADAS DO USUÁRIO EXTERNO
+// ======================================================
+
+async function excluirMinhasSolicitacoesExterno(){
+
+    if(!firebaseAuth.currentUser){
+        alert("❌ Sua sessão expirou. Faça login novamente.");
+        return;
+    }
+
+    const lista = obterMinhasSolicitacoesExternoAtualizadas();
+
+    const finalizadas = lista.filter(function(item){
+        return item &&
+            (item.status === "atendido" ||
+             item.status === "cancelado");
+    });
+
+    if(!finalizadas.length){
+        alert("📭 Não existem solicitações finalizadas para excluir.");
+        return;
+    }
+
+    if(!confirm(
+        "Excluir definitivamente " +
+        finalizadas.length +
+        " solicitação(ões) finalizada(s) do seu histórico?\n\n" +
+        "Solicitações pendentes serão preservadas.\n\n" +
+        "Essa ação não poderá ser desfeita."
+    )){
+        return;
+    }
+
+    try{
+
+        const atualizacoes = {};
+
+        finalizadas.forEach(function(item){
+            if(item.id != null){
+                atualizacoes[String(item.id)] = null;
+            }
+        });
+
+        await firebaseDB
+            .ref("solicitacoesMercadoria")
+            .update(atualizacoes);
+
+        alert(
+            "✅ Solicitações finalizadas excluídas do seu histórico."
+        );
+
+    }catch(erro){
+
+        console.error(
+            "Erro ao excluir solicitações externas:",
+            erro
+        );
+
+        alert(
+            "❌ Não foi possível excluir as solicitações.\n\n" +
+            erro.message
+        );
+    }
 }
 
 
@@ -7458,6 +7738,22 @@ function renderizarMinhasSolicitacoesExterno(
                                 ""
                             }
 
+                            ${
+                                (pedido.status === "atendido" || pedido.status === "cancelado")
+                                ? `
+                                    <div style="margin-top:12px;">
+                                        <button
+                                            type="button"
+                                            class="btn-apagar-historico"
+                                            onclick="excluirMinhaSolicitacaoExterno('${escaparHtmlExterno(String(pedido.id || ""))}')"
+                                        >
+                                            🗑️ Excluir este registro
+                                        </button>
+                                    </div>
+                                  `
+                                : ""
+                            }
+
                         </div>
 
                     `;
@@ -7580,6 +7876,9 @@ window.toggleHistoricoSolicitacoesAdmin = toggleHistoricoSolicitacoesAdmin;
 window.abrirTelaSolicitarMercadoriaExterno = abrirTelaSolicitarMercadoriaExterno;
 window.fecharTelaSolicitarMercadoriaExterno = fecharTelaSolicitarMercadoriaExterno;
 window.toggleMinhasSolicitacoesExterno = toggleMinhasSolicitacoesExterno;
+window.exportarMinhasSolicitacoesExternoExcel = exportarMinhasSolicitacoesExternoExcel;
+window.excluirMinhaSolicitacaoExterno = excluirMinhaSolicitacaoExterno;
+window.excluirMinhasSolicitacoesExterno = excluirMinhasSolicitacoesExterno;
 window.enviarSolicitacaoMercadoria = enviarSolicitacaoMercadoria;
 window.limparSolicitacaoMercadoria = limparSolicitacaoMercadoria;
 window.aceitarSolicitacaoMercadoriaAdmin = aceitarSolicitacaoMercadoriaAdmin;
