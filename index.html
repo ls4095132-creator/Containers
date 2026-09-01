@@ -1378,9 +1378,10 @@ oninput="filtrarHistorico()"
 </div>
 
 
-<div class="container-botoes">
+<div class="container-botoes" style="display:flex;gap:8px;flex-wrap:wrap;">
 
 <button
+type="button"
 onclick="mostrarHistorico()"
 class="btn-historico"
 >
@@ -1388,10 +1389,19 @@ class="btn-historico"
 </button>
 
 <button
+type="button"
+onclick="exportarHistoricoExcel()"
+class="btn-historico"
+>
+📊 Exportar Excel
+</button>
+
+<button
+type="button"
 onclick="limparHistorico()"
 class="btn-apagar-historico"
 >
-🗑️ Limpar Histórico
+🗑️ <span id="texto-btn-limpar-historico">Limpar Histórico</span>
 </button>
 
 </div>
@@ -1422,6 +1432,9 @@ style="margin-top:20px;"
 
 let estoque = [];
 let historico = [];
+// Registros que o usuário comum escolheu ocultar somente da própria tela.
+// Nunca são removidos de /historico, portanto o Admin continua com o histórico completo.
+let historicoOcultoUsuario = {};
 let produtosCadastrados = [];
 let solicitacoesAlteracoesCache = [];
 let solicitacoesAcessoCache = [];
@@ -1524,6 +1537,11 @@ async function iniciarSincronizacaoFirebase(){
         const alteracoesRef=firebaseDB.ref("solicitacoesAlteracoes");
         const acessoRef=firebaseDB.ref("solicitacoesAcesso");
         const solicitacoesMercadoriaRef=firebaseDB.ref("solicitacoesMercadoria");
+        // Área individual: o usuário comum grava somente os IDs que deseja
+        // ocultar da própria tela. O histórico central continua intacto.
+        const historicoOcultoRef = souAdmin
+            ? null
+            : firebaseDB.ref("historicoOculto/" + usuarioFirebase.uid);
         
         const ler=async function(ref,nome){
             try{
@@ -1542,6 +1560,9 @@ async function iniciarSincronizacaoFirebase(){
             ler(produtosRef,"produtos"),
             ler(alteracoesRef,"solicitações de alteração")
         ];
+        if(!souAdmin){
+            resultados.push(ler(historicoOcultoRef,"histórico oculto do usuário"));
+        }
         if(souAdmin){
     resultados.push(ler(acessoRef,"solicitações de acesso"));
     resultados.push(ler(solicitacoesMercadoriaRef,"solicitações de mercadoria"));
@@ -1554,9 +1575,16 @@ async function iniciarSincronizacaoFirebase(){
         const alteracoesSnap=valores[3];
         const acessoSnap=souAdmin ? valores[4] : null;
         const solicitacoesMercadoriaSnap=souAdmin ? valores[5] : null;
+        const historicoOcultoSnap=!souAdmin ? valores[4] : null;
 
         estoque=estoqueSnap ? normalizarListaFirebase(estoqueSnap.val()) : [];
         historico=historicoSnap ? normalizarListaFirebase(historicoSnap.val()) : [];
+        historicoOcultoUsuario = !souAdmin
+            ? carregarHistoricoOcultoLocal()
+            : {};
+        if(!souAdmin && historicoOcultoSnap && historicoOcultoSnap.exists()){
+            Object.assign(historicoOcultoUsuario, historicoOcultoSnap.val() || {});
+        }
         produtosCadastrados=produtosSnap ? normalizarListaFirebase(produtosSnap.val()) : [];
         solicitacoesAlteracoesCache=alteracoesSnap ? normalizarListaFirebase(alteracoesSnap.val()) : [];
         solicitacoesAcessoCache=souAdmin && acessoSnap ? normalizarListaFirebase(acessoSnap.val()) : [];
@@ -1604,6 +1632,16 @@ async function iniciarSincronizacaoFirebase(){
             historico=normalizarListaFirebase(snapshot.val());
             mostrarHistorico();
         },function(e){console.error("Firebase histórico:",e);});
+
+        if(!souAdmin && historicoOcultoRef){
+            registrar(historicoOcultoRef,"value",function(snapshot){
+                Object.assign(historicoOcultoUsuario, snapshot.val() || {});
+                salvarHistoricoOcultoLocal();
+                mostrarHistorico();
+            },function(e){
+                console.error("Firebase histórico oculto do usuário:",e);
+            });
+        }
 
         registrar(produtosRef,"value",function(snapshot){
             produtosCadastrados=normalizarListaFirebase(snapshot.val()).map(normalizarProdutoCatalogo);
@@ -1656,6 +1694,7 @@ async function iniciarSincronizacaoFirebase(){
         atualizarContadorProdutos();
         mostrarEstoque();
         mostrarHistorico();
+        atualizarBotaoLimparHistorico();
         atualizarContador();
         atualizarIndicadorAdmin();
         console.log("☁️ Firebase: sincronização em tempo real ativa.");
@@ -5006,13 +5045,14 @@ document.getElementById(
 
 area.innerHTML="";
 
+const historicoVisivel = obterHistoricoVisivelAtual();
 
-if(historico.length===0){
+if(historicoVisivel.length===0){
 
 area.innerHTML=
 `
 <div class="sem-historico">
-📋 Nenhuma movimentação registrada.
+📋 Nenhuma movimentação registrada nesta visualização.
 </div>
 `;
 
@@ -5020,9 +5060,7 @@ return;
 
 }
 
-
-const lista =
-[...historico].reverse();
+const lista = historicoVisivel.reverse();
 
 
 lista.forEach(
@@ -5149,6 +5187,18 @@ item.detalhes
 ""
 }
 
+${
+!usuarioEhAdmin() && item.id != null
+? `
+<div style="margin-top:12px;">
+<button type="button" class="btn-apagar-historico" onclick="ocultarRegistroHistoricoUsuario('${String(item.id).replace(/'/g,"\\'")}')">
+🗑️ Ocultar este registro
+</button>
+</div>
+`
+: ""
+}
+
 `;
 
 
@@ -5180,6 +5230,40 @@ return "🧹";
 
 return "📋";
 
+}
+
+
+// ======================================================
+// OCULTAR UM REGISTRO DO HISTÓRICO — USUÁRIO COMUM
+// ======================================================
+
+async function ocultarRegistroHistoricoUsuario(id){
+    if(usuarioEhAdmin()){
+        alert("⚠️ O administrador deve usar a função de limpeza do histórico central.");
+        return;
+    }
+
+    if(!firebaseAuth.currentUser || !id) return;
+
+    if(!confirm("Ocultar este registro somente da sua tela?\n\nO administrador continuará vendo o registro.")) return;
+
+    try{
+        const uid=firebaseAuth.currentUser.uid;
+        const chave=String(id);
+        historicoOcultoUsuario[chave]=true;
+        salvarHistoricoOcultoLocal();
+        try{
+            await firebaseDB.ref("historicoOculto/"+uid+"/"+chave).set(true);
+        }catch(e){
+            // O Firebase pode estar sem permissão para esta área auxiliar.
+            // O registro continua sendo ocultado localmente sem afetar o Admin.
+            console.warn("Histórico oculto não sincronizado no Firebase; usando armazenamento local:",e);
+        }
+        mostrarHistorico();
+    }catch(erro){
+        console.error("Erro ao ocultar registro do histórico:",erro);
+        alert("❌ Não foi possível ocultar o registro.\n\nVerifique as regras do Firebase Realtime Database.");
+    }
 }
 
 
@@ -5238,21 +5322,183 @@ movimento.style.display=
 // LIMPAR HISTÓRICO
 // ======================================================
 
-function limparHistorico(){
-    if(historico.length===0){ alert("O histórico já está vazio."); return; }
-    const confirmar=confirm("Tem certeza que deseja apagar todo o histórico de movimentações?\n\nO estoque atual NÃO será apagado.");
-    if(!confirmar)return;
+function chaveHistoricoOcultoLocal(){
+    const uid = firebaseAuth.currentUser ? firebaseAuth.currentUser.uid : "anonimo";
+    return "historicoOcultoUsuario_" + uid;
+}
 
+function carregarHistoricoOcultoLocal(){
+    try{
+        const bruto = localStorage.getItem(chaveHistoricoOcultoLocal());
+        const dados = bruto ? JSON.parse(bruto) : {};
+        return dados && typeof dados === "object" ? dados : {};
+    }catch(e){
+        console.warn("Não foi possível carregar histórico oculto local:",e);
+        return {};
+    }
+}
+
+function salvarHistoricoOcultoLocal(){
+    try{
+        localStorage.setItem(
+            chaveHistoricoOcultoLocal(),
+            JSON.stringify(historicoOcultoUsuario || {})
+        );
+    }catch(e){
+        console.warn("Não foi possível salvar histórico oculto local:",e);
+    }
+}
+
+function obterHistoricoVisivelAtual(){
     if(usuarioEhAdmin()){
-        historico=[];
-        salvarDados();
-        mostrarHistorico();
-        alert("✅ Histórico apagado com sucesso.");
+        return Array.isArray(historico) ? historico.slice() : [];
+    }
+
+    const ocultos = historicoOcultoUsuario || {};
+
+    return (Array.isArray(historico) ? historico : []).filter(function(item){
+        const id = String(item && item.id != null ? item.id : "");
+        return !id || !ocultos[id];
+    });
+}
+
+function atualizarBotaoLimparHistorico(){
+    const texto = document.getElementById("texto-btn-limpar-historico");
+    if(texto){
+        texto.innerText = usuarioEhAdmin()
+            ? "Limpar Histórico"
+            : "Limpar Meu Histórico";
+    }
+}
+
+async function limparHistorico(){
+    const visiveis = obterHistoricoVisivelAtual();
+
+    if(!visiveis.length){
+        alert(usuarioEhAdmin()
+            ? "O histórico já está vazio."
+            : "Você não possui registros visíveis para ocultar.");
         return;
     }
 
-    solicitarAlteracaoAdmin("LIMPAR_HISTORICO", {}, "O operador solicitou a limpeza do histórico de movimentações.");
-    alert("📨 Solicitação enviada ao administrador. O histórico só será apagado após aprovação.");
+    if(usuarioEhAdmin()){
+        const confirmar=confirm(
+            "Tem certeza que deseja apagar TODO o histórico de movimentações?\n\n" +
+            "O estoque atual NÃO será apagado.\n\n" +
+            "Esta ação afetará o histórico central do sistema."
+        );
+        if(!confirmar)return;
+
+        try{
+            historico=[];
+            await firebaseDB.ref("historico").set([]);
+            mostrarHistorico();
+            alert("✅ Histórico central apagado com sucesso.");
+        }catch(erro){
+            console.error("Erro ao apagar histórico central:",erro);
+            alert("❌ Não foi possível apagar o histórico central.\n\n"+erro.message);
+        }
+        return;
+    }
+
+    const confirmar=confirm(
+        "Ocultar seus registros do histórico?\n\n" +
+        "Os registros NÃO serão apagados do sistema e continuarão disponíveis para o administrador."
+    );
+    if(!confirmar)return;
+
+    if(!firebaseAuth.currentUser){
+        alert("❌ Sua sessão expirou. Faça login novamente.");
+        return;
+    }
+
+    const uid=firebaseAuth.currentUser.uid;
+    const atualizacoes={};
+    visiveis.forEach(function(item){
+        if(item && item.id != null){
+            atualizacoes[String(item.id)] = true;
+        }
+    });
+
+    try{
+        Object.assign(historicoOcultoUsuario,atualizacoes);
+        salvarHistoricoOcultoLocal();
+        try{
+            await firebaseDB.ref("historicoOculto/"+uid).update(atualizacoes);
+        }catch(e){
+            // Sem permissão no Firebase, o ocultamento continua localmente.
+            console.warn("Histórico do usuário não sincronizado no Firebase; usando armazenamento local:",e);
+        }
+        mostrarHistorico();
+        alert("✅ Histórico ocultado somente para o seu usuário.\n\nO administrador continua com os registros completos.");
+    }catch(erro){
+        console.error("Erro ao ocultar histórico do usuário:",erro);
+        alert("❌ Não foi possível ocultar seu histórico.\n\nVerifique as regras do Firebase Realtime Database.");
+    }
+}
+
+function exportarHistoricoExcel(){
+    if(!firebaseAuth.currentUser){
+        alert("❌ Sua sessão expirou. Faça login novamente.");
+        return;
+    }
+
+    const lista = obterHistoricoVisivelAtual();
+
+    if(!lista.length){
+        alert("📭 Não há movimentações disponíveis para exportar.");
+        return;
+    }
+
+    const escapar = function(valor){
+        return String(valor == null ? "" : valor)
+            .replace(/&/g,"&amp;")
+            .replace(/</g,"&lt;")
+            .replace(/>/g,"&gt;")
+            .replace(/"/g,"&quot;");
+    };
+
+    let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>';
+    html += '<h2>Histórico de Movimentações</h2>';
+    html += '<table border="1"><tr>' +
+        '<th>Data</th><th>Hora</th><th>Tipo</th><th>Container</th>' +
+        '<th>Código</th><th>Produto</th><th>Lote</th><th>Fornecedor</th>' +
+        '<th>Nota Fiscal</th><th>Quantidade</th><th>Peso KG</th><th>Detalhes</th>' +
+        '</tr>';
+
+    lista.slice().reverse().forEach(function(item){
+        html += '<tr>';
+        [
+            item.data || "",
+            item.hora || "",
+            item.tipo || "",
+            item.num || "",
+            item.codigo || "",
+            item.prod || "",
+            item.lote || "",
+            item.fornecedor || "",
+            item.nf || "",
+            item.qtd || "",
+            item.peso || "",
+            item.detalhes || ""
+        ].forEach(function(valor){
+            html += '<td>'+escapar(valor)+'</td>';
+        });
+        html += '</tr>';
+    });
+
+    html += '</table></body></html>';
+
+    const blob = new Blob([html],{type:"application/vnd.ms-excel;charset=utf-8;"});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href=url;
+    link.download = (usuarioEhAdmin() ? "historico_admin_" : "meu_historico_") +
+        new Date().toISOString().slice(0,10) + ".xls";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
 
 
@@ -7942,6 +8188,9 @@ window.finalizarSolicitacaoMercadoriaAdmin = finalizarSolicitacaoMercadoriaAdmin
 window.atenderSolicitacaoMercadoriaAdmin = atenderSolicitacaoMercadoriaAdmin;
 window.cancelarSolicitacaoMercadoriaAdmin = cancelarSolicitacaoMercadoriaAdmin;
 window.exportarMovimentacoesESolicitacoesExcel = exportarMovimentacoesESolicitacoesExcel;
+window.exportarHistoricoExcel = exportarHistoricoExcel;
+window.limparHistorico = limparHistorico;
+window.ocultarRegistroHistoricoUsuario = ocultarRegistroHistoricoUsuario;
 window.excluirSolicitacoesFinalizadasAdmin = excluirSolicitacoesFinalizadasAdmin;
 console.log("✅ CONTROLE DE CONTAINERS — FIREBASE V6 carregado.");
 </script>
