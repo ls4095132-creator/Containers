@@ -7063,6 +7063,116 @@ function escaparHtmlExterno(valor){
 }
     
 // ======================================================
+// CORREÇÃO — PAINEL DE USUÁRIOS / INDICADOR ADMIN
+// ======================================================
+
+function toggleAdminUsuarios(){
+    if(!usuarioEhAdmin()){
+        return;
+    }
+
+    const painel = document.getElementById("painel-admin-usuarios");
+    const botao = document.getElementById("btn-abrir-painel-admin");
+
+    if(!painel){
+        console.error("❌ #painel-admin-usuarios não encontrado.");
+        return;
+    }
+
+    const aberto =
+        painel.style.display !== "none" &&
+        painel.style.display !== "";
+
+    if(aberto){
+        painel.style.display = "none";
+        if(botao){
+            botao.innerText = "👑 Usuários Cadastrados";
+        }
+        return;
+    }
+
+    painel.style.display = "block";
+
+    if(botao){
+        botao.innerText = "🙈 Ocultar Usuários";
+    }
+
+    Promise.resolve()
+        .then(function(){
+            return carregarPerfisUsuariosFirebase();
+        })
+        .catch(function(erro){
+            console.error("Erro ao carregar perfis:", erro);
+        })
+        .finally(function(){
+            if(typeof renderizarSolicitacoesAcessoAdmin === "function"){
+                renderizarSolicitacoesAcessoAdmin();
+            }
+            if(typeof renderizarSolicitacoesAlteracoesAdmin === "function"){
+                renderizarSolicitacoesAlteracoesAdmin();
+            }
+            if(typeof renderizarSolicitacoesMercadoriaAdmin === "function"){
+                renderizarSolicitacoesMercadoriaAdmin();
+            }
+            if(typeof renderizarUsuariosCadastradosAdmin === "function"){
+                renderizarUsuariosCadastradosAdmin();
+            }
+        });
+}
+
+function atualizarIndicadorAdmin(){
+    const botao = document.getElementById("btn-abrir-painel-admin");
+
+    // Não gera erro em telas de usuário comum/externo.
+    if(!botao || !usuarioEhAdmin()){
+        return;
+    }
+
+    const acessos =
+        Array.isArray(solicitacoesAcessoCache)
+            ? solicitacoesAcessoCache.filter(function(item){
+                return String(item.status || "").toLowerCase() === "pendente";
+            }).length
+            : 0;
+
+    const alteracoes =
+        Array.isArray(solicitacoesAlteracoesCache)
+            ? solicitacoesAlteracoesCache.filter(function(item){
+                return String(item.status || "").toLowerCase() === "pendente";
+            }).length
+            : 0;
+
+    const mercadorias =
+        Array.isArray(solicitacoesMercadoriaAdminCache)
+            ? solicitacoesMercadoriaAdminCache.filter(function(item){
+                return String(item.status || "").toLowerCase() === "pendente";
+            }).length
+            : 0;
+
+    const total = acessos + alteracoes + mercadorias;
+    const painel = document.getElementById("painel-admin-usuarios");
+
+    const aberto =
+        painel &&
+        painel.style.display !== "none" &&
+        painel.style.display !== "";
+
+    if(total > 0){
+        botao.innerText = "👑 Usuários / 🔔 " + total + " pendente(s)";
+    }else if(aberto){
+        botao.innerText = "🙈 Ocultar Usuários";
+    }else{
+        botao.innerText = "👑 Usuários Cadastrados";
+    }
+}
+
+// Disponibiliza os handlers usados pelo HTML no escopo global.
+window.toggleAdminUsuarios = toggleAdminUsuarios;
+window.atualizarIndicadorAdmin = atualizarIndicadorAdmin;
+
+
+
+// ======================================================
 // INICIALIZAÇÃO DA AUTENTICAÇÃO
 // ======================================================
 // O Firebase Authentication usa persistência NONE.
@@ -7121,7 +7231,6 @@ setInterval(function(){
 
 // Compatibilidade: garante que os handlers usados pelos botões HTML
 // estejam disponíveis no escopo global do navegador.
-window.toggleAdminUsuarios = toggleAdminUsuarios;
 window.tratarEnvioLogin = tratarEnvioLogin;
 window.sairDoSistema = sairDoSistema;
 console.log("✅ CONTROLE DE CONTAINERS — FIREBASE V6 carregado.");
