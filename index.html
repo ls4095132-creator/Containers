@@ -964,9 +964,9 @@ console.log("🔥 Firebase conectado!");
 /* AJUSTE FINAL — painel administrativo + entrada de mercadoria */
 .layout-admin-operacional{
     display:grid;
-    grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
     gap:14px;
-    align-items:start;
+    align-items:stretch;
     margin-bottom:18px;
 }
 .layout-admin-operacional > #painel-admin-usuarios{
@@ -1000,52 +1000,63 @@ console.log("🔥 Firebase conectado!");
 </style>
 
 <style id="ajuste-layout-registro">
-/* Layout do REGISTRO seguindo o mesmo padrão compacto dos cards de Solicitações/Alterações */
+/* Registro com a mesma dimensão visual do painel de Usuários/Solicitações */
+.layout-admin-operacional > #painel-admin-usuarios,
+.layout-admin-operacional > .painel-entrada{
+    width:100%;
+    min-width:0;
+    height:100%;
+    min-height:100%;
+    box-sizing:border-box;
+}
 .layout-admin-operacional > .painel-entrada{
     background:var(--bg-painel);
-    border:1px solid var(--borda-forte);
+    border:1px solid var(--borda);
     border-radius:12px;
-    padding:14px;
-    box-shadow:0 4px 14px rgba(0,0,0,.25);
+    padding:25px;
+    margin-bottom:0;
+    box-shadow:0 4px 14px rgba(0,0,0,.35);
 }
 .layout-admin-operacional > .painel-entrada h2{
-    margin:0 0 10px;
-    padding:8px 10px;
-    border-radius:8px;
-    background:var(--azul-fraco);
-    border:1px solid var(--borda);
+    margin-top:0;
+    margin-bottom:14px;
+    padding:0 0 8px;
+    border:none;
+    border-bottom:1px solid var(--borda);
+    border-radius:0;
+    background:transparent;
 }
 .layout-admin-operacional > .painel-entrada .linha-form{
-    gap:8px;
-    margin-bottom:4px;
+    gap:10px;
+    margin-bottom:7px;
 }
 .layout-admin-operacional > .painel-entrada .linha-identificacao{
     grid-template-columns:1fr 1fr;
 }
 .layout-admin-operacional > .painel-entrada .linha-produto{
-    grid-template-columns:.9fr 1.7fr 1fr;
+    grid-template-columns:1fr 1.8fr 1fr;
 }
 .layout-admin-operacional > .painel-entrada .linha-quantidade{
     grid-template-columns:1fr 1fr;
-    max-width:none;
+    max-width:100%;
 }
 .layout-admin-operacional > .painel-entrada label{
-    font-size:11px;
+    font-size:12.5px;
 }
 .layout-admin-operacional > .painel-entrada input{
-    height:29px;
-    min-height:29px;
-    margin:2px 0 4px;
+    height:34px;
+    min-height:34px;
+    margin:3px 0 6px;
 }
 .layout-admin-operacional > .painel-entrada .container-botoes{
-    margin-top:7px;
-    padding-top:8px;
+    margin-top:10px;
+    padding-top:12px;
     border-top:1px solid var(--borda);
-    gap:7px;
+    gap:10px;
 }
 .layout-admin-operacional > .painel-entrada .container-botoes button{
-    padding:7px 10px;
-    font-size:11.5px;
+    padding:9px 16px;
+    font-size:13px;
 }
 @media(max-width:1100px){
     .layout-admin-operacional > .painel-entrada .linha-identificacao,
