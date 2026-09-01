@@ -7236,6 +7236,77 @@ window.sairDoSistema = sairDoSistema;
 console.log("✅ CONTROLE DE CONTAINERS — FIREBASE V6 carregado.");
 </script>
 
+<!-- FALLBACK GLOBAL: mantém os botões administrativos funcionando mesmo que
+     outra rotina do script principal tenha sido interrompida em tempo de execução. -->
+<script>
+(function(){
+    if (typeof window.toggleAdminUsuarios !== "function") {
+        window.toggleAdminUsuarios = function(){
+            try{
+                if (typeof window.usuarioEhAdmin === "function" && !window.usuarioEhAdmin()) return;
+                const painel = document.getElementById("painel-admin-usuarios");
+                const botao = document.getElementById("btn-abrir-painel-admin");
+                if(!painel) return;
+                const aberto = painel.style.display !== "none" && painel.style.display !== "";
+                if(aberto){
+                    painel.style.display = "none";
+                    if(botao) botao.innerText = "👑 Usuários Cadastrados";
+                    return;
+                }
+                painel.style.display = "block";
+                if(botao) botao.innerText = "🙈 Ocultar Usuários";
+                try{
+                    if(typeof window.carregarPerfisUsuariosFirebase === "function"){
+                        Promise.resolve(window.carregarPerfisUsuariosFirebase()).then(function(){
+                            [
+                                "renderizarSolicitacoesAcessoAdmin",
+                                "renderizarSolicitacoesAlteracoesAdmin",
+                                "renderizarSolicitacoesMercadoriaAdmin",
+                                "renderizarUsuariosCadastradosAdmin"
+                            ].forEach(function(nome){
+                                if(typeof window[nome] === "function") window[nome]();
+                            });
+                        }).catch(function(e){ console.error("Erro ao carregar perfis:",e); });
+                    }
+                }catch(e){ console.error("Erro no painel administrativo:",e); }
+            }catch(e){ console.error("Erro ao abrir painel administrativo:",e); }
+        };
+    }
+
+    if (typeof window.atualizarIndicadorAdmin !== "function") {
+        window.atualizarIndicadorAdmin = function(){
+            try{
+                const botao = document.getElementById("btn-abrir-painel-admin");
+                if(!botao) return;
+                if(typeof window.usuarioEhAdmin === "function" && !window.usuarioEhAdmin()) return;
+
+                const pendentes = function(nomeCache){
+                    try{
+                        const valor = window[nomeCache];
+                        if(!Array.isArray(valor)) return 0;
+                        return valor.filter(function(item){
+                            return String((item && item.status) || "").toLowerCase() === "pendente";
+                        }).length;
+                    }catch(e){ return 0; }
+                };
+
+                const total =
+                    pendentes("solicitacoesAcessoCache") +
+                    pendentes("solicitacoesAlteracoesCache") +
+                    pendentes("solicitacoesMercadoriaAdminCache");
+
+                const painel = document.getElementById("painel-admin-usuarios");
+                const aberto = painel && painel.style.display !== "none" && painel.style.display !== "";
+
+                if(total > 0) botao.innerText = "👑 Usuários / 🔔 " + total + " pendente(s)";
+                else if(aberto) botao.innerText = "🙈 Ocultar Usuários";
+                else botao.innerText = "👑 Usuários Cadastrados";
+            }catch(e){ console.error("Erro no indicador admin:",e); }
+        };
+    }
+})();
+</script>
+
 </body>
 
 </html>
