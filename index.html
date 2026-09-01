@@ -3346,6 +3346,383 @@ const pendentes = lista.filter(function(item){
 
 async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
 
+    if(!usuarioEhAdmin() || !id){
+        return;
+    }
+
+    const ref = firebaseDB.ref(
+        "solicitacoesMercadoria/" + id
+    );
+
+    try{
+
+        const snapshot = await ref.once("value");
+
+        if(!snapshot.exists()){
+
+            alert("❌ Esta solicitação não existe mais.");
+
+            return;
+        }
+
+        const pedido = snapshot.val() || {};
+
+        if(pedido.status !== "pendente"){
+
+            alert("⚠️ Esta solicitação já foi processada.");
+
+            return;
+        }
+
+        // ==============================================
+        // FINALIZAR SOLICITAÇÃO
+        // ==============================================
+
+        if(novoStatus === "atendido"){
+
+            const tipo = String(
+                pedido.tipoUsuario || ""
+            ).trim().toLowerCase();
+
+            let nf = "";
+
+            // Usuário externo precisa de NF
+            if(
+                tipo === "externo" ||
+                tipo === "usuario externo" ||
+                tipo === "usuário externo"
+            ){
+
+                nf = prompt(
+                    "🧾 Informe o número da Nota Fiscal:"
+                );
+
+                if(nf === null){
+                    return;
+                }
+
+                nf = nf.trim();
+
+                if(!nf){
+
+                    alert(
+                        "❌ Informe o número da Nota Fiscal."
+                    );
+
+                    return;
+                }
+
+            }
+
+            const confirmar = confirm(
+                tipo === "comum"
+                    ? "Deseja aceitar esta solicitação?"
+                    : "Deseja finalizar esta solicitação?"
+            );
+
+            if(!confirmar){
+                return;
+            }
+
+            const dados = {
+
+                status: "atendido",
+
+                processadoEm:
+                    new Date().toISOString(),
+
+                processadoPorUid:
+                    firebaseAuth.currentUser
+                        ? firebaseAuth.currentUser.uid
+                        : "",
+
+                processadoPor:
+                    typeof operadorAtual === "function"
+                        ? operadorAtual()
+                        : "Administrador"
+
+            };
+
+            if(nf){
+
+                dados.nf = nf;
+
+                dados.nfFinalizacao = nf;
+
+            }
+
+            await ref.update(dados);
+
+            alert(
+                tipo === "comum"
+                    ? "✅ Solicitação aceita com sucesso!"
+                    : "✅ Solicitação finalizada com sucesso!"
+            );
+
+            return;
+        }
+
+        // ==============================================
+        // CANCELAR
+        // ==============================================
+
+        if(novoStatus === "cancelado"){
+
+            if(!confirm(
+                "Deseja cancelar esta solicitação?"
+            )){
+
+                return;
+            }
+
+            await ref.update({
+
+                status: "cancelado",
+
+                processadoEm:
+                    new Date().toISOString(),
+
+                processadoPorUid:
+                    firebaseAuth.currentUser
+                        ? firebaseAuth.currentUser.uid
+                        : "",
+
+                processadoPor:
+                    typeof operadorAtual === "function"
+                        ? operadorAtual()
+                        : "Administrador"
+
+            });
+
+            alert(
+                "❌ Solicitação cancelada."
+            );
+
+        }
+
+    }catch(erro){
+
+        console.error(
+            "Erro ao processar solicitação:",
+            erro
+        );
+
+        alert(
+            "❌ Não foi possível processar a solicitação.\n\n" +
+            erro.message
+        );
+
+    }
+
+}
+
+        // ==================================================
+        // IDENTIFICAR O TIPO DE USUÁRIO
+        // ==================================================
+
+        const tipoUsuario = String(
+            pedido.tipoUsuario ||
+            pedido.tipo ||
+            pedido.usuarioTipo ||
+            pedido.perfil ||
+            ""
+        ).trim().toLowerCase();
+
+        const ehExterno =
+            tipoUsuario === "externo" ||
+            tipoUsuario === "usuario externo" ||
+            tipoUsuario === "usuário externo";
+
+        const ehComum =
+            tipoUsuario === "comum" ||
+            tipoUsuario === "usuario comum" ||
+            tipoUsuario === "usuário comum";
+
+        // ==================================================
+        // CANCELAMENTO
+        // ==================================================
+
+        if(novoStatus === "cancelado"){
+
+            if(!confirm(
+                "Deseja CANCELAR esta solicitação?"
+            )){
+                return;
+            }
+
+            await ref.update({
+
+                status: "cancelado",
+
+                processadoEm:
+                    new Date().toISOString(),
+
+                processadoPorUid:
+                    firebaseAuth.currentUser
+                        ? firebaseAuth.currentUser.uid
+                        : "",
+
+                processadoPor:
+                    typeof operadorAtual === "function"
+                        ? operadorAtual()
+                        : "Administrador"
+
+            });
+
+            alert(
+                "❌ Solicitação cancelada."
+            );
+
+            return;
+        }
+
+        // ==================================================
+        // ATENDIMENTO
+        // ==================================================
+
+        if(novoStatus === "atendido"){
+
+            // ----------------------------------------------
+            // USUÁRIO EXTERNO — EXIGE NF
+            // ----------------------------------------------
+
+            if(ehExterno){
+
+                const campoNF =
+                    document.getElementById(
+                        "nf-solicitacao-" + id
+                    );
+
+                if(!campoNF){
+
+                    alert(
+                        "❌ Campo de Nota Fiscal não encontrado."
+                    );
+
+                    return;
+                }
+
+                const nf =
+                    String(
+                        campoNF.value || ""
+                    ).trim();
+
+                if(!nf){
+
+                    alert(
+                        "🧾 Informe o número da Nota Fiscal para finalizar esta solicitação."
+                    );
+
+                    campoNF.focus();
+
+                    return;
+                }
+
+                if(!confirm(
+                    "Finalizar esta solicitação com a NF nº " +
+                    nf +
+                    "?"
+                )){
+                    return;
+                }
+
+                await ref.update({
+
+                    status: "atendido",
+
+                    nf: nf,
+
+                    processadoEm:
+                        new Date().toISOString(),
+
+                    processadoPorUid:
+                        firebaseAuth.currentUser
+                            ? firebaseAuth.currentUser.uid
+                            : "",
+
+                    processadoPor:
+                        typeof operadorAtual === "function"
+                            ? operadorAtual()
+                            : "Administrador"
+
+                });
+
+                alert(
+                    "✅ Solicitação finalizada com sucesso!"
+                );
+
+                return;
+            }
+
+            // ----------------------------------------------
+            // USUÁRIO COMUM — NÃO EXIGE NF
+            // ----------------------------------------------
+
+            if(ehComum){
+
+                if(!confirm(
+                    "Deseja marcar esta solicitação como ATENDIDA?"
+                )){
+                    return;
+                }
+
+                await ref.update({
+
+                    status: "atendido",
+
+                    processadoEm:
+                        new Date().toISOString(),
+
+                    processadoPorUid:
+                        firebaseAuth.currentUser
+                            ? firebaseAuth.currentUser.uid
+                            : "",
+
+                    processadoPor:
+                        typeof operadorAtual === "function"
+                            ? operadorAtual()
+                            : "Administrador"
+
+                });
+
+                alert(
+                    "✅ Solicitação aceita com sucesso!"
+                );
+
+                return;
+            }
+
+            // ----------------------------------------------
+            // TIPO NÃO IDENTIFICADO
+            // ----------------------------------------------
+
+            alert(
+                "⚠️ Não foi possível identificar o tipo de usuário desta solicitação."
+            );
+
+            return;
+        }
+
+    }catch(erro){
+
+        console.error(
+            "Erro ao atualizar solicitação de mercadoria:",
+            erro
+        );
+
+        alert(
+            "❌ Não foi possível atualizar a solicitação."
+        );
+
+    }
+}
+
+// ======================================================
+// ATUALIZAR STATUS DA SOLICITAÇÃO DE MERCADORIA
+// ======================================================
+
+async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
+
     if(!usuarioEhAdmin()){
         alert("❌ Apenas o administrador pode processar solicitações.");
         return;
@@ -7062,69 +7439,115 @@ function escaparHtmlExterno(valor){
 
 }
     
+
 // ======================================================
-// PAINEL DE USUÁRIOS — CONTROLE DO BOTÃO E INDICADORES
+// CORREÇÃO — PAINEL DE USUÁRIOS / INDICADOR ADMIN
 // ======================================================
+
 function toggleAdminUsuarios(){
     if(!usuarioEhAdmin()){
-        alert("Apenas o administrador pode acessar os usuários cadastrados.");
         return;
     }
 
-    const painel=document.getElementById("painel-admin-usuarios");
-    const botao=document.getElementById("btn-abrir-painel-admin");
-    if(!painel)return;
+    const painel = document.getElementById("painel-admin-usuarios");
+    const botao = document.getElementById("btn-abrir-painel-admin");
 
-    const aberto=painel.style.display !== "none" && painel.style.display !== "";
+    if(!painel){
+        console.error("❌ #painel-admin-usuarios não encontrado.");
+        return;
+    }
+
+    const aberto =
+        painel.style.display !== "none" &&
+        painel.style.display !== "";
 
     if(aberto){
-        painel.style.display="none";
-        if(botao)botao.innerHTML="👑 Usuários Cadastrados";
-    }else{
-        painel.style.display="block";
-        if(botao)botao.innerHTML="👑 Ocultar Usuários Cadastrados";
-        renderizarUsuariosCadastradosAdmin();
-        if(typeof renderizarSolicitacoesAcessoAdmin === "function") renderizarSolicitacoesAcessoAdmin();
-        if(typeof renderizarSolicitacoesAlteracoesAdmin === "function") renderizarSolicitacoesAlteracoesAdmin();
-        if(typeof renderizarSolicitacoesMercadoriaAdmin === "function") renderizarSolicitacoesMercadoriaAdmin();
-        atualizarIndicadorAdmin();
-        setTimeout(function(){ painel.scrollIntoView({behavior:"smooth",block:"start"}); },50);
+        painel.style.display = "none";
+        if(botao){
+            botao.innerText = "👑 Usuários Cadastrados";
+        }
+        return;
     }
+
+    painel.style.display = "block";
+
+    if(botao){
+        botao.innerText = "🙈 Ocultar Usuários";
+    }
+
+    Promise.resolve()
+        .then(function(){
+            return carregarPerfisUsuariosFirebase();
+        })
+        .catch(function(erro){
+            console.error("Erro ao carregar perfis:", erro);
+        })
+        .finally(function(){
+            if(typeof renderizarSolicitacoesAcessoAdmin === "function"){
+                renderizarSolicitacoesAcessoAdmin();
+            }
+            if(typeof renderizarSolicitacoesAlteracoesAdmin === "function"){
+                renderizarSolicitacoesAlteracoesAdmin();
+            }
+            if(typeof renderizarSolicitacoesMercadoriaAdmin === "function"){
+                renderizarSolicitacoesMercadoriaAdmin();
+            }
+            if(typeof renderizarUsuariosCadastradosAdmin === "function"){
+                renderizarUsuariosCadastradosAdmin();
+            }
+        });
 }
 
 function atualizarIndicadorAdmin(){
-    if(!usuarioEhAdmin())return;
+    const botao = document.getElementById("btn-abrir-painel-admin");
 
-    const acesso=Array.isArray(solicitacoesAcessoCache)
-        ? solicitacoesAcessoCache.filter(function(x){return x && String(x.status||"").toLowerCase()==="pendente";}).length
-        : 0;
+    // Não gera erro em telas de usuário comum/externo.
+    if(!botao || !usuarioEhAdmin()){
+        return;
+    }
 
-    const alteracoes=Array.isArray(solicitacoesAlteracoesCache)
-        ? solicitacoesAlteracoesCache.filter(function(x){return x && String(x.status||"").toLowerCase()==="pendente";}).length
-        : 0;
+    const acessos =
+        Array.isArray(solicitacoesAcessoCache)
+            ? solicitacoesAcessoCache.filter(function(item){
+                return String(item.status || "").toLowerCase() === "pendente";
+            }).length
+            : 0;
 
-    const mercadorias=Array.isArray(solicitacoesMercadoriaAdminCache)
-        ? solicitacoesMercadoriaAdminCache.filter(function(x){return x && String(x.status||"").toLowerCase()==="pendente";}).length
-        : 0;
+    const alteracoes =
+        Array.isArray(solicitacoesAlteracoesCache)
+            ? solicitacoesAlteracoesCache.filter(function(item){
+                return String(item.status || "").toLowerCase() === "pendente";
+            }).length
+            : 0;
 
-    const c1=document.getElementById("contador-solicitacoes-admin");
-    const c2=document.getElementById("contador-alteracoes-admin");
-    const c3=document.getElementById("contador-solicitacoes-mercadoria-admin");
+    const mercadorias =
+        Array.isArray(solicitacoesMercadoriaAdminCache)
+            ? solicitacoesMercadoriaAdminCache.filter(function(item){
+                return String(item.status || "").toLowerCase() === "pendente";
+            }).length
+            : 0;
 
-    if(c1)c1.innerText=acesso ? "("+acesso+" pendente(s))" : "(nenhuma pendente)";
-    if(c2)c2.innerText=alteracoes ? "("+alteracoes+" pendente(s))" : "(nenhuma pendente)";
-    if(c3)c3.innerText=mercadorias ? "("+mercadorias+" pendente(s))" : "(nenhuma pendente)";
+    const total = acessos + alteracoes + mercadorias;
+    const painel = document.getElementById("painel-admin-usuarios");
 
-    const botao=document.getElementById("btn-abrir-painel-admin");
-    if(botao){
-        botao.style.display="inline-block";
-        if(document.getElementById("painel-admin-usuarios")?.style.display === "block"){
-            botao.innerHTML="👑 Ocultar Usuários Cadastrados";
-        }else{
-            botao.innerHTML="👑 Usuários Cadastrados";
-        }
+    const aberto =
+        painel &&
+        painel.style.display !== "none" &&
+        painel.style.display !== "";
+
+    if(total > 0){
+        botao.innerText = "👑 Usuários / 🔔 " + total + " pendente(s)";
+    }else if(aberto){
+        botao.innerText = "🙈 Ocultar Usuários";
+    }else{
+        botao.innerText = "👑 Usuários Cadastrados";
     }
 }
+
+// Disponibiliza os handlers usados pelo HTML no escopo global.
+window.toggleAdminUsuarios = toggleAdminUsuarios;
+window.atualizarIndicadorAdmin = atualizarIndicadorAdmin;
+
 
 // ======================================================
 // INICIALIZAÇÃO DA AUTENTICAÇÃO
@@ -7185,7 +7608,6 @@ setInterval(function(){
 
 // Compatibilidade: garante que os handlers usados pelos botões HTML
 // estejam disponíveis no escopo global do navegador.
-window.toggleAdminUsuarios = toggleAdminUsuarios;
 window.tratarEnvioLogin = tratarEnvioLogin;
 window.sairDoSistema = sairDoSistema;
 console.log("✅ CONTROLE DE CONTAINERS — FIREBASE V6 carregado.");
