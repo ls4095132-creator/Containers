@@ -2763,39 +2763,21 @@ function renderizarSolicitacoesMercadoriaAdmin(){
         ? solicitacoesMercadoriaAdminCache.slice()
         : [];
 
-    // ======================================================
-    // SOMENTE SOLICITAÇÕES PENDENTES
-    // E SOMENTE DE USUÁRIOS COMUNS OU EXTERNOS
-    // ======================================================
+   // ======================================================
+// SOMENTE SOLICITAÇÕES PENDENTES
+// ======================================================
 
-    const pendentes = lista.filter(function(item){
+const pendentes = lista.filter(function(item){
 
-        if(!item) return false;
+    if(!item) return false;
 
-        const status = String(item.status || "")
-            .trim()
-            .toLowerCase();
+    const status = String(
+        item.status || ""
+    ).trim().toLowerCase();
 
-        if(status !== "pendente") return false;
+    return status === "pendente";
 
-        const tipoUsuario = String(
-            item.tipoUsuario ||
-            item.tipo ||
-            item.usuarioTipo ||
-            item.perfil ||
-            ""
-        ).trim().toLowerCase();
-
-        return (
-            tipoUsuario === "comum" ||
-            tipoUsuario === "usuario comum" ||
-            tipoUsuario === "usuário comum" ||
-            tipoUsuario === "externo" ||
-            tipoUsuario === "usuario externo" ||
-            tipoUsuario === "usuário externo"
-        );
-
-    });
+});
 
     // ======================================================
     // CONTADOR
