@@ -964,7 +964,7 @@ console.log("🔥 Firebase conectado!");
 /* AJUSTE FINAL — painel administrativo + entrada de mercadoria */
 .layout-admin-operacional{
     display:grid;
-    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    grid-template-columns:minmax(360px,.72fr) minmax(0,1.28fr);
     gap:14px;
     align-items:stretch;
     margin-bottom:18px;
@@ -1797,12 +1797,6 @@ class="btn-apagar-historico"
 🗑️ Excluir Minhas Movimentações
 </button>
 
-<button
-onclick="limparHistorico()"
-class="btn-apagar-historico"
->
-🧹 Limpar Histórico
-</button>
 
 </div>
 
@@ -3365,7 +3359,7 @@ const pendentes = lista.filter(function(item){
                         <button
                             type="button"
                             class="btn-salvar"
-                            onclick="finalizarSolicitacaoMercadoriaAdmin('${item.id}')">
+                            onclick="atualizarStatusSolicitacaoMercadoriaAdmin('${item.id}', 'atendido')">
 
                             ✅ Finalizar Solicitação
 
@@ -3557,22 +3551,20 @@ async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
                 tipoUsuario === "usuário externo"
             ){
 
-                numeroNF = prompt(
-                    "🧾 Informe o número da Nota Fiscal para finalizar:"
+                const campoNF = document.getElementById(
+                    "nf-solicitacao-" + id
                 );
 
-                if(numeroNF === null){
+                if(!campoNF){
+                    alert("❌ Campo de Nota Fiscal não encontrado.");
                     return;
                 }
 
-                numeroNF = numeroNF.trim();
+                numeroNF = String(campoNF.value || "").trim();
 
                 if(!numeroNF){
-
-                    alert(
-                        "❌ É obrigatório informar o número da Nota Fiscal."
-                    );
-
+                    alert("❌ É obrigatório informar o número da Nota Fiscal.");
+                    campoNF.focus();
                     return;
                 }
 
