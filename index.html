@@ -7853,11 +7853,9 @@ console.log("✅ CONTROLE DE CONTAINERS — FIREBASE V6 carregado.");
 // ======================================================
 // NOTIFICAÇÕES PUSH — FIREBASE CLOUD MESSAGING
 // ======================================================
-// A chave pública VAPID abaixo é opcional para o teste inicial.
-// Para maior compatibilidade, especialmente no Safari/iPhone,
-// importe o par VAPID fornecido no arquivo de instruções no
-// Firebase Console e cole aqui somente a chave PÚBLICA.
-const NOTIFICACOES_VAPID_KEY = "BL7bASNS7HkTujeTBg7XXPh3Tav3Oo8d5VT7VwKhjVCbSExB07HgTqQ3_goFlS-jjPIUxU6Zd7O-ytwVoSv9n6c";
+// Usa a chave Web Push configurada no próprio Firebase.
+// Não há chave VAPID fixa no código para evitar conflito com
+// a chave pública cadastrada em Cloud Messaging.
 let firebaseMessagingWeb = null;
 let registroServiceWorkerNotificacoes = null;
 let notificacoesWebInicializadas = false;
@@ -7871,7 +7869,7 @@ function mostrarToastNotificacaoWeb(titulo, corpo){
         box.className="toast-notificacao-web";
         box.innerHTML="<strong>🔔 "+escaparHtmlSolicitacao(titulo||"Nova notificação")+"</strong><div>"+escaparHtmlSolicitacao(corpo||"")+"</div>";
         document.body.appendChild(box);
-        setTimeout(function(){ if(box && box.parentNode) box.remove(); }, 7000);
+        setTimeout(function(){ if(box && box.parentNode) box.remove(); },7000);
     }catch(e){ console.warn("Toast de notificação:",e); }
 }
 
@@ -7916,49 +7914,64 @@ async function salvarTokenNotificacaoWeb(token){
     });
 }
 
+async function obterRegistroServiceWorkerNotificacoes(){
+    if(!('serviceWorker' in navigator)) throw new Error("Service Worker não é suportado neste navegador.");
+
+    // Usa a raiz real da página, inclusive quando o GitHub Pages está em /Containers/.
+    const url=new URL("firebase-messaging-sw.js",document.baseURI).toString();
+    registroServiceWorkerNotificacoes=await navigator.serviceWorker.register(url,{scope:new URL("./",document.baseURI).toString()});
+    await navigator.serviceWorker.ready;
+
+    return registroServiceWorkerNotificacoes;
+}
+
 async function configurarNotificacoesWeb(){
-    try{
-        atualizarBotaoNotificacoesWeb();
-        if(!firebaseAuth.currentUser) return;
-        if(typeof firebase === "undefined" || !firebase.messaging) return;
-        if(!('serviceWorker' in navigator) || !('Notification' in window)) return;
+    atualizarBotaoNotificacoesWeb();
 
-        if(!firebaseMessagingWeb){
-            firebaseMessagingWeb=firebase.messaging();
-        }
+    if(!firebaseAuth.currentUser) return null;
+    if(typeof firebase==="undefined" || !firebase.messaging) throw new Error("Firebase Messaging não foi carregado.");
+    if(!('serviceWorker' in navigator)) throw new Error("Service Worker não disponível.");
+    if(!('Notification' in window)) throw new Error("Este navegador não oferece notificações.");
 
-        if(!registroServiceWorkerNotificacoes){
-            registroServiceWorkerNotificacoes=await navigator.serviceWorker.register("./firebase-messaging-sw.js",{scope:"./"});
-        }
-
-        if(!notificacoesWebInicializadas){
-            firebaseMessagingWeb.onMessage(function(payload){
-                const titulo=(payload && payload.notification && payload.notification.title) || "Controle de Containers";
-                const corpo=(payload && payload.notification && payload.notification.body) || "Você recebeu uma nova notificação.";
-                mostrarToastNotificacaoWeb(titulo,corpo);
-                if(typeof Notification!=="undefined" && Notification.permission==="granted" && document.hidden){
-                    try{
-                        new Notification(titulo,{body:corpo,icon:"./icon-192.png",badge:"./icon-192.png"});
-                    }catch(e){}
-                }
-            });
-            notificacoesWebInicializadas=true;
-        }
-
-        if(typeof Notification!=="undefined" && Notification.permission==="granted"){
-            const token=await firebaseMessagingWeb.getToken({
-                vapidKey:NOTIFICACOES_VAPID_KEY,
-                serviceWorkerRegistration:registroServiceWorkerNotificacoes
-            });
-            if(token) await salvarTokenNotificacaoWeb(token);
-        }
-    }catch(erro){
-        console.warn("⚠️ Notificações push ainda não configuradas:",erro);
+    if(!firebaseMessagingWeb){
+        firebaseMessagingWeb=firebase.messaging();
     }
+
+    if(!registroServiceWorkerNotificacoes){
+        registroServiceWorkerNotificacoes=await obterRegistroServiceWorkerNotificacoes();
+    }
+
+    if(!notificacoesWebInicializadas){
+        firebaseMessagingWeb.onMessage(function(payload){
+            const titulo=(payload && payload.notification && payload.notification.title) || (payload && payload.data && payload.data.title) || "Controle de Containers";
+            const corpo=(payload && payload.notification && payload.notification.body) || (payload && payload.data && payload.data.body) || "Você recebeu uma nova notificação.";
+            mostrarToastNotificacaoWeb(titulo,corpo);
+            if(typeof Notification!=="undefined" && Notification.permission==="granted" && document.hidden){
+                try{
+                    new Notification(titulo,{body:corpo,icon:new URL("icon-192.png",document.baseURI).toString(),badge:new URL("icon-192.png",document.baseURI).toString()});
+                }catch(e){ console.warn("Notification local:",e); }
+            }
+        });
+        notificacoesWebInicializadas=true;
+    }
+
+    if(Notification.permission!=="granted") return null;
+
+    // Sem informar vapidKey, o SDK usa a configuração Web Push do projeto Firebase.
+    const token=await firebaseMessagingWeb.getToken({
+        serviceWorkerRegistration:registroServiceWorkerNotificacoes
+    });
+
+    if(token) await salvarTokenNotificacaoWeb(token);
+    return token || null;
 }
 
 async function ativarNotificacoesWeb(){
     try{
+        if(!window.isSecureContext){
+            alert("❌ Este site não está em uma conexão segura (HTTPS). Abra o endereço do GitHub Pages começando com https://.");
+            return;
+        }
         if(!('Notification' in window)){
             alert("Este navegador não oferece suporte a notificações.");
             return;
@@ -7967,7 +7980,7 @@ async function ativarNotificacoesWeb(){
             alert("Entre no sistema antes de ativar as notificações.");
             return;
         }
-        if(Notification.permission === "denied"){
+        if(Notification.permission==="denied"){
             alert("As notificações estão bloqueadas no navegador. Libere as notificações deste site nas configurações do navegador e tente novamente.");
             return;
         }
@@ -7979,28 +7992,29 @@ async function ativarNotificacoesWeb(){
             return;
         }
 
-        await configurarNotificacoesWeb();
-        const user=firebaseAuth.currentUser;
-        let token="";
-        if(firebaseMessagingWeb && registroServiceWorkerNotificacoes){
-            token=await firebaseMessagingWeb.getToken({
-                vapidKey:NOTIFICACOES_VAPID_KEY,
-                serviceWorkerRegistration:registroServiceWorkerNotificacoes
-            });
-            if(token) await salvarTokenNotificacaoWeb(token);
+        // Remove registros antigos deste mesmo SW apenas quando necessário.
+        const registrations=await navigator.serviceWorker.getRegistrations();
+        for(const reg of registrations){
+            const scriptURL=(reg.active && reg.active.scriptURL)||"";
+            if(scriptURL.includes("firebase-messaging-sw.js")){
+                try{ await reg.update(); }catch(e){ console.warn("Atualização do Service Worker:",e); }
+            }
         }
+
+        const token=await configurarNotificacoesWeb();
+
         if(token){
             mostrarToastNotificacaoWeb("Notificações ativadas","Este dispositivo agora receberá avisos do sistema.");
         }else{
-            alert("A permissão do navegador foi concedida, mas o dispositivo ainda não recebeu um registro FCM. Confira se o site está em HTTPS e se a Web Push está configurada no Firebase.");
+            alert("⚠️ O navegador autorizou as notificações, mas o Firebase não retornou o registro FCM. Verifique no Firebase → Configurações do projeto → Cloud Messaging → Web Push certificates se existe uma chave pública ativa e recarregue a página.");
         }
     }catch(erro){
         console.error("Erro ao ativar notificações:",erro);
-        alert("Não foi possível ativar as notificações agora. Verifique se o site está em HTTPS e se a chave Web Push (VAPID) foi configurada no Firebase.");
+        const detalhe=erro && (erro.code || erro.message) ? "\n\nDetalhe: "+String(erro.code||erro.message) : "";
+        alert("❌ Não foi possível ativar as notificações agora."+detalhe);
     }
 }
 
-// Tentativa automática depois do login, sem bloquear a entrada no sistema.
 document.addEventListener("DOMContentLoaded",function(){ atualizarBotaoNotificacoesWeb(); });
 </script>
 
