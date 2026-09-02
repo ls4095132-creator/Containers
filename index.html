@@ -1143,6 +1143,16 @@ body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada input{
     }
 }
 </style>
+<style id="ajuste-layout-comum-solicitacoes">
+body:not(.usuario-admin) .layout-admin-operacional{display:grid;grid-template-columns:minmax(320px,.9fr) minmax(520px,1.1fr);gap:14px;align-items:stretch;margin-bottom:18px;}
+body:not(.usuario-admin) .layout-admin-operacional > #painel-admin-usuarios{display:none!important;}
+body:not(.usuario-admin) .layout-admin-operacional > .painel-solicitacoes-comum{display:block;grid-column:1;margin:0;min-height:680px;height:100%;box-sizing:border-box;}
+body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada{grid-column:2;margin:0;min-height:680px;height:100%;width:100%;box-sizing:border-box;}
+body.usuario-admin .painel-solicitacoes-comum{display:none!important;}
+.painel-solicitacoes-comum #lista-solicitacoes-comum{max-height:620px;overflow:auto;padding-right:2px;}
+.painel-solicitacoes-comum .produto-item{padding:10px 12px;border:1px solid var(--borda);border-radius:8px;margin-bottom:8px;background:var(--bg-painel-2);}
+@media(max-width:1100px){body:not(.usuario-admin) .layout-admin-operacional{grid-template-columns:1fr;}body:not(.usuario-admin) .layout-admin-operacional > .painel-solicitacoes-comum,body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada{grid-column:1;}}
+</style>
 
 </head>
 
@@ -1541,6 +1551,18 @@ onchange="restaurarBackup(this)"
 
 
 
+<!-- SOLICITAÇÕES RECEBIDAS — USUÁRIO COMUM (SOMENTE VISUALIZAÇÃO) -->
+<div class="painel painel-solicitacoes-comum" id="painel-solicitacoes-comum" style="display:none;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;">
+        <div>
+            <h2 style="margin:0;">📦 Solicitações Recebidas</h2>
+            <div style="font-size:11px;color:var(--texto-fraco);margin-top:4px;">Visualização somente leitura.</div>
+        </div>
+        <span id="contador-solicitacoes-comum" style="font-size:11px;color:var(--texto-fraco);"></span>
+    </div>
+    <div id="lista-solicitacoes-comum"><div class="vazio">📭 Nenhuma solicitação recebida.</div></div>
+</div>
+
 <!-- FORMULÁRIO -->
 
 <div class="painel painel-entrada">
@@ -1866,6 +1888,7 @@ let produtosCadastrados = [];
 let solicitacoesAlteracoesCache = [];
 let solicitacoesAcessoCache = [];
 let solicitacoesMercadoriaAdminCache = [];
+let solicitacoesMercadoriaComumCache = [];
 let firebaseSincronizacaoAtiva = false;
 let firebaseListenersAtivos = false;
 let firebaseRefsAtivos = [];
@@ -1890,6 +1913,41 @@ function normalizarListaFirebase(valor){
 }
 
 // ======================================================
+// SOLICITAÇÕES RECEBIDAS — USUÁRIO COMUM (SOMENTE LEITURA)
+// ======================================================
+function renderizarSolicitacoesRecebidasComum(){
+    const painel=document.getElementById("painel-solicitacoes-comum");
+    const area=document.getElementById("lista-solicitacoes-comum");
+    const contador=document.getElementById("contador-solicitacoes-comum");
+    if(!painel || !area) return;
+    if(usuarioLogadoAtual && usuarioLogadoAtual.tipo === "admin"){painel.style.display="none";return;}
+    painel.style.display="block";
+    const uid=firebaseAuth.currentUser ? firebaseAuth.currentUser.uid : "";
+    const lista=(Array.isArray(solicitacoesMercadoriaComumCache)?solicitacoesMercadoriaComumCache.slice():[]).filter(function(item){
+        if(!item) return false;
+        if(String(item.solicitanteUid||"")===String(uid||"")) return false;
+        return String(item.status||"").trim().toLowerCase()!=="cancelado";
+    });
+    lista.sort(function(a,b){return String(b.dataHora||"").localeCompare(String(a.dataHora||""));});
+    if(contador) contador.innerText="("+lista.length+")";
+    if(!lista.length){area.innerHTML='<div class="vazio">📭 Nenhuma solicitação recebida.</div>';return;}
+    area.innerHTML=lista.map(function(item){
+        const st=String(item.status||"pendente").toLowerCase();
+        const txt=st==="atendido"?"✅ Finalizada":"⏳ Pendente";
+        const data=item.dataHora?new Date(item.dataHora).toLocaleString("pt-BR"):"—";
+        return '<div class="produto-item"><div style="margin-bottom:7px;"><span class="tipo tipo-alteracao">'+escaparHtmlSolicitacao(txt)+'</span></div>'+
+        '<div style="font-size:12px;line-height:1.75;"><strong>📦 Container:</strong> '+escaparHtmlSolicitacao(item.container||"—")+'<br>'+
+        '<strong>📋 Produto:</strong> '+escaparHtmlSolicitacao(item.produto||"—")+'<br>'+
+        '<strong>🔢 Código:</strong> '+escaparHtmlSolicitacao(item.codigo||"—")+'<br>'+
+        '<strong>🏷️ Lote:</strong> '+escaparHtmlSolicitacao(item.lote||"—")+'<br>'+
+        '<strong>👤 Solicitante:</strong> '+escaparHtmlSolicitacao(item.solicitanteNome||item.solicitante||"—")+'<br>'+
+        '<strong>🔢 Quantidade:</strong> '+escaparHtmlSolicitacao(item.quantidadeSolicitada??"—")+'<br>'+
+        '<strong>⚖️ Peso:</strong> '+escaparHtmlSolicitacao(item.pesoSolicitado??"—")+' KG<br>'+
+        '<strong>🧾 NF:</strong> '+escaparHtmlSolicitacao(item.nf||item.notaFiscal||"—")+'<br>'+
+        '<strong>🕒 Data:</strong> '+escaparHtmlSolicitacao(data)+(item.observacao?'<br><strong>💬 Observação:</strong> '+escaparHtmlSolicitacao(item.observacao):'')+'</div></div>';
+    }).join("");
+}
+
 // ABRIR / FECHAR SOLICITAÇÕES DE MERCADORIA
 // ======================================================
 
@@ -1982,9 +2040,9 @@ async function iniciarSincronizacaoFirebase(){
             ler(produtosRef,"produtos"),
             ler(alteracoesRef,"solicitações de alteração")
         ];
+        resultados.push(ler(solicitacoesMercadoriaRef,"solicitações de mercadoria"));
         if(souAdmin){
     resultados.push(ler(acessoRef,"solicitações de acesso"));
-    resultados.push(ler(solicitacoesMercadoriaRef,"solicitações de mercadoria"));
 }
 
         const valores=await Promise.all(resultados);
@@ -1992,8 +2050,8 @@ async function iniciarSincronizacaoFirebase(){
         const historicoSnap=valores[1];
         const produtosSnap=valores[2];
         const alteracoesSnap=valores[3];
-        const acessoSnap=souAdmin ? valores[4] : null;
-        const solicitacoesMercadoriaSnap=souAdmin ? valores[5] : null;
+        const solicitacoesMercadoriaSnap=valores[4] || null;
+        const acessoSnap=souAdmin ? valores[5] : null;
 
         estoque=estoqueSnap ? normalizarListaFirebase(estoqueSnap.val()) : [];
         historico=historicoSnap ? normalizarListaFirebase(historicoSnap.val()) : [];
@@ -2001,6 +2059,9 @@ async function iniciarSincronizacaoFirebase(){
         solicitacoesAlteracoesCache=alteracoesSnap ? normalizarListaFirebase(alteracoesSnap.val()) : [];
         solicitacoesAcessoCache=souAdmin && acessoSnap ? normalizarListaFirebase(acessoSnap.val()) : [];
         solicitacoesMercadoriaAdminCache=souAdmin && solicitacoesMercadoriaSnap
+    ? normalizarListaFirebase(solicitacoesMercadoriaSnap.val())
+    : [];
+        solicitacoesMercadoriaComumCache=!souAdmin && solicitacoesMercadoriaSnap
     ? normalizarListaFirebase(solicitacoesMercadoriaSnap.val())
     : [];
 
@@ -2080,6 +2141,15 @@ async function iniciarSincronizacaoFirebase(){
         console.error("Firebase solicitações de mercadoria:",e);
     });
 
+}else{
+    registrar(solicitacoesMercadoriaRef,"value",function(snapshot){
+        solicitacoesMercadoriaComumCache=normalizarListaFirebase(snapshot.val());
+        renderizarSolicitacoesRecebidasComum();
+    },function(e){
+        console.error("Firebase solicitações recebidas (usuário comum):",e);
+        solicitacoesMercadoriaComumCache=[];
+        renderizarSolicitacoesRecebidasComum();
+    });
 }
 
         firebaseSincronizacaoAtiva=true;
@@ -5723,6 +5793,7 @@ if(usuarioObjeto && usuarioObjeto.tipo === "externo"){
         app.style.display="block";
     }
     atualizarTelaUsuarioLogado();
+    if(usuarioObjeto && usuarioObjeto.tipo !== "admin") renderizarSolicitacoesRecebidasComum();
 
     try{
         await iniciarAplicativo();
