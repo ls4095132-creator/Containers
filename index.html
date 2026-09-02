@@ -1201,10 +1201,10 @@ body.usuario-admin .painel-solicitacoes-comum{display:none!important;}
 window.OneSignalDeferred = window.OneSignalDeferred || [];
 
 OneSignalDeferred.push(async function(OneSignal) {
-   await OneSignal.init({
+  await OneSignal.init({
     appId: "37744162-3909-4b8c-b452-3e6932ac6ece",
 
-    serviceWorkerPath: "Containers/OneSignalSDKWorker.js",
+    serviceWorkerPath: "/Containers/OneSignalSDKWorker.js",
     serviceWorkerParam: {
         scope: "/Containers/"
     },
@@ -1213,7 +1213,8 @@ OneSignalDeferred.push(async function(OneSignal) {
 
     notifyButton: {
         enable: false
-    },
+    }
+});
         welcomeNotification: {
             disable: false,
             title: "Controle de Containers",
