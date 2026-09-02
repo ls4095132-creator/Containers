@@ -935,6 +935,44 @@ button:disabled {
     margin-bottom:18px;
 }
 
+
+/* ======================================================
+   NOTIFICAÇÕES PUSH — PADRÃO DO SISTEMA
+   ====================================================== */
+.btn-notificacao-web{
+    background:var(--bg-painel-2);
+    color:var(--texto);
+    border:1px solid var(--borda-forte);
+    padding:6px 11px;
+    font-size:12px;
+    white-space:nowrap;
+}
+.btn-notificacao-web.ativo{
+    border-color:#10b981;
+    color:#34d399;
+}
+.toast-notificacao-web{
+    position:fixed;
+    right:18px;
+    bottom:18px;
+    z-index:100000;
+    width:min(390px,calc(100vw - 36px));
+    background:#111a2e;
+    border:1px solid #2c3e63;
+    border-left:4px solid #10b981;
+    color:#dbe6f5;
+    border-radius:12px;
+    box-shadow:0 14px 40px rgba(0,0,0,.45);
+    padding:13px 15px;
+    animation:entradaNotificacaoWeb .2s ease-out;
+}
+.toast-notificacao-web strong{display:block;color:#56d2ff;margin-bottom:4px;font-size:13px;}
+.toast-notificacao-web div{font-size:12px;line-height:1.45;color:#dbe6f5;}
+@keyframes entradaNotificacaoWeb{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:700px){
+    .btn-notificacao-web{padding:6px 9px;font-size:11px;}
+    .toast-notificacao-web{right:10px;bottom:10px;width:calc(100vw - 20px);}
+}
 </style>
 
 <!-- FIREBASE: conexão do sistema -->
@@ -1242,6 +1280,8 @@ Entrar
     <div class="barra-usuario">
         <span id="texto-usuario-externo"></span>
 
+        <button type="button" class="btn-notificacao-web" id="btn-notificacoes-externo" onclick="ativarNotificacoesWeb()">🔔 Ativar</button>
+
         <button
             type="button"
             class="btn-sair"
@@ -1406,6 +1446,7 @@ Entrar
 
 <div class="barra-usuario">
 <span id="texto-usuario-logado"></span>
+<button type="button" class="btn-notificacao-web" id="btn-notificacoes-app" onclick="ativarNotificacoesWeb()">🔔 Ativar</button>
 <button type="button" class="btn-historico" id="btn-abrir-painel-admin" onclick="toggleAdminUsuarios()" style="display:none;">
 👑 Usuários Cadastrados
 </button>
@@ -5778,6 +5819,7 @@ if(usuarioObjeto && usuarioObjeto.tipo === "externo"){
     }
 
     iniciarTelaUsuarioExterno();
+    setTimeout(function(){ if(typeof configurarNotificacoesWeb === "function") configurarNotificacoesWeb(); }, 500);
 
     return;
 }
@@ -7804,6 +7846,162 @@ console.log("✅ CONTROLE DE CONTAINERS — FIREBASE V6 carregado.");
         };
     }
 })();
+</script>
+
+
+<script>
+// ======================================================
+// NOTIFICAÇÕES PUSH — FIREBASE CLOUD MESSAGING
+// ======================================================
+// A chave pública VAPID abaixo é opcional para o teste inicial.
+// Para maior compatibilidade, especialmente no Safari/iPhone,
+// importe o par VAPID fornecido no arquivo de instruções no
+// Firebase Console e cole aqui somente a chave PÚBLICA.
+const NOTIFICACOES_VAPID_KEY = "BPYGGa6c3YzBcyu6AgrDglA6mEadb6YY2JsY1mxUuHNkxnykyNmG08Al5NU7WrI38nlrprhlj4o-FjTvpvS-Lic";
+let firebaseMessagingWeb = null;
+let registroServiceWorkerNotificacoes = null;
+let notificacoesWebInicializadas = false;
+
+function mostrarToastNotificacaoWeb(titulo, corpo){
+    try{
+        const anterior=document.getElementById("toast-notificacao-web");
+        if(anterior) anterior.remove();
+        const box=document.createElement("div");
+        box.id="toast-notificacao-web";
+        box.className="toast-notificacao-web";
+        box.innerHTML="<strong>🔔 "+escaparHtmlSolicitacao(titulo||"Nova notificação")+"</strong><div>"+escaparHtmlSolicitacao(corpo||"")+"</div>";
+        document.body.appendChild(box);
+        setTimeout(function(){ if(box && box.parentNode) box.remove(); }, 7000);
+    }catch(e){ console.warn("Toast de notificação:",e); }
+}
+
+function atualizarBotaoNotificacoesWeb(){
+    const botoes=[
+        document.getElementById("btn-notificacoes-app"),
+        document.getElementById("btn-notificacoes-externo")
+    ].filter(Boolean);
+    botoes.forEach(function(botao){
+        const permitido=(typeof Notification!=="undefined" && Notification.permission==="granted");
+        if(permitido){
+            botao.innerText="🔔 Ativas";
+            botao.classList.add("ativo");
+        }else{
+            botao.innerText="🔔 Ativar";
+            botao.classList.remove("ativo");
+        }
+    });
+}
+
+function obterDeviceIdNotificacao(){
+    const chave="controleContainersDeviceId";
+    let id=localStorage.getItem(chave);
+    if(!id){
+        id="d_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,12);
+        localStorage.setItem(chave,id);
+    }
+    return id;
+}
+
+async function salvarTokenNotificacaoWeb(token){
+    const user=firebaseAuth.currentUser;
+    if(!user || !token) return;
+    const uid=user.uid;
+    const deviceId=obterDeviceIdNotificacao();
+    await firebaseDB.ref("notificacoesWeb/"+uid+"/"+deviceId).set({
+        token:token,
+        uid:uid,
+        tipo:(usuarioLogadoAtual && usuarioLogadoAtual.tipo)||"usuario",
+        userAgent:navigator.userAgent||"",
+        atualizadoEm:new Date().toISOString()
+    });
+}
+
+async function configurarNotificacoesWeb(){
+    try{
+        atualizarBotaoNotificacoesWeb();
+        if(!firebaseAuth.currentUser) return;
+        if(typeof firebase === "undefined" || !firebase.messaging) return;
+        if(!('serviceWorker' in navigator) || !('Notification' in window)) return;
+
+        if(!firebaseMessagingWeb){
+            firebaseMessagingWeb=firebase.messaging();
+        }
+
+        if(!registroServiceWorkerNotificacoes){
+            registroServiceWorkerNotificacoes=await navigator.serviceWorker.register("./firebase-messaging-sw.js",{scope:"./"});
+        }
+
+        if(!notificacoesWebInicializadas){
+            firebaseMessagingWeb.onMessage(function(payload){
+                const titulo=(payload && payload.notification && payload.notification.title) || "Controle de Containers";
+                const corpo=(payload && payload.notification && payload.notification.body) || "Você recebeu uma nova notificação.";
+                mostrarToastNotificacaoWeb(titulo,corpo);
+                if(typeof Notification!=="undefined" && Notification.permission==="granted" && document.hidden){
+                    try{
+                        new Notification(titulo,{body:corpo,icon:"./icon-192.png",badge:"./icon-192.png"});
+                    }catch(e){}
+                }
+            });
+            notificacoesWebInicializadas=true;
+        }
+
+        if(typeof Notification!=="undefined" && Notification.permission==="granted"){
+            const token=await firebaseMessagingWeb.getToken({
+                vapidKey:NOTIFICACOES_VAPID_KEY,
+                serviceWorkerRegistration:registroServiceWorkerNotificacoes
+            });
+            if(token) await salvarTokenNotificacaoWeb(token);
+        }
+    }catch(erro){
+        console.warn("⚠️ Notificações push ainda não configuradas:",erro);
+    }
+}
+
+async function ativarNotificacoesWeb(){
+    try{
+        if(!('Notification' in window)){
+            alert("Este navegador não oferece suporte a notificações.");
+            return;
+        }
+        if(!firebaseAuth.currentUser){
+            alert("Entre no sistema antes de ativar as notificações.");
+            return;
+        }
+        if(Notification.permission === "denied"){
+            alert("As notificações estão bloqueadas no navegador. Libere as notificações deste site nas configurações do navegador e tente novamente.");
+            return;
+        }
+
+        const permissao=await Notification.requestPermission();
+        atualizarBotaoNotificacoesWeb();
+        if(permissao!=="granted"){
+            alert("As notificações não foram autorizadas.");
+            return;
+        }
+
+        await configurarNotificacoesWeb();
+        const user=firebaseAuth.currentUser;
+        let token="";
+        if(firebaseMessagingWeb && registroServiceWorkerNotificacoes){
+            token=await firebaseMessagingWeb.getToken({
+                vapidKey:NOTIFICACOES_VAPID_KEY,
+                serviceWorkerRegistration:registroServiceWorkerNotificacoes
+            });
+            if(token) await salvarTokenNotificacaoWeb(token);
+        }
+        if(token){
+            mostrarToastNotificacaoWeb("Notificações ativadas","Este dispositivo agora receberá avisos do sistema.");
+        }else{
+            alert("A permissão do navegador foi concedida, mas o dispositivo ainda não recebeu um registro FCM. Confira se o site está em HTTPS e se a Web Push está configurada no Firebase.");
+        }
+    }catch(erro){
+        console.error("Erro ao ativar notificações:",erro);
+        alert("Não foi possível ativar as notificações agora. Verifique se o site está em HTTPS e se a chave Web Push (VAPID) foi configurada no Firebase.");
+    }
+}
+
+// Tentativa automática depois do login, sem bloquear a entrada no sistema.
+document.addEventListener("DOMContentLoaded",function(){ atualizarBotaoNotificacoesWeb(); });
 </script>
 
 </body>
