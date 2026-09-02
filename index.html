@@ -187,8 +187,8 @@ input::placeholder, textarea::placeholder {
 
 /* Linha 3: quantidade + peso */
 .painel-entrada .linha-quantidade {
-    grid-template-columns: 170px 190px;
-    max-width: 380px;
+    grid-template-columns: 150px 150px 190px;
+    max-width: 520px;
 }
 
 .painel-entrada .campo-produto {
@@ -228,7 +228,7 @@ input::placeholder, textarea::placeholder {
     }
 
     .painel-entrada .linha-quantidade {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr 1fr 1fr;
         max-width: none;
     }
 }
@@ -800,8 +800,8 @@ button:disabled {
     width:min(820px,96vw);
     max-height:90vh;
     overflow:auto;
-    background:#fff;
-    color:#182033;
+    background:var(--bg-painel);
+    color:var(--texto);
     border-radius:14px;
     box-shadow:0 22px 70px rgba(0,0,0,.45);
 }
@@ -811,16 +811,16 @@ button:disabled {
     justify-content:space-between;
     gap:15px;
     padding:18px 22px 14px;
-    border-bottom:1px solid #ddd;
+    border-bottom:1px solid var(--borda);
 }
 .modal-solicitacao-cabecalho h2{
     margin:0 0 4px;
-    color:#111827;
+    color:var(--azul);
 }
 .modal-fechar{
     border:0;
     background:transparent;
-    color:#555;
+    color:var(--texto-fraco);
     font-size:27px;
     cursor:pointer;
     line-height:1;
@@ -838,27 +838,30 @@ button:disabled {
     display:block;
     margin-bottom:6px;
     font-weight:600;
-    color:#1f2937;
+    color:var(--texto-fraco);
 }
 .modal-solicitacao-caixa input,
 .modal-solicitacao-caixa select,
 .modal-solicitacao-caixa textarea{
     width:100%;
-    border:1px solid #cbd5e1;
+    border:1px solid var(--borda-forte);
     border-radius:8px;
-    background:#fff;
-    color:#111827;
+    background:var(--bg-input);
+    color:var(--texto);
     padding:10px 11px;
     font:inherit;
 }
 .modal-solicitacao-caixa textarea{resize:vertical;min-height:78px;}
+.modal-solicitacao-caixa input::placeholder,
+.modal-solicitacao-caixa textarea::placeholder{color:var(--texto-fraco);}
+.modal-solicitacao-caixa select option{background:var(--bg-input);color:var(--texto);}
 .resumo-container-solicitacao{
     margin:14px 0;
     padding:12px 14px;
-    border:1px solid #d6dee9;
+    border:1px solid var(--borda);
     border-radius:9px;
-    background:#f5f8fc;
-    color:#334155;
+    background:var(--bg-painel-2);
+    color:var(--texto);
     font-size:13px;
     line-height:1.55;
 }
@@ -867,7 +870,7 @@ button:disabled {
     justify-content:flex-end;
     gap:12px;
     padding:14px 22px 18px;
-    border-top:1px solid #ddd;
+    border-top:1px solid var(--borda);
 }
 .modal-solicitacao-rodape button{
     min-width:150px;
@@ -1451,6 +1454,15 @@ Entrar
             🗑️ Apagar Solicitações
         </button>
 
+        <button
+            type="button"
+            onclick="toggleSolicitacoesFinalizadasAdmin()"
+            class="btn-historico"
+            id="btn-solicitacoes-finalizadas-admin"
+        >
+            📋 Ver Solicitações Finalizadas
+        </button>
+
     </div>
 
     <div
@@ -1462,6 +1474,15 @@ Entrar
             <!-- As solicitações serão carregadas aqui pelo Firebase -->
         </div>
 
+    </div>
+
+    <div
+        id="conteudo-solicitacoes-finalizadas-admin"
+        style="display:none;margin-top:15px;"
+    >
+        <div id="lista-solicitacoes-finalizadas-admin">
+            <!-- Solicitações finalizadas -->
+        </div>
     </div>
 
 </div>
@@ -1607,7 +1628,7 @@ placeholder="Número do lote"
 
 </div>
 
-<!-- Linha 3: quantidade e peso -->
+<!-- Linha 3: quantidade + KG por volume + peso total -->
 <div class="linha-form linha-quantidade">
 
 <div class="campo">
@@ -1616,18 +1637,33 @@ placeholder="Número do lote"
 type="number"
 id="qtd"
 min="0"
+step="1"
 placeholder="Quantidade de volumes"
+oninput="calcularPesoTotal()"
 >
 </div>
 
 <div class="campo">
-<label>⚖️ Peso (KG):</label>
+<label>⚖️ KG:</label>
+<input
+type="number"
+id="kg"
+min="0"
+step="0.01"
+placeholder="KG por volume"
+oninput="calcularPesoTotal()"
+>
+</div>
+
+<div class="campo">
+<label>🧮 Peso Total (KG):</label>
 <input
 type="number"
 id="peso"
 min="0"
 step="0.01"
-placeholder="Peso líquido total"
+placeholder="Calculado automaticamente"
+readonly
 >
 </div>
 
@@ -2033,6 +2069,9 @@ async function iniciarSincronizacaoFirebase(){
 
         if(typeof renderizarSolicitacoesMercadoriaAdmin==="function"){
             renderizarSolicitacoesMercadoriaAdmin();
+        }
+        if(document.getElementById("conteudo-solicitacoes-finalizadas-admin")?.style.display !== "none" && typeof renderizarSolicitacoesFinalizadasAdmin === "function"){
+            renderizarSolicitacoesFinalizadasAdmin();
         }
 
         atualizarIndicadorAdmin();
@@ -3482,6 +3521,82 @@ const pendentes = lista.filter(function(item){
 }
 
 // ======================================================
+// VISUALIZAR SOLICITAÇÕES FINALIZADAS — ADMIN
+// ======================================================
+
+function toggleSolicitacoesFinalizadasAdmin(){
+    if(!usuarioEhAdmin()) return;
+
+    const painel = document.getElementById("conteudo-solicitacoes-finalizadas-admin");
+    const botao = document.getElementById("btn-solicitacoes-finalizadas-admin");
+
+    if(!painel || !botao) return;
+
+    const aberto = painel.style.display !== "none";
+
+    if(aberto){
+        painel.style.display = "none";
+        botao.innerText = "📋 Ver Solicitações Finalizadas";
+        return;
+    }
+
+    painel.style.display = "block";
+    botao.innerText = "🙈 Ocultar Solicitações Finalizadas";
+    renderizarSolicitacoesFinalizadasAdmin();
+}
+
+function renderizarSolicitacoesFinalizadasAdmin(){
+    const area = document.getElementById("lista-solicitacoes-finalizadas-admin");
+    if(!area || !usuarioEhAdmin()) return;
+
+    const ocultas = new Set(obterOcultosSolicitacoesUsuario());
+    const lista = (Array.isArray(solicitacoesMercadoriaAdminCache) ? solicitacoesMercadoriaAdminCache.slice() : [])
+        .filter(function(item){
+            if(!item) return false;
+            if(ocultas.has(String(item.id || ""))) return false;
+            const status = String(item.status || "").trim().toLowerCase();
+            return status === "atendido" || status === "finalizado" || status === "concluido" || status === "concluído";
+        })
+        .sort(function(a,b){
+            return String(b.processadoEm || b.dataHora || "").localeCompare(String(a.processadoEm || a.dataHora || ""));
+        });
+
+    if(!lista.length){
+        area.innerHTML = '<div class="vazio" style="margin-top:10px;">📭 Nenhuma solicitação finalizada.</div>';
+        return;
+    }
+
+    area.innerHTML = lista.map(function(item){
+        const tipo = String(item.tipoUsuario || item.tipo || item.usuarioTipo || item.perfil || "").trim().toLowerCase();
+        const nf = item.nf || item.notaFiscal || "—";
+        const processadoEm = item.processadoEm ? new Date(item.processadoEm).toLocaleString("pt-BR") : "—";
+        const solicitante = item.solicitanteNome || item.solicitante || "—";
+        const quantidade = Number(item.quantidadeSolicitada || 0);
+        const peso = Number(item.pesoSolicitado || 0);
+        const statusTexto = (tipo === "comum" || tipo === "usuario comum" || tipo === "usuário comum") ? "✅ Aceitada" : "✅ Finalizada";
+
+        return `
+            <div class="produto-item" style="margin-bottom:10px;padding:12px;border:1px solid var(--borda);border-radius:8px;">
+                <div style="margin-bottom:8px;">
+                    <span class="tipo tipo-entrada">${statusTexto}</span>
+                </div>
+                <div style="font-size:12px;line-height:1.8;">
+                    <strong>📦 Container:</strong> ${item.container || "—"}<br>
+                    <strong>📋 Produto:</strong> ${item.produto || "—"}<br>
+                    <strong>🔢 Código:</strong> ${item.codigo || "—"}<br>
+                    <strong>🏷️ Lote:</strong> ${item.lote || "—"}<br>
+                    <strong>👤 Solicitante:</strong> ${solicitante}<br>
+                    <strong>👥 Tipo:</strong> ${tipo === "externo" || tipo === "usuario externo" || tipo === "usuário externo" ? "Usuário externo" : "Usuário comum"}<br>
+                    <strong>🔢 Quantidade:</strong> ${quantidade}<br>
+                    <strong>⚖️ Peso:</strong> ${peso.toLocaleString("pt-BR",{minimumFractionDigits:2})} KG<br>
+                    <strong>🧾 Nota Fiscal:</strong> ${nf}<br>
+                    <strong>🕐 Finalizada em:</strong> ${processadoEm}
+                </div>
+            </div>`;
+    }).join("");
+}
+
+// ======================================================
 // ATUALIZAR STATUS DA SOLICITAÇÃO DE MERCADORIA
 // ======================================================
 
@@ -3929,6 +4044,8 @@ lote:item.lote,
 
 qtd:item.qtd,
 
+kg:item.kg,
+
 peso:item.peso,
 
 detalhes:detalhes
@@ -4316,6 +4433,27 @@ title="Remover produto"
 // ENTRADA
 // ======================================================
 
+function calcularPesoTotal(){
+
+const quantidade = Number(
+    document.getElementById("qtd")?.value || 0
+);
+
+const kgPorVolume = Number(
+    document.getElementById("kg")?.value || 0
+);
+
+const campoPeso = document.getElementById("peso");
+
+if(!campoPeso)return;
+
+const total = quantidade * kgPorVolume;
+
+campoPeso.value = total > 0 ? total.toFixed(2) : "";
+
+}
+
+
 function adicionarItem(){
 
 const data = document.getElementById("data").value;
@@ -4326,6 +4464,8 @@ const prod = document.getElementById("prod").value.trim();
 const codigo = document.getElementById("codigo").value.trim();
 const lote = document.getElementById("lote").value.trim();
 const qtd = document.getElementById("qtd").value;
+const kg = document.getElementById("kg").value;
+calcularPesoTotal();
 const peso = document.getElementById("peso").value;
 const editIndex = document.getElementById("edit-index").value;
 
@@ -4336,8 +4476,9 @@ if(!fornecedor){ alert("Informe o fornecedor."); return; }
 if(!nf){ alert("Informe a Nota Fiscal."); return; }
 if(!prod){ alert("Informe o produto."); return; }
 if(!lote){ alert("Informe o lote."); return; }
-if(!qtd){ alert("Informe a quantidade."); return; }
-if(!peso){ alert("Informe o peso."); return; }
+if(!qtd || Number(qtd) <= 0){ alert("Informe a quantidade."); return; }
+if(!kg || Number(kg) <= 0){ alert("Informe o KG por volume."); return; }
+if(!peso || Number(peso) <= 0){ alert("O peso total não pôde ser calculado."); return; }
 
 const produtoCadastrado = produtosCadastrados.find(function(itemProduto){
     return itemProduto.nome.toLowerCase() === prod.toLowerCase();
@@ -4363,6 +4504,7 @@ const item={
     codigo:codigo || produtoCadastrado.codigo || "",
     lote:lote,
     qtd:Number(qtd),
+    kg:Number(kg),
     peso:Number(peso)
 };
 
@@ -4414,6 +4556,8 @@ document.getElementById("codigo").value="";
 document.getElementById("lote").value="";
 
 document.getElementById("qtd").value="";
+
+document.getElementById("kg").value="";
 
 document.getElementById("peso").value="";
 
@@ -4619,8 +4763,10 @@ item.lote;
 document.getElementById("qtd").value =
 item.qtd;
 
-document.getElementById("peso").value =
-item.peso;
+document.getElementById("kg").value =
+item.kg != null ? item.kg : (Number(item.qtd) > 0 ? Number(item.peso || 0) / Number(item.qtd) : "");
+
+calcularPesoTotal();
 
 document.getElementById("edit-index").value =
 index;
