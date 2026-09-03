@@ -3914,6 +3914,38 @@ async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
             return;
         }
 
+        // ======================================================
+// NOTIFICAÇÃO — SOLICITAÇÃO EXTERNA FINALIZADA
+// ======================================================
+
+if(
+    tipoUsuario !== "comum" &&
+    numeroNF &&
+    solicitacao.solicitanteUid &&
+    (
+        tipoUsuario === "externo" ||
+        tipoUsuario === "usuario externo" ||
+        tipoUsuario === "usuário externo"
+    )
+){
+    console.log("🔔 Enviando notificação de finalização...");
+
+    await chamarWorkerNotificacao(
+        "solicitacao_finalizada",
+        {
+            solicitacao: {
+                id: id,
+                solicitanteUid: solicitacao.solicitanteUid,
+                tipoUsuario: "externo",
+                container: solicitacao.container,
+                produto: solicitacao.produto,
+                nf: numeroNF,
+                nfFinalizacao: numeroNF,
+                status: "atendido"
+            }
+        }
+    );
+}
 
         // ==================================================
         // CANCELAMENTO
