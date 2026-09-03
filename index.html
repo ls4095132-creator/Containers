@@ -7239,6 +7239,15 @@ async function enviarSolicitacaoMercadoria(){
     )
     .set(pedido);
 
+console.log("📦 Solicitação salva. Chamando Worker...");
+
+await chamarWorkerNotificacao(
+    "nova_solicitacao",
+    {
+        solicitacao: pedido
+    }
+);
+        
 // Envia a notificação depois que o pedido foi salvo
 await chamarWorkerNotificacao(
     "nova_solicitacao",
