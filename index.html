@@ -1437,6 +1437,9 @@ Entrar
 <button class="btn-apagar-historico" onclick="ocultarSolicitacoesAdmin()" type="button">
             🗑️ Apagar Solicitações
         </button>
+<button class="btn-cancelar" onclick="limparPendenciasMercadoriaAdmin()" type="button" title="Marca como canceladas as solicitações de mercadoria que ainda estão pendentes, preservando os registros no Firebase.">
+            🧹 Limpar Pendências Antigas
+        </button>
 <button class="btn-historico" id="btn-solicitacoes-finalizadas-admin" onclick="toggleSolicitacoesFinalizadasAdmin()" type="button">
             📋 Ver Solicitações Finalizadas
         </button>
@@ -3594,6 +3597,65 @@ function toggleSolicitacoesFinalizadasAdmin(){
     renderizarSolicitacoesFinalizadasAdmin();
 }
 
+async function limparPendenciasMercadoriaAdmin(){
+    if(!usuarioEhAdmin()) return;
+
+    const pendentes=(Array.isArray(solicitacoesMercadoriaAdminCache)
+        ? solicitacoesMercadoriaAdminCache.slice()
+        : [])
+        .filter(function(item){
+            return item && String(item.status || "").trim().toLowerCase() === "pendente";
+        });
+
+    if(!pendentes.length){
+        alert("✅ Não existem solicitações de mercadoria pendentes para limpar.");
+        return;
+    }
+
+    if(!confirm(
+        "Foram encontradas " + pendentes.length + " solicitação(ões) de mercadoria ainda pendente(s).\n\n" +
+        "As pendências antigas serão marcadas como CANCELADAS para limpar o indicador do administrador.\n" +
+        "Os registros não serão apagados do Firebase.\n\nContinuar?"
+    )) return;
+
+    try{
+        const agora=new Date().toISOString();
+        const uid=firebaseAuth.currentUser ? firebaseAuth.currentUser.uid : "";
+        const operador=typeof operadorAtual === "function" ? operadorAtual() : "Administrador";
+
+        await Promise.all(pendentes.map(function(item){
+            return firebaseDB.ref("solicitacoesMercadoria/" + item.id).update({
+                status:"cancelado",
+                processadoEm:agora,
+                processadoPorUid:uid,
+                processadoPor:operador,
+                canceladoPorLimpezaAdmin:true
+            });
+        }));
+
+        solicitacoesMercadoriaAdminCache=solicitacoesMercadoriaAdminCache.map(function(item){
+            if(!item || String(item.status || "").trim().toLowerCase() !== "pendente") return item;
+            return Object.assign({},item,{
+                status:"cancelado",
+                processadoEm:agora,
+                processadoPorUid:uid,
+                processadoPor:operador,
+                canceladoPorLimpezaAdmin:true
+            });
+        });
+
+        renderizarSolicitacoesMercadoriaAdmin();
+        renderizarSolicitacoesFinalizadasAdmin();
+        atualizarIndicadorAdmin();
+        alert("✅ Pendências antigas limpas. Os registros foram preservados no Firebase como cancelados.");
+    }catch(erro){
+        console.error("Erro ao limpar pendências antigas:",erro);
+        alert("❌ Não foi possível limpar as pendências antigas.\n\n"+(erro && erro.message ? erro.message : erro));
+    }
+}
+
+window.limparPendenciasMercadoriaAdmin = limparPendenciasMercadoriaAdmin;
+
 function renderizarSolicitacoesFinalizadasAdmin(){
     const area = document.getElementById("lista-solicitacoes-finalizadas-admin");
     if(!area || !usuarioEhAdmin()) return;
@@ -3989,9 +4051,12 @@ async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
             estoque = normalizarListaFirebase((await firebaseDB.ref("estoque").once("value")).val());
             historico = normalizarListaFirebase((await firebaseDB.ref("historico").once("value")).val());
 
+            // Mantém a solicitação no cache para que ela apareça em
+            // "Solicitações Finalizadas". Apenas removemos o status de pendente.
             solicitacoesMercadoriaAdminCache =
-                solicitacoesMercadoriaAdminCache.filter(function(item){
-                    return String(item.id || "") !== String(id);
+                solicitacoesMercadoriaAdminCache.map(function(item){
+                    if(String(item.id || "") !== String(id)) return item;
+                    return Object.assign({}, item, atualizacao);
                 });
 
             mostrarEstoque();
@@ -4031,9 +4096,17 @@ async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
                 processadoPor: typeof operadorAtual === "function" ? operadorAtual() : "Administrador"
             });
 
+            // Mantém a solicitação no cache como cancelada para preservar
+            // o histórico e permitir futura consulta administrativa.
             solicitacoesMercadoriaAdminCache =
-                solicitacoesMercadoriaAdminCache.filter(function(item){
-                    return String(item.id || "") !== String(id);
+                solicitacoesMercadoriaAdminCache.map(function(item){
+                    if(String(item.id || "") !== String(id)) return item;
+                    return Object.assign({}, item, {
+                        status: "cancelado",
+                        processadoEm: new Date().toISOString(),
+                        processadoPorUid: firebaseAuth.currentUser ? firebaseAuth.currentUser.uid : "",
+                        processadoPor: typeof operadorAtual === "function" ? operadorAtual() : "Administrador"
+                    });
                 });
 
             if(typeof renderizarSolicitacoesMercadoriaAdmin === "function"){
