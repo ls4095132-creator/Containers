@@ -1621,11 +1621,14 @@ onchange="restaurarBackup(this)"
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;">
         <div>
             <h2 style="margin:0;">📦 Solicitações Recebidas</h2>
-            <div style="font-size:11px;color:var(--texto-fraco);margin-top:4px;">Visualização somente leitura.</div>
+            <div style="font-size:11px;color:var(--texto-fraco);margin-top:4px;">Visualização somente leitura das solicitações de mercadoria.</div>
         </div>
         <span id="contador-solicitacoes-comum" style="font-size:11px;color:var(--texto-fraco);"></span>
     </div>
     <div id="lista-solicitacoes-comum"><div class="vazio">📭 Nenhuma solicitação recebida.</div></div>
+    <div style="margin-top:10px;font-size:11px;color:var(--texto-fraco);display:flex;justify-content:flex-end;">
+        <button type="button" class="btn-notificacao-web" id="btn-notificacoes-comum" onclick="ativarNotificacoesWeb()">🔔 Ativar notificações</button>
+    </div>
 </div>
 
 <!-- FORMULÁRIO -->
@@ -2011,10 +2014,6 @@ function renderizarSolicitacoesRecebidasComum(){
 
     const lista=origem.filter(function(item){
         if(!item) return false;
-
-        // Não mostrar no painel de recebidas a própria solicitação do usuário.
-        if(uid && String(item.solicitanteUid||"") === String(uid)) return false;
-
         const status=String(item.status||"pendente").trim().toLowerCase();
         return status !== "cancelado";
     });
@@ -2034,9 +2033,10 @@ function renderizarSolicitacoesRecebidasComum(){
 
     area.innerHTML=lista.map(function(item){
         const st=String(item.status||"pendente").trim().toLowerCase();
+        const minha = uid && String(item.solicitanteUid||"") === String(uid);
         const txt=st === "atendido" || st === "finalizado" || st === "concluido" || st === "concluído"
             ? "✅ Finalizada"
-            : "⏳ Pendente";
+            : (minha ? "⏳ Minha solicitação" : "⏳ Solicitação recebida");
 
         const data=item.dataHora
             ? new Date(item.dataHora).toLocaleString("pt-BR")
@@ -2272,10 +2272,13 @@ async function iniciarSincronizacaoFirebase(){
 }else{
     registrar(solicitacoesMercadoriaRef,"value",function(snapshot){
         solicitacoesMercadoriaComumCache=normalizarListaFirebase(snapshot.val());
+        console.log("📦 Solicitações disponíveis para usuário comum:", solicitacoesMercadoriaComumCache.length);
         renderizarSolicitacoesRecebidasComum();
     },function(e){
-        console.error("Firebase solicitações recebidas (usuário comum):",e);
+        console.error("Firebase solicitações recebidas (usuário comum):", e);
         solicitacoesMercadoriaComumCache=[];
+        const area=document.getElementById("lista-solicitacoes-comum");
+        if(area){ area.innerHTML='<div class="vazio">⚠️ Não foi possível carregar as solicitações.</div>'; }
         renderizarSolicitacoesRecebidasComum();
     });
 }
@@ -3847,6 +3850,12 @@ async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
                 tipoUsuario === "usuario externo" ||
                 tipoUsuario === "usuário externo";
 
+            const ehUsuarioComum =
+                tipoUsuario === "comum" ||
+                tipoUsuario === "usuario" ||
+                tipoUsuario === "usuario comum" ||
+                tipoUsuario === "usuário comum";
+
             if(ehUsuarioExterno){
                 const campoNF=document.getElementById("nf-solicitacao-" + id);
 
@@ -4055,23 +4064,24 @@ async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
             await ref.update(atualizacao);
 
             // ==================================================
-            // NOTIFICAÇÃO — USUÁRIO EXTERNO
+            // NOTIFICAÇÃO — USUÁRIO EXTERNO OU USUÁRIO COMUM
             // ==================================================
-            if(ehUsuarioExterno && pedido.solicitanteUid){
+            if((ehUsuarioExterno || ehUsuarioComum) && pedido.solicitanteUid){
+                console.log("🔔 Enviando finalização para o solicitante:", pedido.solicitanteUid);
                 await chamarWorkerNotificacao(
                     "solicitacao_finalizada",
                     {
                         solicitacao: {
                             id: id,
                             solicitanteUid: pedido.solicitanteUid,
-                            tipoUsuario: "externo",
+                            tipoUsuario: ehUsuarioExterno ? "externo" : "comum",
                             container: pedido.container || "",
                             produto: pedido.produto || "",
                             codigo: pedido.codigo || "",
                             quantidadeSolicitada: quantidadeSolicitada,
                             pesoSolicitado: baixaEstoque.pesoBaixado,
-                            nf: numeroNF,
-                            nfFinalizacao: numeroNF,
+                            nf: numeroNF || pedido.nf || "",
+                            nfFinalizacao: numeroNF || pedido.nf || "",
                             status: "atendido"
                         }
                     }
@@ -5928,6 +5938,34 @@ async function concluirLoginFirebase(user,perfil){
 
 let loginEmProcessamento=false;
 
+// Solicita permissão do OneSignal a partir do clique no botão de login.
+// Isso dá ao navegador um gesto do usuário para autorizar Web Push; depois
+// do login, configurarNotificacoesOneSignal() vincula a assinatura ao UID.
+async function solicitarPermissaoOneSignalNoLogin(){
+    try{
+        if(typeof OneSignal === "undefined" && !window.OneSignalDeferred) return;
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        await new Promise(function(resolve){
+            window.OneSignalDeferred.push(async function(OneSignal){
+                try{
+                    if(OneSignal.Notifications && typeof OneSignal.Notifications.isPushSupported === "function") {
+                        const suportado = await OneSignal.Notifications.isPushSupported();
+                        if(!suportado){ resolve(); return; }
+                    }
+                    if(OneSignal.Notifications && OneSignal.Notifications.permission !== true){
+                        await OneSignal.Notifications.requestPermission();
+                    }
+                }catch(e){
+                    console.warn("Permissão OneSignal no login:",e);
+                }
+                resolve();
+            });
+        });
+    }catch(e){
+        console.warn("Não foi possível solicitar permissão OneSignal no login:",e);
+    }
+}
+
 async function tratarEnvioLogin(){
     if(loginEmProcessamento)return;
     esconderErroLogin();
@@ -5936,6 +5974,9 @@ async function tratarEnvioLogin(){
     const usuarioDigitado=(campoUsuario?.value||"").trim();
     const senha=campoSenha?.value||"";
     if(!usuarioDigitado||!senha){mostrarErroLogin("Preencha usuário e senha.");return;}
+    // O pedido de permissão ocorre no clique do login para aumentar a compatibilidade
+    // com as políticas do navegador. Se já estiver autorizado, não mostra nada.
+    await solicitarPermissaoOneSignalNoLogin();
     const botao=document.getElementById("btn-acao-login");
     loginEmProcessamento=true;
     if(botao){botao.disabled=true;botao.innerText="Entrando...";}
@@ -6022,6 +6063,14 @@ if(usuarioObjeto && usuarioObjeto.tipo === "externo"){
     }
     atualizarTelaUsuarioLogado();
     if(usuarioObjeto && usuarioObjeto.tipo !== "admin") renderizarSolicitacoesRecebidasComum();
+
+    // Garante que o usuário comum também fique associado ao OneSignal
+    // assim que entra no sistema.
+    if(usuarioObjeto && usuarioObjeto.tipo !== "admin" && typeof configurarNotificacoesOneSignal === "function") {
+        setTimeout(function(){
+            try{ configurarNotificacoesOneSignal(); }catch(e){ console.warn("OneSignal usuário:",e); }
+        }, 300);
+    }
 
     try{
         await iniciarAplicativo();
@@ -8160,7 +8209,8 @@ function mostrarToastNotificacaoWeb(titulo, corpo){
 function atualizarBotaoNotificacoesWeb(){
     const botoes=[
         document.getElementById("btn-notificacoes-app"),
-        document.getElementById("btn-notificacoes-externo")
+        document.getElementById("btn-notificacoes-externo"),
+        document.getElementById("btn-notificacoes-comum")
     ].filter(Boolean);
     botoes.forEach(function(botao){
         const permitido=(typeof Notification!=="undefined" && Notification.permission==="granted");
@@ -8415,7 +8465,8 @@ async function ativarNotificacoesWeb() {
 function atualizarBotaoNotificacoesWeb() {
     const botoes = [
         document.getElementById("btn-notificacoes-app"),
-        document.getElementById("btn-notificacoes-externo")
+        document.getElementById("btn-notificacoes-externo"),
+        document.getElementById("btn-notificacoes-comum")
     ].filter(Boolean);
 
     window.OneSignalDeferred = window.OneSignalDeferred || [];
