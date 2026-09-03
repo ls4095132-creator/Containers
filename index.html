@@ -1937,6 +1937,22 @@ style="margin-top:20px;"
 
 </div>
 
+<!-- HISTÓRICO DE SOLICITAÇÕES DO USUÁRIO COMUM -->
+<div class="painel" id="painel-historico-solicitacoes-comum" style="display:none;margin-top:15px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+        <div>
+            <h2 style="margin:0;">📋 Histórico de Solicitações</h2>
+            <div style="font-size:11px;color:var(--texto-fraco);margin-top:4px;">Solicitações já finalizadas pelo administrador.</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span id="contador-historico-solicitacoes-comum" style="font-size:11px;color:var(--texto-fraco);"></span>
+            <button type="button" class="btn-produto" onclick="exportarHistoricoSolicitacoesComumExcel()">📊 Exportar Excel</button>
+            <button type="button" class="btn-apagar-historico" onclick="ocultarHistoricoSolicitacoesComum()">🗑️ Apagar da tela</button>
+        </div>
+    </div>
+    <div id="historico-solicitacoes-comum"><div class="vazio">📭 Nenhuma solicitação finalizada.</div></div>
+</div>
+
 </div>
 <!-- fim de #app-principal -->
 
@@ -1981,24 +1997,18 @@ function normalizarListaFirebase(valor){
 }
 
 // ======================================================
-// SOLICITAÇÕES RECEBIDAS — USUÁRIO COMUM (SOMENTE LEITURA)
+// SOLICITAÇÕES DO USUÁRIO COMUM
 // ======================================================
 function renderizarSolicitacoesRecebidasComum(){
     const painel=document.getElementById("painel-solicitacoes-comum");
     const area=document.getElementById("lista-solicitacoes-comum");
     const contador=document.getElementById("contador-solicitacoes-comum");
-
     if(!painel || !area) return;
 
-    const tipoAtual=String(
-        (usuarioLogadoAtual && (
-            usuarioLogadoAtual.tipo ||
-            usuarioLogadoAtual.tipoUsuario ||
-            usuarioLogadoAtual.perfil
-        )) || ""
-    ).trim().toLowerCase();
+    const tipoAtual=String((usuarioLogadoAtual && (
+        usuarioLogadoAtual.tipo || usuarioLogadoAtual.tipoUsuario || usuarioLogadoAtual.perfil
+    )) || "").trim().toLowerCase();
 
-    // Este painel pertence ao usuário comum. O admin usa o painel administrativo.
     if(tipoAtual === "admin"){
         painel.style.display="none";
         return;
@@ -2007,71 +2017,118 @@ function renderizarSolicitacoesRecebidasComum(){
     painel.style.display="block";
 
     const uid=firebaseAuth.currentUser ? firebaseAuth.currentUser.uid : "";
-
-    const origem = Array.isArray(solicitacoesMercadoriaComumCache)
+    const origem=Array.isArray(solicitacoesMercadoriaComumCache)
         ? solicitacoesMercadoriaComumCache.slice()
         : [];
 
+    // A tela principal mostra somente as solicitações ainda pendentes
+    // deste usuário. Quando o administrador finaliza, ela sai daqui.
     const lista=origem.filter(function(item){
         if(!item) return false;
         const status=String(item.status||"pendente").trim().toLowerCase();
-        return status !== "cancelado";
+        const solicitante=String(item.solicitanteUid||"");
+        return solicitante === String(uid||"") && status === "pendente";
     });
 
     lista.sort(function(a,b){
         return String(b.dataHora||"").localeCompare(String(a.dataHora||""));
     });
 
-    if(contador){
-        contador.innerText="("+lista.length+")";
-    }
+    if(contador) contador.innerText="("+lista.length+")";
 
     if(!lista.length){
-        area.innerHTML='<div class="vazio">📭 Nenhuma solicitação recebida.</div>';
+        area.innerHTML='<div class="vazio">📭 Nenhuma solicitação pendente.</div>';
         return;
     }
 
     area.innerHTML=lista.map(function(item){
-        const st=String(item.status||"pendente").trim().toLowerCase();
-        const minha = uid && String(item.solicitanteUid||"") === String(uid);
-        const txt=st === "atendido" || st === "finalizado" || st === "concluido" || st === "concluído"
-            ? "✅ Finalizada"
-            : (minha ? "⏳ Minha solicitação" : "⏳ Solicitação recebida");
-
-        const data=item.dataHora
-            ? new Date(item.dataHora).toLocaleString("pt-BR")
-            : "—";
-
-        const processado=item.processadoEm
-            ? new Date(item.processadoEm).toLocaleString("pt-BR")
-            : "—";
-
-        const nf=item.nf || item.notaFiscal || item.nfFinalizacao || "—";
+        const data=item.dataHora ? new Date(item.dataHora).toLocaleString("pt-BR") : "—";
+        const nf=item.nf || item.notaFiscal || "—";
 
         return '<div class="produto-item">'+
-            '<div style="margin-bottom:7px;"><span class="tipo '+
-                (st === "atendido" || st === "finalizado" || st === "concluido" || st === "concluído" ? "tipo-entrada" : "tipo-alteracao")+
-                '">'+escaparHtmlSolicitacao(txt)+'</span></div>'+
+            '<div style="margin-bottom:7px;"><span class="tipo tipo-alteracao">⏳ Pendente</span></div>'+
             '<div style="font-size:12px;line-height:1.75;">'+
             '<strong>📦 Container:</strong> '+escaparHtmlSolicitacao(item.container||"—")+'<br>'+
             '<strong>📋 Produto:</strong> '+escaparHtmlSolicitacao(item.produto||"—")+'<br>'+
             '<strong>🔢 Código:</strong> '+escaparHtmlSolicitacao(item.codigo||"—")+'<br>'+
             '<strong>🏷️ Lote:</strong> '+escaparHtmlSolicitacao(item.lote||"—")+'<br>'+
             '<strong>🏢 Fornecedor:</strong> '+escaparHtmlSolicitacao(item.fornecedor||"—")+'<br>'+
-            '<strong>👤 Solicitante:</strong> '+escaparHtmlSolicitacao(item.solicitanteNome||item.solicitante||"—")+'<br>'+
-            '<strong>👥 Tipo:</strong> '+escaparHtmlSolicitacao(
-                String(item.tipoUsuario||"").toLowerCase() === "externo" ? "Usuário externo" : "Usuário comum"
-            )+'<br>'+
             '<strong>🔢 Quantidade:</strong> '+escaparHtmlSolicitacao(item.quantidadeSolicitada ?? "—")+'<br>'+
-            '<strong>⚖️ Peso:</strong> '+escaparHtmlSolicitacao(item.pesoSolicitado ?? "—")+' KG<br>'+ 
+            '<strong>⚖️ Peso:</strong> '+escaparHtmlSolicitacao(item.pesoSolicitado ?? "—")+' KG<br>'+
             '<strong>🧾 NF:</strong> '+escaparHtmlSolicitacao(nf)+'<br>'+
             '<strong>🕒 Solicitação:</strong> '+escaparHtmlSolicitacao(data)+
-            (st === "atendido" || st === "finalizado" || st === "concluido" || st === "concluído"
-                ? '<br><strong>✅ Processada em:</strong> '+escaparHtmlSolicitacao(processado)
-                : '')+
-            (item.observacao
-                ? '<br><strong>💬 Observação:</strong> '+escaparHtmlSolicitacao(item.observacao)
-                : '')+
+            (item.observacao ? '<br><strong>💬 Observação:</strong> '+escaparHtmlSolicitacao(item.observacao) : '')+
+            '</div></div>';
+    }).join("");
+}
+
+function renderizarHistoricoSolicitacoesComum(){
+    const painel=document.getElementById("painel-historico-solicitacoes-comum");
+    const area=document.getElementById("historico-solicitacoes-comum");
+    const contador=document.getElementById("contador-historico-solicitacoes-comum");
+    if(!painel || !area) return;
+
+    const tipoAtual=String((usuarioLogadoAtual && (
+        usuarioLogadoAtual.tipo || usuarioLogadoAtual.tipoUsuario || usuarioLogadoAtual.perfil
+    )) || "").trim().toLowerCase();
+
+    if(tipoAtual === "admin"){
+        painel.style.display="none";
+        return;
+    }
+
+    painel.style.display="block";
+
+    const uid=firebaseAuth.currentUser ? firebaseAuth.currentUser.uid : "";
+    const origem=Array.isArray(solicitacoesMercadoriaComumCache)
+        ? solicitacoesMercadoriaComumCache.slice()
+        : [];
+
+    // O histórico é individual: cada usuário comum visualiza somente
+    // as solicitações que ele próprio fez e que já foram processadas.
+    const ocultos = new Set(obterOcultosHistoricoSolicitacoesComum());
+
+    const lista=origem.filter(function(item){
+        if(!item) return false;
+        const status=String(item.status||"").trim().toLowerCase();
+        const itemId=String(item.id || "");
+        return String(item.solicitanteUid||"") === String(uid||"") &&
+            !ocultos.has(itemId) &&
+            (status === "atendido" || status === "finalizado" || status === "concluido" || status === "concluído");
+    });
+
+    lista.sort(function(a,b){
+        return String(b.processadoEm||b.dataHora||"").localeCompare(String(a.processadoEm||a.dataHora||""));
+    });
+
+    if(contador) contador.innerText="("+lista.length+")";
+
+    if(!lista.length){
+        area.innerHTML='<div class="vazio">📭 Nenhuma solicitação finalizada.</div>';
+        return;
+    }
+
+    area.innerHTML=lista.map(function(item){
+        const processado=item.processadoEm ? new Date(item.processadoEm).toLocaleString("pt-BR") : "—";
+        const solicitado=item.dataHora ? new Date(item.dataHora).toLocaleString("pt-BR") : "—";
+        const nf=item.nfFinalizacao || item.nf || item.notaFiscal || "—";
+        const peso=Number(item.pesoSolicitado || 0);
+        const qtd=Number(item.quantidadeSolicitada || 0);
+
+        return '<div class="produto-item" style="margin-bottom:10px;padding:12px;border:1px solid var(--borda);border-radius:8px;">'+
+            '<div style="margin-bottom:8px;"><span class="tipo tipo-entrada">✅ Solicitação finalizada</span></div>'+
+            '<div style="font-size:12px;line-height:1.8;">'+
+            '<strong>📦 Container:</strong> '+escaparHtmlSolicitacao(item.container||"—")+'<br>'+
+            '<strong>📋 Produto:</strong> '+escaparHtmlSolicitacao(item.produto||"—")+'<br>'+
+            '<strong>🔢 Código:</strong> '+escaparHtmlSolicitacao(item.codigo||"—")+'<br>'+
+            '<strong>🏷️ Lote:</strong> '+escaparHtmlSolicitacao(item.lote||"—")+'<br>'+
+            '<strong>🏢 Fornecedor:</strong> '+escaparHtmlSolicitacao(item.fornecedor||"—")+'<br>'+
+            '<strong>🔢 Quantidade:</strong> '+escaparHtmlSolicitacao(qtd)+'<br>'+
+            '<strong>⚖️ Peso:</strong> '+escaparHtmlSolicitacao(peso.toLocaleString("pt-BR",{minimumFractionDigits:2}))+' KG<br>'+
+            '<strong>🧾 Nota Fiscal:</strong> '+escaparHtmlSolicitacao(nf)+'<br>'+
+            '<strong>🕒 Solicitação:</strong> '+escaparHtmlSolicitacao(solicitado)+'<br>'+
+            '<strong>✅ Finalizada em:</strong> '+escaparHtmlSolicitacao(processado)+
+            (item.observacao ? '<br><strong>💬 Observação:</strong> '+escaparHtmlSolicitacao(item.observacao) : '')+
             '</div></div>';
     }).join("");
 }
@@ -2274,12 +2331,14 @@ async function iniciarSincronizacaoFirebase(){
         solicitacoesMercadoriaComumCache=normalizarListaFirebase(snapshot.val());
         console.log("📦 Solicitações disponíveis para usuário comum:", solicitacoesMercadoriaComumCache.length);
         renderizarSolicitacoesRecebidasComum();
+        renderizarHistoricoSolicitacoesComum();
     },function(e){
         console.error("Firebase solicitações recebidas (usuário comum):", e);
         solicitacoesMercadoriaComumCache=[];
         const area=document.getElementById("lista-solicitacoes-comum");
         if(area){ area.innerHTML='<div class="vazio">⚠️ Não foi possível carregar as solicitações.</div>'; }
         renderizarSolicitacoesRecebidasComum();
+        renderizarHistoricoSolicitacoesComum();
     });
 }
 
@@ -6062,7 +6121,10 @@ if(usuarioObjeto && usuarioObjeto.tipo === "externo"){
         app.style.display="block";
     }
     atualizarTelaUsuarioLogado();
-    if(usuarioObjeto && usuarioObjeto.tipo !== "admin") renderizarSolicitacoesRecebidasComum();
+    if(usuarioObjeto && usuarioObjeto.tipo !== "admin"){
+        renderizarSolicitacoesRecebidasComum();
+        renderizarHistoricoSolicitacoesComum();
+    }
 
     // Garante que o usuário comum também fique associado ao OneSignal
     // assim que entra no sistema.
@@ -6325,6 +6387,127 @@ function obterOcultosSolicitacoesUsuario(){
 
 function salvarOcultosSolicitacoesUsuario(lista){
     try{ localStorage.setItem(chaveOcultosSolicitacoesUsuario(), JSON.stringify([...new Set(lista.map(String))])); }catch(e){}
+}
+
+function chaveOcultosHistoricoSolicitacoesComum(){
+    const uid=firebaseAuth.currentUser ? firebaseAuth.currentUser.uid : "anonimo";
+    return "cc_ocultos_historico_solicitacoes_comum_" + uid;
+}
+
+function obterOcultosHistoricoSolicitacoesComum(){
+    try{
+        const valor=JSON.parse(localStorage.getItem(chaveOcultosHistoricoSolicitacoesComum()) || "[]");
+        return Array.isArray(valor) ? valor.map(String) : [];
+    }catch(e){
+        return [];
+    }
+}
+
+function salvarOcultosHistoricoSolicitacoesComum(lista){
+    try{
+        localStorage.setItem(
+            chaveOcultosHistoricoSolicitacoesComum(),
+            JSON.stringify([...new Set(lista.map(String))])
+        );
+    }catch(e){}
+}
+
+function ocultarHistoricoSolicitacoesComum(){
+    if(!firebaseAuth.currentUser){
+        alert("Faça login novamente.");
+        return;
+    }
+
+    const uid=firebaseAuth.currentUser.uid;
+    const ocultos=obterOcultosHistoricoSolicitacoesComum();
+    const ocultosSet=new Set(ocultos);
+    const lista=(Array.isArray(solicitacoesMercadoriaComumCache)
+        ? solicitacoesMercadoriaComumCache.slice()
+        : []).filter(function(item){
+            if(!item) return false;
+            const status=String(item.status||"").trim().toLowerCase();
+            const itemId=String(item.id||"");
+            return String(item.solicitanteUid||"") === String(uid||"") &&
+                !ocultosSet.has(itemId) &&
+                (status === "atendido" || status === "finalizado" || status === "concluido" || status === "concluído");
+        });
+
+    if(!lista.length){
+        alert("Não existem solicitações finalizadas visíveis para apagar.");
+        return;
+    }
+
+    if(!confirm(
+        "Apagar as solicitações finalizadas desta tela?\n\n" +
+        "Os registros continuarão preservados no Firebase e não serão apagados para o administrador."
+    )){
+        return;
+    }
+
+    lista.forEach(function(item){
+        const itemId=String(item.id||"");
+        if(itemId) ocultos.push(itemId);
+    });
+
+    salvarOcultosHistoricoSolicitacoesComum(ocultos);
+    renderizarHistoricoSolicitacoesComum();
+    alert("✅ Solicitações finalizadas ocultadas somente nesta tela.");
+}
+
+function exportarHistoricoSolicitacoesComumExcel(){
+    if(!firebaseAuth.currentUser){
+        alert("Faça login novamente.");
+        return;
+    }
+
+    const uid=firebaseAuth.currentUser.uid;
+    const ocultos=new Set(obterOcultosHistoricoSolicitacoesComum());
+    const origem=(Array.isArray(solicitacoesMercadoriaComumCache)
+        ? solicitacoesMercadoriaComumCache.slice()
+        : []).filter(function(item){
+            if(!item) return false;
+            const status=String(item.status||"").trim().toLowerCase();
+            const itemId=String(item.id||"");
+            return String(item.solicitanteUid||"") === String(uid||"") &&
+                !ocultos.has(itemId) &&
+                (status === "atendido" || status === "finalizado" || status === "concluido" || status === "concluído");
+        });
+
+    origem.sort(function(a,b){
+        return String(b.processadoEm||b.dataHora||"").localeCompare(String(a.processadoEm||a.dataHora||""));
+    });
+
+    if(!origem.length){
+        alert("Não existem solicitações finalizadas visíveis para exportar.");
+        return;
+    }
+
+    let csv="Status;Container;Código;Produto;Lote;Fornecedor;Quantidade;Peso KG;Nota Fiscal;Data da Solicitação;Data da Finalização;Observação\n";
+
+    origem.forEach(function(item){
+        const solicitado=item.dataHora ? new Date(item.dataHora).toLocaleString("pt-BR") : "";
+        const finalizado=item.processadoEm ? new Date(item.processadoEm).toLocaleString("pt-BR") : "";
+        const nf=item.nfFinalizacao || item.nf || item.notaFiscal || "";
+
+        function campoExcel(valor){
+            return String(valor ?? "").replace(/"/g,'""');
+        }
+
+        csv += '"'+campoExcel(item.status||"")+'";'+
+            '"'+campoExcel(item.container||"")+'";'+
+            '"'+campoExcel(item.codigo||"")+'";'+
+            '"'+campoExcel(item.produto||"")+'";'+
+            '"'+campoExcel(item.lote||"")+'";'+
+            '"'+campoExcel(item.fornecedor||"")+'";'+
+            '"'+campoExcel(item.quantidadeSolicitada ?? "")+'";'+
+            '"'+campoExcel(item.pesoSolicitado ?? "")+'";'+
+            '"'+campoExcel(nf)+'";'+
+            '"'+campoExcel(solicitado)+'";'+
+            '"'+campoExcel(finalizado)+'";'+
+            '"'+campoExcel(item.observacao||"")+'"\n';
+    });
+
+    baixarCsv(csv,"historico_solicitacoes_comum.csv");
 }
 
 function exportarHistoricoParaExcel(){
