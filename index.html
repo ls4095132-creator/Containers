@@ -5,7 +5,6 @@
 <link href="./manifest.webmanifest" rel="manifest"/>
 <meta content="#0a0f1c" name="theme-color"/>
 <link href="./icon-192.png" rel="apple-touch-icon"/>
-<link href="./icon-192.png" rel="icon" type="image/png"/>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>Controle de Containers — Firebase V6</title>
@@ -1221,7 +1220,7 @@ window.OneSignalDeferred = window.OneSignalDeferred || [];
 window.OneSignalDeferred.push(async function(OneSignal) {
     await OneSignal.init({
         appId: "37744162-3909-4b8c-b452-3e6932ac6ece",
-        serviceWorkerPath: "/Containers/OneSignalSDKWorker.js",
+        serviceWorkerPath: "OneSignalSDKWorker.js",
         serviceWorkerParam: {
             scope: "/Containers/"
         },
