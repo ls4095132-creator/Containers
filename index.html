@@ -980,6 +980,7 @@ button:disabled {
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 <script>
 const firebaseConfig = {
     apiKey: "AIzaSyB7nueKFNhlXRNg5aOH-JknVcmF5Eihawc",
@@ -1192,35 +1193,29 @@ body.usuario-admin .painel-solicitacoes-comum{display:none!important;}
 @media(max-width:1100px){body:not(.usuario-admin) .layout-admin-operacional{grid-template-columns:1fr;}body:not(.usuario-admin) .layout-admin-operacional > .painel-solicitacoes-comum,body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada{grid-column:1;}}
 </style>
 
+
 <!-- ======================================================
      ONESIGNAL - NOTIFICAÇÕES PUSH
      ====================================================== -->
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-
 <script>
 window.OneSignalDeferred = window.OneSignalDeferred || [];
-
 window.OneSignalDeferred.push(async function(OneSignal) {
     await OneSignal.init({
         appId: "37744162-3909-4b8c-b452-3e6932ac6ece",
-
         serviceWorkerPath: "Containers/OneSignalSDKWorker.js",
-
         serviceWorkerParam: {
             scope: "/Containers/"
         },
-
         autoResubscribe: true,
-
         notifyButton: {
             enable: false
         }
     });
-
     console.log("✅ OneSignal inicializado corretamente.");
 });
 </script>
-    
+
 </head>
 
 <body>
@@ -1989,32 +1984,95 @@ function renderizarSolicitacoesRecebidasComum(){
     const painel=document.getElementById("painel-solicitacoes-comum");
     const area=document.getElementById("lista-solicitacoes-comum");
     const contador=document.getElementById("contador-solicitacoes-comum");
+
     if(!painel || !area) return;
-    if(usuarioLogadoAtual && usuarioLogadoAtual.tipo === "admin"){painel.style.display="none";return;}
+
+    const tipoAtual=String(
+        (usuarioLogadoAtual && (
+            usuarioLogadoAtual.tipo ||
+            usuarioLogadoAtual.tipoUsuario ||
+            usuarioLogadoAtual.perfil
+        )) || ""
+    ).trim().toLowerCase();
+
+    // Este painel pertence ao usuário comum. O admin usa o painel administrativo.
+    if(tipoAtual === "admin"){
+        painel.style.display="none";
+        return;
+    }
+
     painel.style.display="block";
+
     const uid=firebaseAuth.currentUser ? firebaseAuth.currentUser.uid : "";
-    const lista=(Array.isArray(solicitacoesMercadoriaComumCache)?solicitacoesMercadoriaComumCache.slice():[]).filter(function(item){
+
+    const origem = Array.isArray(solicitacoesMercadoriaComumCache)
+        ? solicitacoesMercadoriaComumCache.slice()
+        : [];
+
+    const lista=origem.filter(function(item){
         if(!item) return false;
-        if(String(item.solicitanteUid||"")===String(uid||"")) return false;
-        return String(item.status||"").trim().toLowerCase()!=="cancelado";
+
+        // Não mostrar no painel de recebidas a própria solicitação do usuário.
+        if(uid && String(item.solicitanteUid||"") === String(uid)) return false;
+
+        const status=String(item.status||"pendente").trim().toLowerCase();
+        return status !== "cancelado";
     });
-    lista.sort(function(a,b){return String(b.dataHora||"").localeCompare(String(a.dataHora||""));});
-    if(contador) contador.innerText="("+lista.length+")";
-    if(!lista.length){area.innerHTML='<div class="vazio">📭 Nenhuma solicitação recebida.</div>';return;}
+
+    lista.sort(function(a,b){
+        return String(b.dataHora||"").localeCompare(String(a.dataHora||""));
+    });
+
+    if(contador){
+        contador.innerText="("+lista.length+")";
+    }
+
+    if(!lista.length){
+        area.innerHTML='<div class="vazio">📭 Nenhuma solicitação recebida.</div>';
+        return;
+    }
+
     area.innerHTML=lista.map(function(item){
-        const st=String(item.status||"pendente").toLowerCase();
-        const txt=st==="atendido"?"✅ Finalizada":"⏳ Pendente";
-        const data=item.dataHora?new Date(item.dataHora).toLocaleString("pt-BR"):"—";
-        return '<div class="produto-item"><div style="margin-bottom:7px;"><span class="tipo tipo-alteracao">'+escaparHtmlSolicitacao(txt)+'</span></div>'+
-        '<div style="font-size:12px;line-height:1.75;"><strong>📦 Container:</strong> '+escaparHtmlSolicitacao(item.container||"—")+'<br>'+
-        '<strong>📋 Produto:</strong> '+escaparHtmlSolicitacao(item.produto||"—")+'<br>'+
-        '<strong>🔢 Código:</strong> '+escaparHtmlSolicitacao(item.codigo||"—")+'<br>'+
-        '<strong>🏷️ Lote:</strong> '+escaparHtmlSolicitacao(item.lote||"—")+'<br>'+
-        '<strong>👤 Solicitante:</strong> '+escaparHtmlSolicitacao(item.solicitanteNome||item.solicitante||"—")+'<br>'+
-        '<strong>🔢 Quantidade:</strong> '+escaparHtmlSolicitacao(item.quantidadeSolicitada??"—")+'<br>'+
-        '<strong>⚖️ Peso:</strong> '+escaparHtmlSolicitacao(item.pesoSolicitado??"—")+' KG<br>'+
-        '<strong>🧾 NF:</strong> '+escaparHtmlSolicitacao(item.nf||item.notaFiscal||"—")+'<br>'+
-        '<strong>🕒 Data:</strong> '+escaparHtmlSolicitacao(data)+(item.observacao?'<br><strong>💬 Observação:</strong> '+escaparHtmlSolicitacao(item.observacao):'')+'</div></div>';
+        const st=String(item.status||"pendente").trim().toLowerCase();
+        const txt=st === "atendido" || st === "finalizado" || st === "concluido" || st === "concluído"
+            ? "✅ Finalizada"
+            : "⏳ Pendente";
+
+        const data=item.dataHora
+            ? new Date(item.dataHora).toLocaleString("pt-BR")
+            : "—";
+
+        const processado=item.processadoEm
+            ? new Date(item.processadoEm).toLocaleString("pt-BR")
+            : "—";
+
+        const nf=item.nf || item.notaFiscal || item.nfFinalizacao || "—";
+
+        return '<div class="produto-item">'+
+            '<div style="margin-bottom:7px;"><span class="tipo '+
+                (st === "atendido" || st === "finalizado" || st === "concluido" || st === "concluído" ? "tipo-entrada" : "tipo-alteracao")+
+                '">'+escaparHtmlSolicitacao(txt)+'</span></div>'+
+            '<div style="font-size:12px;line-height:1.75;">'+
+            '<strong>📦 Container:</strong> '+escaparHtmlSolicitacao(item.container||"—")+'<br>'+
+            '<strong>📋 Produto:</strong> '+escaparHtmlSolicitacao(item.produto||"—")+'<br>'+
+            '<strong>🔢 Código:</strong> '+escaparHtmlSolicitacao(item.codigo||"—")+'<br>'+
+            '<strong>🏷️ Lote:</strong> '+escaparHtmlSolicitacao(item.lote||"—")+'<br>'+
+            '<strong>🏢 Fornecedor:</strong> '+escaparHtmlSolicitacao(item.fornecedor||"—")+'<br>'+
+            '<strong>👤 Solicitante:</strong> '+escaparHtmlSolicitacao(item.solicitanteNome||item.solicitante||"—")+'<br>'+
+            '<strong>👥 Tipo:</strong> '+escaparHtmlSolicitacao(
+                String(item.tipoUsuario||"").toLowerCase() === "externo" ? "Usuário externo" : "Usuário comum"
+            )+'<br>'+
+            '<strong>🔢 Quantidade:</strong> '+escaparHtmlSolicitacao(item.quantidadeSolicitada ?? "—")+'<br>'+
+            '<strong>⚖️ Peso:</strong> '+escaparHtmlSolicitacao(item.pesoSolicitado ?? "—")+' KG<br>'+ 
+            '<strong>🧾 NF:</strong> '+escaparHtmlSolicitacao(nf)+'<br>'+
+            '<strong>🕒 Solicitação:</strong> '+escaparHtmlSolicitacao(data)+
+            (st === "atendido" || st === "finalizado" || st === "concluido" || st === "concluído"
+                ? '<br><strong>✅ Processada em:</strong> '+escaparHtmlSolicitacao(processado)
+                : '')+
+            (item.observacao
+                ? '<br><strong>💬 Observação:</strong> '+escaparHtmlSolicitacao(item.observacao)
+                : '')+
+            '</div></div>';
     }).join("");
 }
 
@@ -2229,6 +2287,9 @@ async function iniciarSincronizacaoFirebase(){
         mostrarHistorico();
         atualizarContador();
         atualizarIndicadorAdmin();
+        if(!souAdmin){
+            renderizarSolicitacoesRecebidasComum();
+        }
         console.log("☁️ Firebase: sincronização em tempo real ativa.");
     }catch(error){
         desligarListenersFirebase();
@@ -3736,10 +3797,14 @@ function renderizarSolicitacoesFinalizadasAdmin(){
     }).join("");
 }
 
+// ======================================================
+// ATUALIZAR STATUS DA SOLICITAÇÃO DE MERCADORIA
+// ======================================================
+
 async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
 
     if(!usuarioEhAdmin()){
-        alert("❌ Acesso permitido somente para administradores.");
+        alert("❌ Apenas o administrador pode processar solicitações.");
         return;
     }
 
@@ -3748,25 +3813,20 @@ async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
         return;
     }
 
-    const ref = firebaseDB.ref(
-        "solicitacoesMercadoria/" + id
-    );
+    const ref = firebaseDB.ref("solicitacoesMercadoria/" + id);
 
     try{
-
         const snapshot = await ref.once("value");
 
         if(!snapshot.exists()){
-            alert("❌ Solicitação não encontrada.");
+            alert("❌ Esta solicitação não existe mais.");
             return;
         }
 
         const pedido = snapshot.val() || {};
 
-        if(pedido.status !== "pendente"){
-            alert(
-                "⚠️ Esta solicitação já foi processada."
-            );
+        if(String(pedido.status||"").trim().toLowerCase() !== "pendente"){
+            alert("⚠️ Esta solicitação já foi processada.");
             return;
         }
 
@@ -3778,11 +3838,6 @@ async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
             ""
         ).trim().toLowerCase();
 
-
-        // ==================================================
-        // ATENDIMENTO
-        // ==================================================
-
         if(novoStatus === "atendido"){
 
             let numeroNF = "";
@@ -3792,271 +3847,306 @@ async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
                 tipoUsuario === "usuario externo" ||
                 tipoUsuario === "usuário externo";
 
-
-            // ==============================================
-            // NF OBRIGATÓRIA PARA USUÁRIO EXTERNO
-            // ==============================================
-
             if(ehUsuarioExterno){
-
-                const campoNF =
-                    document.getElementById(
-                        "nf-solicitacao-" + id
-                    );
+                const campoNF=document.getElementById("nf-solicitacao-" + id);
 
                 if(!campoNF){
-
-                    alert(
-                        "❌ Campo da Nota Fiscal não encontrado."
-                    );
-
+                    alert("❌ Campo de Nota Fiscal não encontrado.");
                     return;
                 }
 
-                numeroNF =
-                    String(
-                        campoNF.value || ""
-                    ).trim();
-
+                numeroNF=String(campoNF.value || "").trim();
 
                 if(!numeroNF){
-
-                    alert(
-                        "❌ Informe o número da Nota Fiscal para finalizar esta solicitação."
-                    );
-
+                    alert("❌ Informe o número da Nota Fiscal para finalizar esta solicitação.");
                     campoNF.focus();
-
                     return;
                 }
             }
 
-
-            // ==============================================
-            // CONFIRMAÇÃO
-            // ==============================================
-
             const mensagemConfirmacao =
-                tipoUsuario === "comum"
+                tipoUsuario === "comum" || tipoUsuario === "usuario" || tipoUsuario === "usuario comum" || tipoUsuario === "usuário comum"
                     ? "Deseja aceitar esta solicitação?"
                     : "Deseja finalizar esta solicitação?";
 
+            if(!confirm(mensagemConfirmacao)) return;
 
-            if(!confirm(mensagemConfirmacao)){
+            const quantidadeSolicitada = Number(pedido.quantidadeSolicitada || 0);
+            const pesoSolicitadoInformado = Number(pedido.pesoSolicitado || 0);
 
+            if(quantidadeSolicitada < 0 || pesoSolicitadoInformado < 0){
+                alert("❌ Os dados da solicitação são inválidos.");
                 return;
             }
 
+            // ==================================================
+            // BAIXA REAL DO ESTOQUE — TRANSACTION
+            // O estoque é relido no Firebase no momento da finalização,
+            // para que todos os dispositivos recebam exatamente o novo saldo.
+            // ==================================================
+            let baixaEstoque = null;
 
-            // ==============================================
-            // ATUALIZAÇÃO NO FIREBASE
-            // ==============================================
+            const resultadoEstoque = await firebaseDB.ref("estoque").transaction(function(valorAtual){
+                const lista = normalizarListaFirebase(valorAtual);
 
-            const atualizacao = {
+                let indice = -1;
+                const itemId = String(pedido.itemEstoqueId || "").trim();
 
-                status:
-                    "atendido",
+                if(itemId){
+                    indice = lista.findIndex(function(item){
+                        return item && String(item.id || "") === itemId;
+                    });
+                }
 
-                processadoEm:
-                    new Date().toISOString(),
+                if(indice < 0){
+                    const container = String(pedido.container ?? "").trim();
+                    const codigo = String(pedido.codigo || "").trim();
+                    const produto = String(pedido.produto || "").trim().toLowerCase();
+                    const lote = String(pedido.lote || "").trim().toLowerCase();
 
-                processadoPorUid:
-                    firebaseAuth.currentUser
-                        ? firebaseAuth.currentUser.uid
-                        : "",
+                    indice = lista.findIndex(function(item){
+                        if(!item) return false;
 
-                processadoPor:
-                    typeof operadorAtual === "function"
-                        ? operadorAtual()
-                        : "Administrador"
+                        return String(item.num ?? "").trim() === container &&
+                            String(item.codigo || "").trim() === codigo &&
+                            String(item.prod || "").trim().toLowerCase() === produto &&
+                            String(item.lote || "").trim().toLowerCase() === lote;
+                    });
+                }
 
-            };
+                if(indice < 0){
+                    return;
+                }
 
+                const item = lista[indice];
+                const saldoQuantidade = Number(item.qtd || 0);
+                const saldoPeso = Number(item.peso || 0);
 
-            if(numeroNF){
+                if(quantidadeSolicitada > saldoQuantidade){
+                    return;
+                }
 
-                atualizacao.nfFinalizacao =
-                    numeroNF;
+                if(pesoSolicitadoInformado > saldoPeso){
+                    return;
+                }
 
-                atualizacao.nf =
-                    numeroNF;
+                let pesoBaixado = pesoSolicitadoInformado;
+
+                // Quando o operador informa somente quantidade, reduz também
+                // o peso proporcional ao peso médio por volume.
+                if(pesoBaixado <= 0 && quantidadeSolicitada > 0 && saldoQuantidade > 0 && saldoPeso > 0){
+                    pesoBaixado = (saldoPeso / saldoQuantidade) * quantidadeSolicitada;
+                }
+
+                let novaQuantidade = saldoQuantidade - quantidadeSolicitada;
+                let novoPeso = saldoPeso - pesoBaixado;
+
+                if(Math.abs(novaQuantidade) < 0.000001) novaQuantidade = 0;
+                if(Math.abs(novoPeso) < 0.000001) novoPeso = 0;
+                if(novaQuantidade < 0) novaQuantidade = 0;
+                if(novoPeso < 0) novoPeso = 0;
+
+                const atualizado = Object.assign({}, item, {
+                    qtd: novaQuantidade,
+                    peso: novoPeso
+                });
+
+                // Guarda kg por volume quando a estrutura já utiliza esse campo.
+                if(item.kg != null && quantidadeSolicitada > 0){
+                    atualizado.kg = novoPeso > 0 && novaQuantidade > 0
+                        ? novoPeso / novaQuantidade
+                        : item.kg;
+                }
+
+                lista[indice] = atualizado;
+
+                baixaEstoque = {
+                    itemAnterior: item,
+                    itemAtual: atualizado,
+                    indice: indice,
+                    quantidadeBaixada: quantidadeSolicitada,
+                    pesoBaixado: pesoBaixado,
+                    saldoQuantidadeAntes: saldoQuantidade,
+                    saldoPesoAntes: saldoPeso,
+                    saldoQuantidadeDepois: novaQuantidade,
+                    saldoPesoDepois: novoPeso
+                };
+
+                return lista;
+            });
+
+            if(!resultadoEstoque.committed || !baixaEstoque){
+                // Uma segunda leitura ajuda a distinguir item inexistente
+                // de saldo insuficiente.
+                const estoqueSnap = await firebaseDB.ref("estoque").once("value");
+                const estoqueAtual = normalizarListaFirebase(estoqueSnap.val());
+                const idItem = String(pedido.itemEstoqueId || "").trim();
+                const itemAtual = estoqueAtual.find(function(item){
+                    if(!item) return false;
+                    if(idItem && String(item.id || "") === idItem) return true;
+                    return String(item.num ?? "").trim() === String(pedido.container ?? "").trim() &&
+                        String(item.codigo || "").trim() === String(pedido.codigo || "").trim() &&
+                        String(item.prod || "").trim().toLowerCase() === String(pedido.produto || "").trim().toLowerCase() &&
+                        String(item.lote || "").trim().toLowerCase() === String(pedido.lote || "").trim().toLowerCase();
+                });
+
+                if(!itemAtual){
+                    alert("❌ A mercadoria solicitada não foi encontrada no estoque atual.");
+                }else{
+                    const q=Number(itemAtual.qtd || 0);
+                    const p=Number(itemAtual.peso || 0);
+                    alert(
+                        "❌ Não foi possível finalizar porque o saldo atual é insuficiente.\n\n"+
+                        "Saldo atual: "+q+" volume(s) / "+p.toLocaleString("pt-BR",{minimumFractionDigits:2})+" KG"
+                    );
+                }
+                return;
             }
 
+            // ==================================================
+            // REGISTRAR MOVIMENTAÇÃO DE SAÍDA
+            // ==================================================
+            const movimentoSaida = {
+                id: Date.now() + Math.floor(Math.random()*1000),
+                data: new Date().toISOString().slice(0,10),
+                hora: new Date().toTimeString().slice(0,8),
+                tipo: "SAÍDA - SOLICITAÇÃO",
+                num: baixaEstoque.itemAtual.num,
+                fornecedor: baixaEstoque.itemAtual.fornecedor || pedido.fornecedor || "",
+                nf: numeroNF || pedido.nf || "",
+                codigo: baixaEstoque.itemAtual.codigo || pedido.codigo || "",
+                prod: baixaEstoque.itemAtual.prod || pedido.produto || "",
+                lote: baixaEstoque.itemAtual.lote || pedido.lote || "",
+                qtd: baixaEstoque.quantidadeBaixada,
+                kg: baixaEstoque.itemAtual.kg,
+                peso: baixaEstoque.pesoBaixado,
+                detalhes:
+                    "Baixa realizada pela solicitação " + id +
+                    " — solicitante: " + (pedido.solicitanteNome || pedido.solicitante || "")
+            };
+
+            await firebaseDB.ref("historico").transaction(function(valorAtual){
+                const listaHistorico = normalizarListaFirebase(valorAtual);
+                listaHistorico.push(movimentoSaida);
+                return listaHistorico;
+            });
+
+            // ==================================================
+            // MARCAR PEDIDO COMO ATENDIDO
+            // ==================================================
+            const atualizacao = {
+                status: "atendido",
+                processadoEm: new Date().toISOString(),
+                processadoPorUid: firebaseAuth.currentUser ? firebaseAuth.currentUser.uid : "",
+                processadoPor: typeof operadorAtual === "function" ? operadorAtual() : "Administrador",
+                estoqueBaixado: true,
+                estoqueBaixadoEm: new Date().toISOString(),
+                estoqueQuantidadeBaixada: baixaEstoque.quantidadeBaixada,
+                estoquePesoBaixado: baixaEstoque.pesoBaixado,
+                saldoQuantidadeDepois: baixaEstoque.saldoQuantidadeDepois,
+                saldoPesoDepois: baixaEstoque.saldoPesoDepois
+            };
+
+            if(numeroNF){
+                atualizacao.nfFinalizacao = numeroNF;
+                atualizacao.nf = numeroNF;
+            }
 
             await ref.update(atualizacao);
 
-
-            // ==============================================
-            // NOTIFICAÇÃO PARA USUÁRIO EXTERNO
-            // ==============================================
-
-            if(
-                ehUsuarioExterno &&
-                numeroNF &&
-                pedido.solicitanteUid
-            ){
-
-                console.log(
-                    "🔔 Enviando notificação de finalização..."
-                );
-
-
+            // ==================================================
+            // NOTIFICAÇÃO — USUÁRIO EXTERNO
+            // ==================================================
+            if(ehUsuarioExterno && pedido.solicitanteUid){
                 await chamarWorkerNotificacao(
                     "solicitacao_finalizada",
                     {
                         solicitacao: {
-
-                            id:
-                                id,
-
-                            solicitanteUid:
-                                pedido.solicitanteUid,
-
-                            tipoUsuario:
-                                "externo",
-
-                            container:
-                                pedido.container || "",
-
-                            produto:
-                                pedido.produto || "",
-
-                            nf:
-                                numeroNF,
-
-                            nfFinalizacao:
-                                numeroNF,
-
-                            status:
-                                "atendido"
+                            id: id,
+                            solicitanteUid: pedido.solicitanteUid,
+                            tipoUsuario: "externo",
+                            container: pedido.container || "",
+                            produto: pedido.produto || "",
+                            codigo: pedido.codigo || "",
+                            quantidadeSolicitada: quantidadeSolicitada,
+                            pesoSolicitado: baixaEstoque.pesoBaixado,
+                            nf: numeroNF,
+                            nfFinalizacao: numeroNF,
+                            status: "atendido"
                         }
                     }
                 );
             }
 
-
-            // ==============================================
-            // FINALIZAÇÃO VISUAL
-            // ==============================================
-
-            alert(
-                "✅ Solicitação finalizada com sucesso."
-            );
-
+            // Atualização visual imediata e os listeners do Firebase fazem
+            // a sincronização dos demais dispositivos.
+            estoque = normalizarListaFirebase((await firebaseDB.ref("estoque").once("value")).val());
+            historico = normalizarListaFirebase((await firebaseDB.ref("historico").once("value")).val());
 
             solicitacoesMercadoriaAdminCache =
-                solicitacoesMercadoriaAdminCache.filter(
-                    function(item){
+                solicitacoesMercadoriaAdminCache.filter(function(item){
+                    return String(item.id || "") !== String(id);
+                });
 
-                        return item.id !== id;
+            mostrarEstoque();
+            mostrarHistorico();
 
-                    }
-                );
-
-
-            if(
-                typeof renderizarSolicitacoesMercadoriaAdmin ===
-                "function"
-            ){
-
+            if(typeof renderizarSolicitacoesMercadoriaAdmin === "function"){
                 renderizarSolicitacoesMercadoriaAdmin();
-
             }
 
+            if(typeof renderizarSolicitacoesFinalizadasAdmin === "function" &&
+               document.getElementById("conteudo-solicitacoes-finalizadas-admin")?.style.display !== "none"){
+                renderizarSolicitacoesFinalizadasAdmin();
+            }
 
             atualizarIndicadorAdmin();
 
+            alert(
+                tipoUsuario === "comum" || tipoUsuario === "usuario" || tipoUsuario === "usuario comum" || tipoUsuario === "usuário comum"
+                    ? "✅ Solicitação aceita e estoque atualizado com sucesso!"
+                    : "✅ Solicitação finalizada e estoque atualizado com sucesso!"
+            );
 
             return;
         }
-
 
         // ==================================================
         // CANCELAMENTO
         // ==================================================
-
         if(novoStatus === "cancelado"){
 
-            if(!confirm(
-                "Deseja cancelar esta solicitação?"
-            )){
-
-                return;
-            }
-
+            if(!confirm("Deseja cancelar esta solicitação?")) return;
 
             await ref.update({
-
-                status:
-                    "cancelado",
-
-                processadoEm:
-                    new Date().toISOString(),
-
-                processadoPorUid:
-                    firebaseAuth.currentUser
-                        ? firebaseAuth.currentUser.uid
-                        : "",
-
-                processadoPor:
-                    typeof operadorAtual === "function"
-                        ? operadorAtual()
-                        : "Administrador"
-
+                status: "cancelado",
+                processadoEm: new Date().toISOString(),
+                processadoPorUid: firebaseAuth.currentUser ? firebaseAuth.currentUser.uid : "",
+                processadoPor: typeof operadorAtual === "function" ? operadorAtual() : "Administrador"
             });
 
-
-            alert(
-                "❌ Solicitação cancelada."
-            );
-
-
             solicitacoesMercadoriaAdminCache =
-                solicitacoesMercadoriaAdminCache.filter(
-                    function(item){
+                solicitacoesMercadoriaAdminCache.filter(function(item){
+                    return String(item.id || "") !== String(id);
+                });
 
-                        return item.id !== id;
-
-                    }
-                );
-
-
-            if(
-                typeof renderizarSolicitacoesMercadoriaAdmin ===
-                "function"
-            ){
-
+            if(typeof renderizarSolicitacoesMercadoriaAdmin === "function"){
                 renderizarSolicitacoesMercadoriaAdmin();
-
             }
 
-
             atualizarIndicadorAdmin();
-
-
+            alert("❌ Solicitação cancelada.");
             return;
         }
 
     }catch(erro){
-
-        console.error(
-            "❌ Erro ao atualizar solicitação de mercadoria:",
-            erro
-        );
-
-
+        console.error("❌ Erro ao atualizar solicitação de mercadoria:", erro);
         alert(
-            "❌ Não foi possível processar a solicitação.\n\n" +
-            (
-                erro && erro.message
-                    ? erro.message
-                    : erro
-            )
+            "❌ Não foi possível processar a solicitação.\n\n"+
+            (erro && erro.message ? erro.message : erro)
         );
     }
 }
-        
-
 
 // ======================================================
 // DATA E HORA
@@ -5829,7 +5919,9 @@ async function concluirLoginFirebase(user,perfil){
     ? "admin"
     : (perfil.tipo === "externo" ? "externo" : "usuario"),ativo:true};
     perfisUsuariosCache[user.uid]=perfil;
-    await configurarNotificacoesOneSignal();
+    if(typeof configurarNotificacoesOneSignal === "function"){
+        await configurarNotificacoesOneSignal();
+    }
     await entrarNoApp(usuarioLogadoAtual);
     return true;
 }
@@ -7187,6 +7279,7 @@ async function enviarSolicitacaoMercadoria(){
 
     }else if(
         tipoUsuario === "comum" ||
+        tipoUsuario === "usuario" ||
         tipoUsuario === "usuario comum" ||
         tipoUsuario === "usuário comum"
     ){
@@ -7296,35 +7389,30 @@ async function enviarSolicitacaoMercadoria(){
                 "Enviando...";
         }
 
-    await firebaseDB
-    .ref(
-        "solicitacoesMercadoria/" +
-        idPedido
-    )
-    .set(pedido);
 
-console.log("📦 Solicitação salva. Chamando Worker...");
+        await firebaseDB
+            .ref(
+                "solicitacoesMercadoria/" +
+                idPedido
+            )
+            .set(pedido);
 
-await chamarWorkerNotificacao(
-    "nova_solicitacao",
-    {
-        solicitacao: pedido
-    }
-);
-        
-// Envia a notificação depois que o pedido foi salvo
-await chamarWorkerNotificacao(
-    "nova_solicitacao",
-    {
-        solicitacao: pedido
-    }
-);
+        console.log("📦 Solicitação salva. Chamando Worker...");
 
-alert(
-    "✅ Solicitação enviada com sucesso.\n\n"+
-    "Pedido: " + idPedido
-);
-        
+        if(typeof chamarWorkerNotificacao === "function"){
+            await chamarWorkerNotificacao(
+                "nova_solicitacao",
+                { solicitacao: pedido }
+            );
+        }
+
+
+        alert(
+            "✅ Solicitação enviada com sucesso.\n\n"+
+            "Pedido: " +
+            idPedido
+        );
+
 
         limparSolicitacaoMercadoria();
         fecharModalSolicitacaoMercadoria();
@@ -7882,6 +7970,7 @@ setInterval(function(){
 // estejam disponíveis no escopo global do navegador.
 window.tratarEnvioLogin = tratarEnvioLogin;
 window.sairDoSistema = sairDoSistema;
+window.atualizarStatusSolicitacaoMercadoriaAdmin = atualizarStatusSolicitacaoMercadoriaAdmin;
 console.log("✅ CONTROLE DE CONTAINERS — FIREBASE V6 carregado.");
 </script>
 
@@ -8043,20 +8132,189 @@ document.addEventListener("DOMContentLoaded",function(){
 })();
 </script>
 
+
+<script>
+// ======================================================
+// NOTIFICAÇÕES PUSH — FIREBASE CLOUD MESSAGING
+// ======================================================
+// Usa a chave Web Push configurada no próprio Firebase.
+// Não há chave VAPID fixa no código para evitar conflito com
+// a chave pública cadastrada em Cloud Messaging.
+let firebaseMessagingWeb = null;
+let registroServiceWorkerNotificacoes = null;
+let notificacoesWebInicializadas = false;
+
+function mostrarToastNotificacaoWeb(titulo, corpo){
+    try{
+        const anterior=document.getElementById("toast-notificacao-web");
+        if(anterior) anterior.remove();
+        const box=document.createElement("div");
+        box.id="toast-notificacao-web";
+        box.className="toast-notificacao-web";
+        box.innerHTML="<strong>🔔 "+escaparHtmlSolicitacao(titulo||"Nova notificação")+"</strong><div>"+escaparHtmlSolicitacao(corpo||"")+"</div>";
+        document.body.appendChild(box);
+        setTimeout(function(){ if(box && box.parentNode) box.remove(); },7000);
+    }catch(e){ console.warn("Toast de notificação:",e); }
+}
+
+function atualizarBotaoNotificacoesWeb(){
+    const botoes=[
+        document.getElementById("btn-notificacoes-app"),
+        document.getElementById("btn-notificacoes-externo")
+    ].filter(Boolean);
+    botoes.forEach(function(botao){
+        const permitido=(typeof Notification!=="undefined" && Notification.permission==="granted");
+        if(permitido){
+            botao.innerText="🔔 Ativas";
+            botao.classList.add("ativo");
+        }else{
+            botao.innerText="🔔 Ativar";
+            botao.classList.remove("ativo");
+        }
+    });
+}
+
+function obterDeviceIdNotificacao(){
+    const chave="controleContainersDeviceId";
+    let id=localStorage.getItem(chave);
+    if(!id){
+        id="d_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,12);
+        localStorage.setItem(chave,id);
+    }
+    return id;
+}
+
+async function salvarTokenNotificacaoWeb(token){
+    const user=firebaseAuth.currentUser;
+    if(!user || !token) return;
+    const uid=user.uid;
+    const deviceId=obterDeviceIdNotificacao();
+    await firebaseDB.ref("notificacoesWeb/"+uid+"/"+deviceId).set({
+        token:token,
+        uid:uid,
+        tipo:(usuarioLogadoAtual && usuarioLogadoAtual.tipo)||"usuario",
+        userAgent:navigator.userAgent||"",
+        atualizadoEm:new Date().toISOString()
+    });
+}
+
+async function obterRegistroServiceWorkerNotificacoes(){
+    if(!('serviceWorker' in navigator)) throw new Error("Service Worker não é suportado neste navegador.");
+
+    // Usa a raiz real da página, inclusive quando o GitHub Pages está em /Containers/.
+    const url=new URL("firebase-messaging-sw.js",document.baseURI).toString();
+    registroServiceWorkerNotificacoes=await navigator.serviceWorker.register(url,{scope:new URL("./",document.baseURI).toString()});
+    await navigator.serviceWorker.ready;
+
+    return registroServiceWorkerNotificacoes;
+}
+
+async function configurarNotificacoesWeb(){
+    atualizarBotaoNotificacoesWeb();
+
+    if(!firebaseAuth.currentUser) return null;
+    if(typeof firebase==="undefined" || !firebase.messaging) throw new Error("Firebase Messaging não foi carregado.");
+    if(!('serviceWorker' in navigator)) throw new Error("Service Worker não disponível.");
+    if(!('Notification' in window)) throw new Error("Este navegador não oferece notificações.");
+
+    if(!firebaseMessagingWeb){
+        firebaseMessagingWeb=firebase.messaging();
+    }
+
+    if(!registroServiceWorkerNotificacoes){
+        registroServiceWorkerNotificacoes=await obterRegistroServiceWorkerNotificacoes();
+    }
+
+    if(!notificacoesWebInicializadas){
+        firebaseMessagingWeb.onMessage(function(payload){
+            const titulo=(payload && payload.notification && payload.notification.title) || (payload && payload.data && payload.data.title) || "Controle de Containers";
+            const corpo=(payload && payload.notification && payload.notification.body) || (payload && payload.data && payload.data.body) || "Você recebeu uma nova notificação.";
+            mostrarToastNotificacaoWeb(titulo,corpo);
+            if(typeof Notification!=="undefined" && Notification.permission==="granted" && document.hidden){
+                try{
+                    new Notification(titulo,{body:corpo,icon:new URL("icon-192.png",document.baseURI).toString(),badge:new URL("icon-192.png",document.baseURI).toString()});
+                }catch(e){ console.warn("Notification local:",e); }
+            }
+        });
+        notificacoesWebInicializadas=true;
+    }
+
+    if(Notification.permission!=="granted") return null;
+
+    // Sem informar vapidKey, o SDK usa a configuração Web Push do projeto Firebase.
+    const token=await firebaseMessagingWeb.getToken({
+        serviceWorkerRegistration:registroServiceWorkerNotificacoes
+    });
+
+    if(token) await salvarTokenNotificacaoWeb(token);
+    return token || null;
+}
+
+async function ativarNotificacoesWeb(){
+    try{
+        if(!window.isSecureContext){
+            alert("❌ Este site não está em uma conexão segura (HTTPS). Abra o endereço do GitHub Pages começando com https://.");
+            return;
+        }
+        if(!('Notification' in window)){
+            alert("Este navegador não oferece suporte a notificações.");
+            return;
+        }
+        if(!firebaseAuth.currentUser){
+            alert("Entre no sistema antes de ativar as notificações.");
+            return;
+        }
+        if(Notification.permission==="denied"){
+            alert("As notificações estão bloqueadas no navegador. Libere as notificações deste site nas configurações do navegador e tente novamente.");
+            return;
+        }
+
+        const permissao=await Notification.requestPermission();
+        atualizarBotaoNotificacoesWeb();
+        if(permissao!=="granted"){
+            alert("As notificações não foram autorizadas.");
+            return;
+        }
+
+        // Remove registros antigos deste mesmo SW apenas quando necessário.
+        const registrations=await navigator.serviceWorker.getRegistrations();
+        for(const reg of registrations){
+            const scriptURL=(reg.active && reg.active.scriptURL)||"";
+            if(scriptURL.includes("firebase-messaging-sw.js")){
+                try{ await reg.update(); }catch(e){ console.warn("Atualização do Service Worker:",e); }
+            }
+        }
+
+        const token=await configurarNotificacoesWeb();
+
+        if(token){
+            mostrarToastNotificacaoWeb("Notificações ativadas","Este dispositivo agora receberá avisos do sistema.");
+        }else{
+            alert("⚠️ O navegador autorizou as notificações, mas o Firebase não retornou o registro FCM. Verifique no Firebase → Configurações do projeto → Cloud Messaging → Web Push certificates se existe uma chave pública ativa e recarregue a página.");
+        }
+    }catch(erro){
+        console.error("Erro ao ativar notificações:",erro);
+        const detalhe=erro && (erro.code || erro.message) ? "\n\nDetalhe: "+String(erro.code||erro.message) : "";
+        alert("❌ Não foi possível ativar as notificações agora."+detalhe);
+    }
+}
+
+document.addEventListener("DOMContentLoaded",function(){ atualizarBotaoNotificacoesWeb(); });
+</script>
+
+
 <script>
 /* ======================================================
    NOTIFICAÇÕES PUSH — ONESIGNAL
    ====================================================== */
-
 async function configurarNotificacoesOneSignal() {
     try {
         if (!window.OneSignalDeferred) {
             window.OneSignalDeferred = [];
         }
-
-        OneSignalDeferred.push(async function(OneSignal) {
+        window.OneSignalDeferred.push(async function(OneSignal) {
             try {
-                if (typeof OneSignal.isPushSupported === "function") {
+                if (OneSignal.Notifications && typeof OneSignal.Notifications.isPushSupported === "function") {
                     const suportado = await OneSignal.Notifications.isPushSupported();
                     if (!suportado) {
                         console.warn("Este navegador não suporta Push.");
@@ -8066,14 +8324,40 @@ async function configurarNotificacoesOneSignal() {
 
                 if (firebaseAuth.currentUser) {
                     const uid = firebaseAuth.currentUser.uid;
-                    const tipo = (usuarioLogadoAtual && usuarioLogadoAtual.tipo) || "usuario";
+                    const tipoOriginal = String(
+                        (usuarioLogadoAtual && usuarioLogadoAtual.tipo) || "usuario"
+                    ).trim().toLowerCase();
+
+                    // O Worker usa as tags: admin / usuario / externo.
+                    // Normalizamos aqui para que usuário comum receba
+                    // as notificações destinadas ao grupo "usuario".
+                    let tipoNotificacao = "usuario";
+
+                    if(tipoOriginal === "admin"){
+                        tipoNotificacao = "admin";
+                    }else if(
+                        tipoOriginal === "externo" ||
+                        tipoOriginal === "usuario externo" ||
+                        tipoOriginal === "usuário externo"
+                    ){
+                        tipoNotificacao = "externo";
+                    }
 
                     await OneSignal.login(uid);
 
-                    await OneSignal.User.addTags({
-                        tipo_usuario: tipo,
-                        sistema: "controle_containers"
-                    });
+                    if(OneSignal.User && typeof OneSignal.User.addTags === "function"){
+                        await OneSignal.User.addTags({
+                            tipo_usuario: tipoNotificacao,
+                            sistema: "controle_containers"
+                        });
+                    }
+
+                    console.log(
+                        "OneSignal vinculado ao usuário:",
+                        uid,
+                        "| tag:",
+                        tipoNotificacao
+                    );
 
                     console.log("OneSignal vinculado ao usuário:", uid);
                 }
@@ -8081,7 +8365,6 @@ async function configurarNotificacoesOneSignal() {
                 console.error("Erro ao vincular OneSignal:", erro);
             }
         });
-
     } catch (erro) {
         console.error("Erro ao configurar OneSignal:", erro);
     }
@@ -8094,19 +8377,17 @@ async function ativarNotificacoesWeb() {
             return;
         }
 
-        OneSignalDeferred.push(async function(OneSignal) {
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        window.OneSignalDeferred.push(async function(OneSignal) {
             try {
                 const suportado = await OneSignal.Notifications.isPushSupported();
-
                 if (!suportado) {
                     alert("Este navegador não suporta notificações push.");
                     return;
                 }
 
                 await OneSignal.Notifications.requestPermission();
-
-                const permitido =
-                    OneSignal.Notifications.permission === true;
+                const permitido = OneSignal.Notifications.permission === true;
 
                 atualizarBotaoNotificacoesWeb();
 
@@ -8118,7 +8399,6 @@ async function ativarNotificacoesWeb() {
                 } else {
                     alert("As notificações não foram autorizadas.");
                 }
-
             } catch (erro) {
                 console.error("Erro OneSignal:", erro);
                 alert(
@@ -8127,7 +8407,6 @@ async function ativarNotificacoesWeb() {
                 );
             }
         });
-
     } catch (erro) {
         console.error(erro);
     }
@@ -8139,11 +8418,10 @@ function atualizarBotaoNotificacoesWeb() {
         document.getElementById("btn-notificacoes-externo")
     ].filter(Boolean);
 
-    OneSignalDeferred.push(async function(OneSignal) {
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(async function(OneSignal) {
         try {
-            const ativo =
-                OneSignal.Notifications.permission === true;
-
+            const ativo = OneSignal.Notifications.permission === true;
             botoes.forEach(function(botao) {
                 if (ativo) {
                     botao.innerText = "🔔 Ativas";
@@ -8153,57 +8431,58 @@ function atualizarBotaoNotificacoesWeb() {
                     botao.classList.remove("ativo");
                 }
             });
-
         } catch (erro) {
-            console.warn(
-                "Não foi possível atualizar botão:",
-                erro
-            );
+            console.warn("Não foi possível atualizar botão:", erro);
         }
     });
 }
 
 function mostrarToastNotificacaoWeb(titulo, corpo) {
     try {
-        const anterior =
-            document.getElementById("toast-notificacao-web");
-
+        const anterior = document.getElementById("toast-notificacao-web");
         if (anterior) anterior.remove();
 
         const box = document.createElement("div");
-
         box.id = "toast-notificacao-web";
         box.className = "toast-notificacao-web";
-
         box.innerHTML =
-            "<strong>🔔 " +
-            String(titulo || "Nova notificação") +
-            "</strong><div>" +
-            String(corpo || "") +
-            "</div>";
+            "<strong>🔔 " + escaparHtmlNotificacao(titulo || "Nova notificação") +
+            "</strong><div>" + escaparHtmlNotificacao(corpo || "") + "</div>";
 
         document.body.appendChild(box);
 
         setTimeout(function() {
-            if (box && box.parentNode) {
-                box.remove();
-            }
+            if (box && box.parentNode) box.remove();
         }, 7000);
-
     } catch (erro) {
         console.warn("Toast:", erro);
     }
 }
 
-OneSignalDeferred.push(async function(OneSignal) {
-    await OneSignal.Notifications.addEventListener(
-        "permissionChange",
-        function() {
-            atualizarBotaoNotificacoesWeb();
+function escaparHtmlNotificacao(v){
+    return String(v == null ? "" : v)
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/\"/g,"&quot;")
+        .replace(/'/g,"&#039;");
+}
+
+if(window.OneSignalDeferred){
+    window.OneSignalDeferred.push(async function(OneSignal) {
+        try {
+            if(OneSignal.Notifications && typeof OneSignal.Notifications.addEventListener === "function"){
+                await OneSignal.Notifications.addEventListener(
+                    "permissionChange",
+                    function(){ atualizarBotaoNotificacoesWeb(); }
+                );
+            }
+        } catch (erro) {
+            console.warn("Listener OneSignal:", erro);
         }
-    );
-});
-</script>    
+    });
+}
+</script>
 
 <script>
 async function chamarWorkerNotificacao(tipo, dados) {
@@ -8211,15 +8490,12 @@ async function chamarWorkerNotificacao(tipo, dados) {
 
     try {
         const user = firebaseAuth.currentUser;
-
         if (!user) {
             console.error("❌ Usuário Firebase não encontrado.");
             return;
         }
 
         const token = await user.getIdToken();
-
-        console.log("🔑 Token Firebase obtido.");
 
         const resposta = await fetch(
             "https://notificacoes-containers.ls4095132.workers.dev/",
@@ -8237,45 +8513,26 @@ async function chamarWorkerNotificacao(tipo, dados) {
         );
 
         const texto = await resposta.text();
-
-        console.log(
-            "📡 Resposta do Worker:",
-            resposta.status,
-            texto
-        );
-
         let resultado = {};
 
         try {
             resultado = JSON.parse(texto);
         } catch (e) {
-            console.warn(
-                "⚠️ Resposta do Worker não é JSON."
-            );
+            console.warn("⚠️ Resposta do Worker não é JSON.");
         }
 
         if (!resposta.ok || !resultado.ok) {
-            console.error(
-                "❌ Worker recusou o envio:",
-                resultado
-            );
+            console.error("❌ Worker recusou o envio:", resultado);
             return;
         }
 
-        console.log(
-            "✅ Worker enviou a notificação:",
-            resultado
-        );
-
+        console.log("✅ Worker enviou a notificação:", resultado);
     } catch (erro) {
-        console.error(
-            "❌ Erro chamando Worker:",
-            erro
-        );
+        console.error("❌ Erro chamando Worker:", erro);
     }
 }
 </script>
-    
+
 </body>
 
 </html>
