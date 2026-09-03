@@ -7232,21 +7232,26 @@ async function enviarSolicitacaoMercadoria(){
                 "Enviando...";
         }
 
+    await firebaseDB
+    .ref(
+        "solicitacoesMercadoria/" +
+        idPedido
+    )
+    .set(pedido);
 
-        await firebaseDB
-            .ref(
-                "solicitacoesMercadoria/" +
-                idPedido
-            )
-            .set(pedido);
+// Envia a notificação depois que o pedido foi salvo
+await chamarWorkerNotificacao(
+    "nova_solicitacao",
+    {
+        solicitacao: pedido
+    }
+);
 
-
-        alert(
-            "✅ Solicitação enviada com sucesso.\n\n"+
-            "Pedido: " +
-            idPedido
-        );
-
+alert(
+    "✅ Solicitação enviada com sucesso.\n\n"+
+    "Pedido: " + idPedido
+);
+        
 
         limparSolicitacaoMercadoria();
         fecharModalSolicitacaoMercadoria();
@@ -8126,6 +8131,55 @@ OneSignalDeferred.push(async function(OneSignal) {
     );
 });
 </script>    
+
+async function chamarWorkerNotificacao(tipo, dados) {
+    try {
+        const user = firebaseAuth.currentUser;
+
+        if (!user) {
+            console.warn("Usuário não autenticado para enviar notificação.");
+            return;
+        }
+
+        const idToken = await user.getIdToken();
+
+        const resposta = await fetch(
+            "https://notificacoes-containers.ls4095132.workers.dev/",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + idToken
+                },
+                body: JSON.stringify({
+                    tipo: tipo,
+                    ...dados
+                })
+            }
+        );
+
+        const resultado = await resposta.json();
+
+        if (!resposta.ok || !resultado.ok) {
+            console.warn(
+                "Worker de notificações:",
+                resultado
+            );
+            return;
+        }
+
+        console.log(
+            "✅ Notificação enviada:",
+            resultado
+        );
+
+    } catch (erro) {
+        console.warn(
+            "⚠️ Falha ao enviar notificação:",
+            erro
+        );
+    }
+}
     
 </body>
 
