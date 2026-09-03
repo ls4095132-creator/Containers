@@ -1,18 +1,14 @@
 <!DOCTYPE html>
+
 <html lang="pt-BR">
-
 <head>
-
-<link rel="manifest" href="./manifest.webmanifest">
-<meta name="theme-color" content="#0a0f1c">
-<link rel="apple-touch-icon" href="./icon-192.png">
-    
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+<link href="./manifest.webmanifest" rel="manifest"/>
+<meta content="#0a0f1c" name="theme-color"/>
+<link href="./icon-192.png" rel="apple-touch-icon"/>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>Controle de Containers — Firebase V6</title>
-<meta name="app-version" content="Firebase-V6">
-
+<meta content="Firebase-V6" name="app-version"/>
 <style>
 
 :root {
@@ -974,7 +970,6 @@ button:disabled {
     .toast-notificacao-web{right:10px;bottom:10px;width:calc(100vw - 20px);}
 }
 </style>
-
 <!-- FIREBASE: conexão do sistema -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -1000,8 +995,6 @@ const firebaseFunctions = firebase.functions();
 // A função configurarAutenticacaoSemPersistencia() confirma isso antes do login.
 console.log("🔥 Firebase conectado!");
 </script>
-
-
 <style id="ajuste-layout-admin-final">
 /* AJUSTE FINAL — painel administrativo + entrada de mercadoria */
 .layout-admin-operacional{
@@ -1040,7 +1033,6 @@ console.log("🔥 Firebase conectado!");
     .layout-admin-operacional > .painel-entrada{grid-column:1;}
 }
 </style>
-
 <style id="ajuste-layout-registro">
 /* Registro com a mesma dimensão visual do painel de Usuários/Solicitações */
 .layout-admin-operacional > #painel-admin-usuarios,
@@ -1115,8 +1107,6 @@ console.log("🔥 Firebase conectado!");
     }
 }
 </style>
-
-
 <style id="ajuste-layout-usuario-comum">
 /* USUÁRIO COMUM — mantém a tela completa/original; somente o layout administrativo recebe a alteração de duas colunas. */
 body:not(.usuario-admin) .layout-admin-operacional{
@@ -1192,12 +1182,10 @@ body.usuario-admin .painel-solicitacoes-comum{display:none!important;}
 .painel-solicitacoes-comum .produto-item{padding:10px 12px;border:1px solid var(--borda);border-radius:8px;margin-bottom:8px;background:var(--bg-painel-2);}
 @media(max-width:1100px){body:not(.usuario-admin) .layout-admin-operacional{grid-template-columns:1fr;}body:not(.usuario-admin) .layout-admin-operacional > .painel-solicitacoes-comum,body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada{grid-column:1;}}
 </style>
-
-
 <!-- ======================================================
      ONESIGNAL - NOTIFICAÇÕES PUSH
      ====================================================== -->
-<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script defer="" src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js"></script>
 <script>
 window.OneSignalDeferred = window.OneSignalDeferred || [];
 window.OneSignalDeferred.push(async function(OneSignal) {
@@ -1215,749 +1203,402 @@ window.OneSignalDeferred.push(async function(OneSignal) {
     console.log("✅ OneSignal inicializado corretamente.");
 });
 </script>
-
 </head>
-
 <body>
-
-
 <!-- TELA DE LOGIN -->
-
 <div class="tela-login" id="tela-login">
-
 <div class="cartao-login">
-
 <h1>📦 Controle de Containers</h1>
-
 <div class="subtitulo-login" id="subtitulo-login">
 Entre com seu usuário e senha
 </div>
-
 <div class="erro-login" id="erro-login"></div>
-
 <div id="bloco-login-normal">
-
 <div class="campo-login">
 <label>👤 Usuário:</label>
-<input type="text" id="login-usuario" autocomplete="off" placeholder="Digite seu usuário">
+<input autocomplete="off" id="login-usuario" placeholder="Digite seu usuário" type="text"/>
 </div>
-
 <div class="campo-login">
 <label>🔒 Senha:</label>
-<input type="password" id="login-senha" autocomplete="off" placeholder="Digite sua senha">
+<input autocomplete="off" id="login-senha" placeholder="Digite sua senha" type="password"/>
 </div>
-
-<button type="button" class="btn-login" id="btn-acao-login" onclick="tratarEnvioLogin()">
+<button class="btn-login" id="btn-acao-login" onclick="tratarEnvioLogin()" type="button">
 Entrar
 </button>
-
 <div class="alternar-login" id="alternar-login" style="display:none;">
 </div>
-
 </div>
-
-
 <!-- PAINEL DE SOLICITAÇÃO DE ACESSO AO ADMINISTRADOR -->
-
 <div id="painel-recuperar-senha" style="display:none;">
-
 <div class="erro-login" id="erro-recuperar"></div>
-
 <div style="background:var(--azul-fraco);border:1px solid var(--azul-forte);color:var(--texto);padding:10px;border-radius:8px;font-size:11.5px;margin-bottom:12px;">
 🔐 Seu acesso será analisado pelo administrador. Você não poderá alterar a própria senha por esta tela.
 </div>
-
 <div class="campo-login">
 <label>👤 Usuário:</label>
-<input type="text" id="recuperar-usuario" autocomplete="off" placeholder="Digite seu usuário">
+<input autocomplete="off" id="recuperar-usuario" placeholder="Digite seu usuário" type="text"/>
 </div>
-
 <div class="campo-login">
 <label>📝 Mensagem para o administrador (opcional):</label>
-<textarea id="recuperar-mensagem" rows="3" placeholder="Ex.: Esqueci minha senha e preciso recuperar meu acesso."></textarea>
+<textarea id="recuperar-mensagem" placeholder="Ex.: Esqueci minha senha e preciso recuperar meu acesso." rows="3"></textarea>
 </div>
-
-<button type="button" class="btn-login" onclick="solicitarAcessoAdmin()">
+<button class="btn-login" onclick="solicitarAcessoAdmin()" type="button">
 📨 Solicitar acesso ao administrador
 </button>
-
 <div class="alternar-login" style="display:block;">
 <a onclick="esconderRecuperarSenha()">← Voltar para o login</a>
 </div>
-
 </div>
-
 </div>
-
 </div>
-
-
 <!-- APLICATIVO -->
-
-    <!-- ======================================================
+<!-- ======================================================
      TELA EXCLUSIVA — USUÁRIO EXTERNO
      ====================================================== -->
-
 <div id="app-externo" style="display:none;">
-
-    <div class="barra-usuario">
-        <span id="texto-usuario-externo"></span>
-
-        <button type="button" class="btn-notificacao-web" id="btn-notificacoes-externo" onclick="ativarNotificacoesWeb()">🔔 Ativar</button>
-
-        <button
-            type="button"
-            class="btn-sair"
-            onclick="sairDoSistema()"
-        >
+<div class="barra-usuario">
+<span id="texto-usuario-externo"></span>
+<button class="btn-notificacao-web" id="btn-notificacoes-externo" onclick="ativarNotificacoesWeb()" type="button">🔔 Ativar</button>
+<button class="btn-sair" onclick="sairDoSistema()" type="button">
             🚪 Sair
         </button>
-    </div>
-
-    <h1>📦 Consulta de Saldo dos Containers</h1>
-
-    <div class="aviso-armazenamento">
+</div>
+<h1>📦 Consulta de Saldo dos Containers</h1>
+<div class="aviso-armazenamento">
         👁️ <strong>Modo consulta:</strong>
         este acesso permite consultar o saldo dos containers
         e enviar solicitações de mercadoria.
         Não permite alterar, excluir ou cadastrar estoque.
     </div>
-
-    <!-- PESQUISA -->
-
-    <div class="painel-busca">
-
-        <strong>
+<!-- PESQUISA -->
+<div class="painel-busca">
+<strong>
             🔎 Pesquisar Containers:
         </strong>
-
-        <input
-            type="text"
-            id="campo-busca-externo"
-            class="input-busca"
-            placeholder="Produto, lote, container, NF ou fornecedor..."
-            oninput="filtrarEstoqueExterno()"
-        >
-
-    </div>
-
-    <!-- CONTADOR -->
-
-    <div
-        id="contador-externo"
-        class="contador"
-    >
+<input class="input-busca" id="campo-busca-externo" oninput="filtrarEstoqueExterno()" placeholder="Produto, lote, container, NF ou fornecedor..." type="text"/>
+</div>
+<!-- CONTADOR -->
+<div class="contador" id="contador-externo">
         Containers ocupados: 0 / 60
     </div>
-
-
 <!-- CONTROLES DE VISUALIZAÇÃO DOS CONTAINERS EXTERNOS -->
 <div class="painel-visualizacao" id="painel-visualizacao-externo">
-    <div class="visualizacao-linha">
-        <strong>👁️ Visualização:</strong>
-        <div class="visualizacao-botoes">
-            <button type="button" class="btn-vis ativo" id="btn-vis-quadro-externo" onclick="alterarVisualizacaoContainers('externo','quadro')">▦ Quadro</button>
-            <button type="button" class="btn-vis" id="btn-vis-lista-externo" onclick="alterarVisualizacaoContainers('externo','lista')">☷ Lista</button>
-        </div>
-        <strong style="margin-left:8px;">Status:</strong>
-        <select id="filtro-status-containers-externo" class="select-status" onchange="aplicarFiltrosContainers('externo')">
-            <option value="todos">Todos</option>
-            <option value="cheios">🟢 Cheios</option>
-            <option value="vazios">⚪ Vazios</option>
-        </select>
-    </div>
-    <div class="resumo-visualizacao" id="resumo-visualizacao-externo"></div>
+<div class="visualizacao-linha">
+<strong>👁️ Visualização:</strong>
+<div class="visualizacao-botoes">
+<button class="btn-vis ativo" id="btn-vis-quadro-externo" onclick="alterarVisualizacaoContainers('externo','quadro')" type="button">▦ Quadro</button>
+<button class="btn-vis" id="btn-vis-lista-externo" onclick="alterarVisualizacaoContainers('externo','lista')" type="button">☷ Lista</button>
 </div>
-
-    <!-- CONTAINERS -->
-
-    <div
-        class="grid"
-        id="grade-externa"
-    ></div>
-
-
-    <!-- ==================================================
+<strong style="margin-left:8px;">Status:</strong>
+<select class="select-status" id="filtro-status-containers-externo" onchange="aplicarFiltrosContainers('externo')">
+<option value="todos">Todos</option>
+<option value="cheios">🟢 Cheios</option>
+<option value="vazios">⚪ Vazios</option>
+</select>
+</div>
+<div class="resumo-visualizacao" id="resumo-visualizacao-externo"></div>
+</div>
+<!-- CONTAINERS -->
+<div class="grid" id="grade-externa"></div>
+<!-- ==================================================
          SOLICITAÇÃO DE MERCADORIA — ACESSO POR MODAL
          ================================================== -->
-
-    <div class="externo-acoes-solicitacao">
-        <div>
-            <h2 style="margin:0 0 4px 0;">📨 Solicitações</h2>
-            <div class="texto-apoio-solicitacao">Solicite uma mercadoria diretamente a partir do saldo dos containers.</div>
-        </div>
-        <button type="button" class="btn-salvar btn-abrir-solicitacao-externo" onclick="abrirModalSolicitacaoMercadoria()">
+<div class="externo-acoes-solicitacao">
+<div>
+<h2 style="margin:0 0 4px 0;">📨 Solicitações</h2>
+<div class="texto-apoio-solicitacao">Solicite uma mercadoria diretamente a partir do saldo dos containers.</div>
+</div>
+<button class="btn-salvar btn-abrir-solicitacao-externo" onclick="abrirModalSolicitacaoMercadoria()" type="button">
             📨 Solicitar Mercadoria
         </button>
-    </div>
-
-    <!-- Solicitação do usuário externo: agora fica em uma janela pequena -->
-    <div id="modal-solicitacao-externo" class="modal-solicitacao-externo" style="display:none;" aria-hidden="true">
-        <div class="modal-solicitacao-caixa" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-solicitacao">
-            <div class="modal-solicitacao-cabecalho">
-                <div>
-                    <h2 id="titulo-modal-solicitacao">📨 Nova Solicitação de Mercadoria</h2>
-                    <div class="texto-apoio-solicitacao">Selecione o container e a mercadoria disponível. Os dados são preenchidos pelo estoque.</div>
-                </div>
-                <button type="button" class="modal-fechar" onclick="fecharModalSolicitacaoMercadoria()" aria-label="Fechar">✕</button>
-            </div>
-
-            <div class="modal-solicitacao-corpo">
-                <div class="linha-form modal-grid-solicitacao">
-                    <div class="campo">
-                        <label>📦 Container:</label>
-                        <select id="solicitacao-container">
-                            <option value="">Selecione o container</option>
-                        </select>
-                    </div>
-
-                    <div class="campo">
-                        <label>📋 Mercadoria:</label>
-                        <select id="solicitacao-produto">
-                            <option value="">Selecione a mercadoria</option>
-                        </select>
-                    </div>
-
-                    <div class="campo">
-                        <label>🔢 Quantidade:</label>
-                        <input type="number" id="solicitacao-qtd" min="1" placeholder="Quantidade">
-                    </div>
-
-                    <div class="campo">
-                        <label>⚖️ Peso solicitado (KG):</label>
-                        <input type="number" id="solicitacao-peso" min="0" step="0.01" placeholder="Peso em KG">
-                    </div>
-                </div>
-
-                <div id="resumo-container-solicitacao" class="resumo-container-solicitacao">
-                    <span>📦 Selecione um container para visualizar os dados.</span>
-                </div>
-
-                <div class="campo">
-                    <label>💬 Observação:</label>
-                    <textarea id="solicitacao-observacao" rows="3" placeholder="Informe alguma observação sobre a solicitação..."></textarea>
-                </div>
-            </div>
-
-            <div class="modal-solicitacao-rodape">
-                <button type="button" class="btn-cancelar" onclick="limparSolicitacaoMercadoria(); fecharModalSolicitacaoMercadoria();">🧹 Cancelar</button>
-                <button type="button" class="btn-salvar" onclick="enviarSolicitacaoMercadoria()">📨 Enviar Solicitação</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Minhas solicitações permanece acima dos containers -->
-    <div class="painel painel-minhas-solicitacoes-externo">
-        <div class="cabecalho-minhas-solicitacoes">
-            <div>
-                <h2 style="margin:0;">📋 Minhas Solicitações</h2>
-                <div class="texto-apoio-solicitacao">Histórico das solicitações enviadas por este usuário.</div>
-            </div>
-            <div class="container-botoes" style="margin:0;justify-content:flex-end;">
-                <button type="button" class="btn-produto" onclick="exportarMinhasSolicitacoesExternoExcel()">📊 Exportar Excel</button>
-                <button type="button" class="btn-apagar-historico" onclick="ocultarMinhasSolicitacoesExterno()">🗑️ Apagar Solicitações</button>
-                <button type="button" class="btn-vis" id="btn-toggle-minhas-solicitacoes-externo" onclick="toggleMinhasSolicitacoesExterno()">👁️ Ocultar Minhas Solicitações</button>
-            </div>
-        </div>
-        <div id="lista-minhas-solicitacoes"></div>
-    </div>
-
-
 </div>
-    
+<!-- Solicitação do usuário externo: agora fica em uma janela pequena -->
+<div aria-hidden="true" class="modal-solicitacao-externo" id="modal-solicitacao-externo" style="display:none;">
+<div aria-labelledby="titulo-modal-solicitacao" aria-modal="true" class="modal-solicitacao-caixa" role="dialog">
+<div class="modal-solicitacao-cabecalho">
+<div>
+<h2 id="titulo-modal-solicitacao">📨 Nova Solicitação de Mercadoria</h2>
+<div class="texto-apoio-solicitacao">Selecione o container e a mercadoria disponível. Os dados são preenchidos pelo estoque.</div>
+</div>
+<button aria-label="Fechar" class="modal-fechar" onclick="fecharModalSolicitacaoMercadoria()" type="button">✕</button>
+</div>
+<div class="modal-solicitacao-corpo">
+<div class="linha-form modal-grid-solicitacao">
+<div class="campo">
+<label>📦 Container:</label>
+<select id="solicitacao-container">
+<option value="">Selecione o container</option>
+</select>
+</div>
+<div class="campo">
+<label>📋 Mercadoria:</label>
+<select id="solicitacao-produto">
+<option value="">Selecione a mercadoria</option>
+</select>
+</div>
+<div class="campo">
+<label>🔢 Quantidade:</label>
+<input id="solicitacao-qtd" min="1" placeholder="Quantidade" type="number"/>
+</div>
+<div class="campo">
+<label>⚖️ Peso solicitado (KG):</label>
+<input id="solicitacao-peso" min="0" placeholder="Peso em KG" step="0.01" type="number"/>
+</div>
+</div>
+<div class="resumo-container-solicitacao" id="resumo-container-solicitacao">
+<span>📦 Selecione um container para visualizar os dados.</span>
+</div>
+<div class="campo">
+<label>💬 Observação:</label>
+<textarea id="solicitacao-observacao" placeholder="Informe alguma observação sobre a solicitação..." rows="3"></textarea>
+</div>
+</div>
+<div class="modal-solicitacao-rodape">
+<button class="btn-cancelar" onclick="limparSolicitacaoMercadoria(); fecharModalSolicitacaoMercadoria();" type="button">🧹 Cancelar</button>
+<button class="btn-salvar" onclick="enviarSolicitacaoMercadoria()" type="button">📨 Enviar Solicitação</button>
+</div>
+</div>
+</div>
+<!-- Minhas solicitações permanece acima dos containers -->
+<div class="painel painel-minhas-solicitacoes-externo">
+<div class="cabecalho-minhas-solicitacoes">
+<div>
+<h2 style="margin:0;">📋 Minhas Solicitações</h2>
+<div class="texto-apoio-solicitacao">Histórico das solicitações enviadas por este usuário.</div>
+</div>
+<div class="container-botoes" style="margin:0;justify-content:flex-end;">
+<button class="btn-produto" onclick="exportarMinhasSolicitacoesExternoExcel()" type="button">📊 Exportar Excel</button>
+<button class="btn-apagar-historico" onclick="ocultarMinhasSolicitacoesExterno()" type="button">🗑️ Apagar Solicitações</button>
+<button class="btn-vis" id="btn-toggle-minhas-solicitacoes-externo" onclick="toggleMinhasSolicitacoesExterno()" type="button">👁️ Ocultar Minhas Solicitações</button>
+</div>
+</div>
+<div id="lista-minhas-solicitacoes"></div>
+</div>
+</div>
 <div id="app-principal" style="display:none;">
-
 <div class="barra-usuario">
 <span id="texto-usuario-logado"></span>
-<button type="button" class="btn-notificacao-web" id="btn-notificacoes-app" onclick="ativarNotificacoesWeb()">🔔 Ativar</button>
-<button type="button" class="btn-historico" id="btn-abrir-painel-admin" onclick="toggleAdminUsuarios()" style="display:none;">
+<button class="btn-notificacao-web" id="btn-notificacoes-app" onclick="ativarNotificacoesWeb()" type="button">🔔 Ativar</button>
+<button class="btn-historico" id="btn-abrir-painel-admin" onclick="toggleAdminUsuarios()" style="display:none;" type="button">
 👑 Usuários Cadastrados
 </button>
-<button type="button" class="btn-sair" onclick="sairDoSistema()">🚪 Sair</button>
+<button class="btn-sair" onclick="sairDoSistema()" type="button">🚪 Sair</button>
 </div>
-
 <h1>📦 Controle de Containers</h1>
-
-
 <div class="layout-admin-operacional" id="layout-admin-operacional">
-
 <!-- PAINEL ADMIN: USUÁRIOS CADASTRADOS -->
-
 <div class="painel" id="painel-admin-usuarios" style="display:none;">
-
 <h2>👑 Usuários Cadastrados</h2>
-
 <div class="erro-login" id="erro-admin-usuarios" style="display:none;"></div>
-
-
 <div id="painel-aprovacoes-alteracoes" style="background:rgba(245,158,11,.10);border:1px solid #f59e0b;padding:12px;border-radius:8px;margin-bottom:18px;">
 <h2 style="margin-top:0;color:#fbbf24;">🔔 Alterações aguardando aprovação <span id="contador-alteracoes-admin" style="font-size:12px;color:var(--texto-fraco);"></span></h2>
 <div id="lista-alteracoes-admin"></div>
 <div style="margin-top:8px;font-size:11px;color:var(--texto-fraco);">As alterações feitas por usuários comuns não entram no estoque até serem aprovadas aqui.</div>
 </div>
-
 <!-- SOLICITAÇÕES RECEBIDAS -->
-
 <div class="painel">
-
-    <h2>📦 Solicitações Recebidas</h2>
-
-    <div class="container-botoes">
-
-        <button
-            type="button"
-            onclick="toggleSolicitacoes()"
-            class="btn-historico"
-            id="btn-toggle-solicitacoes"
-        >
+<h2>📦 Solicitações Recebidas</h2>
+<div class="container-botoes">
+<button class="btn-historico" id="btn-toggle-solicitacoes" onclick="toggleSolicitacoes()" type="button">
             👁️ Mostrar Solicitações
         </button>
-
-        <button
-            type="button"
-            onclick="exportarSolicitacoesAdminExcel()"
-            class="btn-produto"
-        >
+<button class="btn-produto" onclick="exportarSolicitacoesAdminExcel()" type="button">
             📊 Exportar Excel
         </button>
-
-        <button
-            type="button"
-            onclick="ocultarSolicitacoesAdmin()"
-            class="btn-apagar-historico"
-        >
+<button class="btn-apagar-historico" onclick="ocultarSolicitacoesAdmin()" type="button">
             🗑️ Apagar Solicitações
         </button>
-
-        <button
-            type="button"
-            onclick="toggleSolicitacoesFinalizadasAdmin()"
-            class="btn-historico"
-            id="btn-solicitacoes-finalizadas-admin"
-        >
+<button class="btn-historico" id="btn-solicitacoes-finalizadas-admin" onclick="toggleSolicitacoesFinalizadasAdmin()" type="button">
             📋 Ver Solicitações Finalizadas
         </button>
-
-    </div>
-
-    <div
-        id="conteudo-solicitacoes"
-        style="display:none;margin-top:15px;"
-    >
-
-        <div id="lista-solicitacoes">
-            <!-- As solicitações serão carregadas aqui pelo Firebase -->
-        </div>
-
-    </div>
-
-    <div
-        id="conteudo-solicitacoes-finalizadas-admin"
-        style="display:none;margin-top:15px;"
-    >
-        <div id="lista-solicitacoes-finalizadas-admin">
-            <!-- Solicitações finalizadas -->
-        </div>
-    </div>
-
 </div>
-
+<div id="conteudo-solicitacoes" style="display:none;margin-top:15px;">
+<div id="lista-solicitacoes">
+<!-- As solicitações serão carregadas aqui pelo Firebase -->
+</div>
+</div>
+<div id="conteudo-solicitacoes-finalizadas-admin" style="display:none;margin-top:15px;">
+<div id="lista-solicitacoes-finalizadas-admin">
+<!-- Solicitações finalizadas -->
+</div>
+</div>
+</div>
 <!-- FIM SOLICITAÇÕES RECEBIDAS -->
-
 <div class="cabecalho-usuarios-admin" style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;margin-bottom:8px;">
-    <strong style="color:var(--azul);">👥 Usuários existentes</strong>
-    <button type="button" class="btn-vis" id="btn-toggle-usuarios-existentes" onclick="toggleUsuariosExistentes()">🙈 Ocultar Usuários Existentes</button>
+<strong style="color:var(--azul);">👥 Usuários existentes</strong>
+<button class="btn-vis" id="btn-toggle-usuarios-existentes" onclick="toggleUsuariosExistentes()" type="button">🙈 Ocultar Usuários Existentes</button>
 </div>
-
 <div id="lista-usuarios-cadastrados" style="margin-top:20px;">
 </div>
-
 <div class="container-botoes" style="margin-top:20px;padding-top:15px;border-top:1px dashed #cbd5e1;">
-
-<button
-type="button"
-class="btn-produto"
-onclick="fazerBackup()"
->
+<button class="btn-produto" onclick="fazerBackup()" type="button">
 💾 Fazer Backup
 </button>
-
-<button
-type="button"
-class="btn-historico"
-onclick="abrirRestauracaoBackup()"
->
+<button class="btn-historico" onclick="abrirRestauracaoBackup()" type="button">
 ♻️ Restaurar Backup
 </button>
-
-<button
-type="button"
-class="btn-produto"
-onclick="abrirConfiguracaoPastaBackup()"
->
+<button class="btn-produto" onclick="abrirConfiguracaoPastaBackup()" type="button">
 📁 Selecionar Pasta (sessão)
 </button>
-
-<input
-type="file"
-id="arquivo-backup"
-accept=".json,application/json"
-style="display:none;"
-onchange="restaurarBackup(this)"
->
-
+<input accept=".json,application/json" id="arquivo-backup" onchange="restaurarBackup(this)" style="display:none;" type="file"/>
 </div>
-
 <div style="margin-top:10px;font-size:12px;color:#64748b;">
 💡 Na primeira vez, escolha a pasta <strong>backup containers</strong> da sua Área de Trabalho. Depois disso, os backups serão salvos automaticamente nela.
 </div>
-
 </div>
-
-
-
 <!-- SOLICITAÇÕES RECEBIDAS — USUÁRIO COMUM (SOMENTE VISUALIZAÇÃO) -->
 <div class="painel painel-solicitacoes-comum" id="painel-solicitacoes-comum" style="display:none;">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;">
-        <div>
-            <h2 style="margin:0;">📦 Solicitações Recebidas</h2>
-            <div style="font-size:11px;color:var(--texto-fraco);margin-top:4px;">Visualização somente leitura das solicitações de mercadoria.</div>
-        </div>
-        <span id="contador-solicitacoes-comum" style="font-size:11px;color:var(--texto-fraco);"></span>
-    </div>
-    <div id="lista-solicitacoes-comum"><div class="vazio">📭 Nenhuma solicitação recebida.</div></div>
-    <div style="margin-top:10px;font-size:11px;color:var(--texto-fraco);display:flex;justify-content:flex-end;">
-        <button type="button" class="btn-notificacao-web" id="btn-notificacoes-comum" onclick="ativarNotificacoesWeb()">🔔 Ativar notificações</button>
-    </div>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;">
+<div>
+<h2 style="margin:0;">📦 Solicitações Recebidas</h2>
+<div style="font-size:11px;color:var(--texto-fraco);margin-top:4px;">Visualização somente leitura das solicitações de mercadoria.</div>
 </div>
-
+<span id="contador-solicitacoes-comum" style="font-size:11px;color:var(--texto-fraco);"></span>
+</div>
+<div id="lista-solicitacoes-comum"><div class="vazio">📭 Nenhuma solicitação recebida.</div></div>
+<div style="margin-top:10px;font-size:11px;color:var(--texto-fraco);display:flex;justify-content:flex-end;">
+<button class="btn-notificacao-web" id="btn-notificacoes-comum" onclick="ativarNotificacoesWeb()" type="button">🔔 Ativar notificações</button>
+</div>
+</div>
 <!-- FORMULÁRIO -->
-
 <div class="painel painel-entrada">
-
 <h2 id="titulo-form">
 📥 Entrada de Mercadoria
 </h2>
-
-<input type="hidden" id="edit-index">
-
+<input id="edit-index" type="hidden"/>
 <!-- Linha 1: identificação da entrada -->
 <div class="linha-form linha-identificacao">
-
 <div class="campo">
 <label>📅 Data de Entrada:</label>
-<input type="date" id="data">
+<input id="data" type="date"/>
 </div>
-
 <div class="campo">
 <label>📦 Nº Container (1-60):</label>
-<input
-type="number"
-id="num"
-min="1"
-max="60"
-placeholder="Ex: 01"
->
+<input id="num" max="60" min="1" placeholder="Ex: 01" type="number"/>
 </div>
-
 <div class="campo">
 <label>🏢 Fornecedor:</label>
-<input
-type="text"
-id="fornecedor"
-placeholder="Nome do fornecedor"
->
+<input id="fornecedor" placeholder="Nome do fornecedor" type="text"/>
 </div>
-
 <div class="campo">
 <label>🧾 Nº Nota Fiscal:</label>
-<input
-type="text"
-id="nf"
-placeholder="Número da NF-e"
->
+<input id="nf" placeholder="Número da NF-e" type="text"/>
 </div>
-
 </div>
-
 <!-- Linha 2: código, produto e lote -->
 <div class="linha-form linha-produto">
-
 <div class="campo">
 <label>🔢 Código:</label>
-<input
-type="text"
-id="codigo"
-placeholder="Código"
->
+<input id="codigo" placeholder="Código" type="text"/>
 </div>
-
 <div class="campo campo-produto" style="position:relative;">
 <label>📋 Produto:</label>
-<input
-type="text"
-id="prod"
-placeholder="Digite a primeira letra para pesquisar..."
-autocomplete="off"
-oninput="mostrarSugestoesProduto()"
-onfocus="mostrarSugestoesProduto()"
-onblur="esconderSugestoesProduto()"
->
-<div id="sugestoes-produto" class="sugestoes-produto"></div>
-
+<input autocomplete="off" id="prod" onblur="esconderSugestoesProduto()" onfocus="mostrarSugestoesProduto()" oninput="mostrarSugestoesProduto()" placeholder="Digite a primeira letra para pesquisar..." type="text"/>
+<div class="sugestoes-produto" id="sugestoes-produto"></div>
 </div>
-
 <div class="campo">
 <label>🏷️ Lote:</label>
-<input
-type="text"
-id="lote"
-placeholder="Número do lote"
->
+<input id="lote" placeholder="Número do lote" type="text"/>
 </div>
-
 </div>
-
 <!-- Linha 3: quantidade + KG por volume + peso total -->
 <div class="linha-form linha-quantidade">
-
 <div class="campo">
 <label>🔢 Quantidade:</label>
-<input
-type="number"
-id="qtd"
-min="0"
-step="1"
-placeholder="Quantidade de volumes"
-oninput="calcularPesoTotal()"
->
+<input id="qtd" min="0" oninput="calcularPesoTotal()" placeholder="Quantidade de volumes" step="1" type="number"/>
 </div>
-
 <div class="campo">
 <label>⚖️ KG:</label>
-<input
-type="number"
-id="kg"
-min="0"
-step="0.01"
-placeholder="KG por volume"
-oninput="calcularPesoTotal()"
->
+<input id="kg" min="0" oninput="calcularPesoTotal()" placeholder="KG por volume" step="0.01" type="number"/>
 </div>
-
 <div class="campo">
 <label>🧮 Peso Total (KG):</label>
-<input
-type="number"
-id="peso"
-min="0"
-step="0.01"
-placeholder="Calculado automaticamente"
-readonly
->
+<input id="peso" min="0" placeholder="Calculado automaticamente" readonly="" step="0.01" type="number"/>
 </div>
-
 </div>
-
 <div class="container-botoes">
-
-<button
-id="btn-principal"
-onclick="adicionarItem()"
-class="btn-salvar"
->
+<button class="btn-salvar" id="btn-principal" onclick="adicionarItem()">
 💾 Registrar Entrada
 </button>
-
-<button
-id="btn-cancelar"
-onclick="cancelarEdicao()"
-class="btn-cancelar"
-style="display:none;"
->
+<button class="btn-cancelar" id="btn-cancelar" onclick="cancelarEdicao()" style="display:none;">
 ❌ Cancelar Alteração
 </button>
-
-<button
-type="button"
-onclick="esvaziarContainer()"
-class="btn-cancelar"
->
+<button class="btn-cancelar" onclick="esvaziarContainer()" type="button">
 🗑️ Zerar Container
 </button>
-
-<button
-type="button"
-onclick="exportarParaExcel()"
-class="btn-produto"
->
+<button class="btn-produto" onclick="exportarParaExcel()" type="button">
 📊 Exportar Excel
 </button>
-
 </div>
-
 </div>
-
 </div> <!-- /layout-admin-operacional -->
-
-
 <div class="limpar-flutuacao-admin"></div>
-
 <!-- PESQUISA DOS CONTAINERS -->
-
 <div class="painel-busca">
-
 <strong style="color:#3b82f6;">
 🔎 Pesquisar Containers:
 </strong>
-
-<input
-type="text"
-id="campo-busca"
-class="input-busca"
-placeholder="Produto, lote, container, NF ou fornecedor..."
-oninput="filtrarEstoque()"
->
-
+<input class="input-busca" id="campo-busca" oninput="filtrarEstoque()" placeholder="Produto, lote, container, NF ou fornecedor..." type="text"/>
 </div>
-
 <!-- STATUS E CONTAINERS -->
-
 <h2>Status dos 60 Containers</h2>
-
-<div id="contador" class="contador">
+<div class="contador" id="contador">
 Containers ocupados: 0 / 60
 </div>
-
-
 <!-- CONTROLES DE VISUALIZAÇÃO DOS CONTAINERS -->
 <div class="painel-visualizacao" id="painel-visualizacao-admin">
-    <div class="visualizacao-linha">
-        <strong>👁️ Visualização:</strong>
-        <div class="visualizacao-botoes">
-            <button type="button" class="btn-vis ativo" id="btn-vis-quadro-admin" onclick="alterarVisualizacaoContainers('admin','quadro')">▦ Quadro</button>
-            <button type="button" class="btn-vis" id="btn-vis-lista-admin" onclick="alterarVisualizacaoContainers('admin','lista')">☷ Lista</button>
-        </div>
-        <strong style="margin-left:8px;">Status:</strong>
-        <select id="filtro-status-containers-admin" class="select-status" onchange="aplicarFiltrosContainers('admin')">
-            <option value="todos">Todos</option>
-            <option value="cheios">🟢 Cheios</option>
-            <option value="vazios">⚪ Vazios</option>
-        </select>
-    </div>
-    <div class="resumo-visualizacao" id="resumo-visualizacao-admin"></div>
+<div class="visualizacao-linha">
+<strong>👁️ Visualização:</strong>
+<div class="visualizacao-botoes">
+<button class="btn-vis ativo" id="btn-vis-quadro-admin" onclick="alterarVisualizacaoContainers('admin','quadro')" type="button">▦ Quadro</button>
+<button class="btn-vis" id="btn-vis-lista-admin" onclick="alterarVisualizacaoContainers('admin','lista')" type="button">☷ Lista</button>
 </div>
-
-<div
-class="grid"
-id="grade"
->
+<strong style="margin-left:8px;">Status:</strong>
+<select class="select-status" id="filtro-status-containers-admin" onchange="aplicarFiltrosContainers('admin')">
+<option value="todos">Todos</option>
+<option value="cheios">🟢 Cheios</option>
+<option value="vazios">⚪ Vazios</option>
+</select>
 </div>
-
-
-
-
+<div class="resumo-visualizacao" id="resumo-visualizacao-admin"></div>
+</div>
+<div class="grid" id="grade">
+</div>
 <!-- HISTÓRICO -->
-    
 <!-- HISTÓRICO -->
-
 <div class="painel">
-
 <h2>📋 Histórico de Movimentações</h2>
-
 <div class="container-botoes">
-
-<button
-type="button"
-onclick="toggleHistorico()"
-class="btn-historico"
-id="btn-toggle-historico"
->
+<button class="btn-historico" id="btn-toggle-historico" onclick="toggleHistorico()" type="button">
 👁️ Mostrar Histórico
 </button>
-
 </div>
-
 <div id="conteudo-historico" style="display:none;margin-top:15px;">
-
-<div class="painel-busca"
-style="border-color:#64748b;">
-
+<div class="painel-busca" style="border-color:#64748b;">
 <strong>
 🔎 Pesquisar Histórico:
 </strong>
-
-<input
-type="text"
-id="busca-historico"
-class="input-busca"
-placeholder="Produto, container, NF, lote, fornecedor ou tipo..."
-oninput="filtrarHistorico()"
->
-
+<input class="input-busca" id="busca-historico" oninput="filtrarHistorico()" placeholder="Produto, container, NF, lote, fornecedor ou tipo..." type="text"/>
 </div>
-
-
 <div class="container-botoes">
-
-<button
-onclick="mostrarHistorico()"
-class="btn-historico"
->
+<button class="btn-historico" onclick="mostrarHistorico()">
 🔄 Atualizar Histórico
 </button>
-
-<button
-type="button"
-onclick="exportarHistoricoParaExcel()"
-class="btn-produto"
->
+<button class="btn-produto" onclick="exportarHistoricoParaExcel()" type="button">
 📊 Exportar Excel
 </button>
-
-<button
-type="button"
-onclick="ocultarMovimentacoesUsuario()"
-class="btn-apagar-historico"
->
+<button class="btn-apagar-historico" onclick="ocultarMovimentacoesUsuario()" type="button">
 🗑️ Excluir Minhas Movimentações
 </button>
-
-
 </div>
-
-
-<div
-id="historico"
-style="margin-top:20px;"
->
+<div id="historico" style="margin-top:20px;">
 </div>
-
 </div>
-
 </div>
-
 <!-- HISTÓRICO DE SOLICITAÇÕES DO USUÁRIO COMUM -->
-<div class="painel" id="painel-historico-solicitacoes-comum" style="display:none;margin-top:15px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
-        <div>
-            <h2 style="margin:0;">📋 Histórico de Solicitações</h2>
-            <div style="font-size:11px;color:var(--texto-fraco);margin-top:4px;">Solicitações já finalizadas pelo administrador.</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <span id="contador-historico-solicitacoes-comum" style="font-size:11px;color:var(--texto-fraco);"></span>
-            <button type="button" class="btn-historico" id="btn-toggle-historico-solicitacoes-comum" onclick="toggleHistoricoSolicitacoesComum()">🙈 Ocultar Histórico</button>
-            <button type="button" class="btn-produto" onclick="exportarHistoricoSolicitacoesComumExcel()">📊 Exportar Excel</button>
-            <button type="button" class="btn-apagar-historico" onclick="ocultarHistoricoSolicitacoesComum()">🗑️ Apagar da tela</button>
-        </div>
-    </div>
-    <div id="historico-solicitacoes-comum"><div class="vazio">📭 Nenhuma solicitação finalizada.</div></div>
-</div>
 
 </div>
 <!-- fim de #app-principal -->
-
-
 <script>
 
 
@@ -1974,7 +1615,6 @@ let solicitacoesAlteracoesCache = [];
 let solicitacoesAcessoCache = [];
 let solicitacoesMercadoriaAdminCache = [];
 let solicitacoesMercadoriaComumCache = [];
-let historicoSolicitacoesComumVisiveisCache = [];
 let firebaseSincronizacaoAtiva = false;
 let firebaseListenersAtivos = false;
 let firebaseRefsAtivos = [];
@@ -2091,11 +1731,9 @@ function renderizarSolicitacoesRecebidasComum(){
     }).join("");
 }
 
-
 function obterSolicitacoesFinalizadasComumVisiveis(){
     const uid=firebaseAuth.currentUser ? String(firebaseAuth.currentUser.uid || "") : "";
     const identidade=[];
-
     if(usuarioLogadoAtual){
         [
             usuarioLogadoAtual.nome,
@@ -2129,19 +1767,13 @@ function obterSolicitacoesFinalizadasComumVisiveis(){
         if(ocultos.has(idItem)) return false;
 
         const solicitanteUid=String(item.solicitanteUid || "").trim();
-
         if(uid && solicitanteUid && solicitanteUid === uid) return true;
 
+        // Compatibilidade com solicitações antigas que não possuíam UID.
         if(!solicitanteUid && identidade.length){
-            const nomesItem=[
-                item.solicitanteNome,
-                item.solicitante,
-                item.email,
-                item.usuario,
-                item.login
-            ].map(function(valor){
-                return String(valor || "").trim().toLowerCase();
-            }).filter(Boolean);
+            const nomesItem=[item.solicitanteNome,item.solicitante,item.email,item.usuario]
+                .map(function(valor){ return String(valor || "").trim().toLowerCase(); })
+                .filter(Boolean);
 
             return nomesItem.some(function(nome){
                 return identidade.includes(nome);
@@ -2155,36 +1787,26 @@ function obterSolicitacoesFinalizadasComumVisiveis(){
     });
 }
 
-
-
 function renderizarHistoricoSolicitacoesComum(){
     const painel=document.getElementById("painel-historico-solicitacoes-comum");
     const area=document.getElementById("historico-solicitacoes-comum");
     const contador=document.getElementById("contador-historico-solicitacoes-comum");
-
     if(!painel || !area) return;
 
     const tipoAtual=String((usuarioLogadoAtual && (
-        usuarioLogadoAtual.tipo ||
-        usuarioLogadoAtual.tipoUsuario ||
-        usuarioLogadoAtual.perfil
+        usuarioLogadoAtual.tipo || usuarioLogadoAtual.tipoUsuario || usuarioLogadoAtual.perfil
     )) || "").trim().toLowerCase();
 
-    if(tipoAtual === "admin" || tipoAtual === "administrador"){
+    if(tipoAtual === "admin"){
         painel.style.display="none";
-        historicoSolicitacoesComumVisiveisCache=[];
         return;
     }
 
-    const lista=obterSolicitacoesFinalizadasComumVisiveis();
-
-    historicoSolicitacoesComumVisiveisCache=lista.slice();
-
     painel.style.display="block";
 
-    if(contador){
-        contador.innerText="("+lista.length+")";
-    }
+    const lista=obterSolicitacoesFinalizadasComumVisiveis();
+
+    if(contador) contador.innerText="("+lista.length+")";
 
     if(!lista.length){
         area.innerHTML='<div class="vazio">📭 Nenhuma solicitação finalizada.</div>';
@@ -2192,20 +1814,13 @@ function renderizarHistoricoSolicitacoesComum(){
     }
 
     area.innerHTML=lista.map(function(item){
-        const processado=item.processadoEm
-            ? new Date(item.processadoEm).toLocaleString("pt-BR")
-            : "—";
-        const solicitado=item.dataHora
-            ? new Date(item.dataHora).toLocaleString("pt-BR")
-            : "—";
+        const processado=item.processadoEm ? new Date(item.processadoEm).toLocaleString("pt-BR") : "—";
+        const solicitado=item.dataHora ? new Date(item.dataHora).toLocaleString("pt-BR") : "—";
         const nf=item.nfFinalizacao || item.nf || item.notaFiscal || "—";
         const peso=Number(item.pesoSolicitado || 0);
         const qtd=Number(item.quantidadeSolicitada || 0);
-        const idItem=String(item.id || "");
 
-        return '<div class="produto-item" data-historico-solicitacao-id="'+
-            escaparHtmlSolicitacao(idItem)+
-            '" style="margin-bottom:10px;padding:12px;border:1px solid var(--borda);border-radius:8px;">'+
+        return '<div class="produto-item" style="margin-bottom:10px;padding:12px;border:1px solid var(--borda);border-radius:8px;">'+
             '<div style="margin-bottom:8px;"><span class="tipo tipo-entrada">✅ Solicitação finalizada</span></div>'+
             '<div style="font-size:12px;line-height:1.8;">'+
             '<strong>📦 Container:</strong> '+escaparHtmlSolicitacao(item.container||"—")+'<br>'+
@@ -2215,19 +1830,14 @@ function renderizarHistoricoSolicitacoesComum(){
             '<strong>🏢 Fornecedor:</strong> '+escaparHtmlSolicitacao(item.fornecedor||"—")+'<br>'+
             '<strong>👤 Solicitante:</strong> '+escaparHtmlSolicitacao(item.solicitanteNome||item.solicitante||"—")+'<br>'+
             '<strong>🔢 Quantidade:</strong> '+escaparHtmlSolicitacao(qtd)+'<br>'+
-            '<strong>⚖️ Peso:</strong> '+escaparHtmlSolicitacao(
-                peso.toLocaleString("pt-BR",{minimumFractionDigits:2})
-            )+' KG<br>'+
+            '<strong>⚖️ Peso:</strong> '+escaparHtmlSolicitacao(peso.toLocaleString("pt-BR",{minimumFractionDigits:2}))+' KG<br>'+ 
             '<strong>🧾 Nota Fiscal:</strong> '+escaparHtmlSolicitacao(nf)+'<br>'+
             '<strong>🕒 Solicitação:</strong> '+escaparHtmlSolicitacao(solicitado)+'<br>'+
             '<strong>✅ Finalizada em:</strong> '+escaparHtmlSolicitacao(processado)+
-            (item.observacao
-                ? '<br><strong>💬 Observação:</strong> '+escaparHtmlSolicitacao(item.observacao)
-                : '')+
+            (item.observacao ? '<br><strong>💬 Observação:</strong> '+escaparHtmlSolicitacao(item.observacao) : '')+
             '</div></div>';
     }).join("");
 }
-
 
 // ABRIR / FECHAR SOLICITAÇÕES DE MERCADORIA
 // ======================================================
@@ -6601,20 +6211,19 @@ function salvarOcultosHistoricoSolicitacoesComum(lista){
     }catch(e){}
 }
 
-
 function toggleHistoricoSolicitacoesComum(){
     const painel=document.getElementById("painel-historico-solicitacoes-comum");
     const botao=document.getElementById("btn-toggle-historico-solicitacoes-comum");
+    if(!painel || !botao) return;
+
+    const aberto=painel.dataset.oculto !== "true";
+    painel.dataset.oculto=aberto ? "true" : "false";
+
     const conteudo=document.getElementById("historico-solicitacoes-comum");
+    if(conteudo) conteudo.style.display=aberto ? "none" : "block";
 
-    if(!painel || !botao || !conteudo) return;
-
-    const ocultando=conteudo.style.display !== "none";
-    conteudo.style.display=ocultando ? "none" : "block";
-    painel.dataset.oculto=ocultando ? "true" : "false";
-    botao.innerText=ocultando ? "👁️ Mostrar Histórico" : "🙈 Ocultar Histórico";
+    botao.innerText=aberto ? "👁️ Mostrar Histórico" : "🙈 Ocultar Histórico";
 }
-
 
 function normalizarBotoesHistoricoSolicitacoesComum(){
     const painel=document.getElementById("painel-historico-solicitacoes-comum");
@@ -6631,20 +6240,13 @@ function normalizarBotoesHistoricoSolicitacoesComum(){
     }
 }
 
-
 function ocultarHistoricoSolicitacoesComum(){
     if(!firebaseAuth.currentUser){
         alert("Faça login novamente.");
         return;
     }
 
-    let lista=Array.isArray(historicoSolicitacoesComumVisiveisCache)
-        ? historicoSolicitacoesComumVisiveisCache.slice()
-        : [];
-
-    if(!lista.length){
-        lista=obterSolicitacoesFinalizadasComumVisiveis();
-    }
+    const lista=obterSolicitacoesFinalizadasComumVisiveis();
 
     if(!lista.length){
         alert("Não existem solicitações finalizadas visíveis para apagar.");
@@ -6657,25 +6259,15 @@ function ocultarHistoricoSolicitacoesComum(){
     )) return;
 
     const ocultos=obterOcultosHistoricoSolicitacoesComum();
-
     lista.forEach(function(item){
-        const idItem=String(item && item.id || "");
-        if(idItem && !ocultos.includes(idItem)){
-            ocultos.push(idItem);
-        }
+        const itemId=String(item.id || "");
+        if(itemId) ocultos.push(itemId);
     });
 
     salvarOcultosHistoricoSolicitacoesComum(ocultos);
-    historicoSolicitacoesComumVisiveisCache=[];
     renderizarHistoricoSolicitacoesComum();
-
-    alert(
-        "✅ "+lista.length+
-        " solicitação(ões) finalizada(s) ocultada(s) somente desta tela."
-    );
+    alert("✅ Solicitações finalizadas ocultadas somente nesta tela.");
 }
-
-
 
 function exportarHistoricoSolicitacoesComumExcel(){
     if(!firebaseAuth.currentUser){
@@ -6683,54 +6275,40 @@ function exportarHistoricoSolicitacoesComumExcel(){
         return;
     }
 
-    let origem=Array.isArray(historicoSolicitacoesComumVisiveisCache)
-        ? historicoSolicitacoesComumVisiveisCache.slice()
-        : [];
-
-    if(!origem.length){
-        origem=obterSolicitacoesFinalizadasComumVisiveis();
-    }
+    const origem=obterSolicitacoesFinalizadasComumVisiveis();
 
     if(!origem.length){
         alert("Não existem solicitações finalizadas visíveis para exportar.");
         return;
     }
 
-    let csv=
-        "Status;Container;Código;Produto;Lote;Fornecedor;Solicitante;Quantidade;Peso KG;Nota Fiscal;Data da Solicitação;Data da Finalização;Observação\n";
+    let csv="Status;Container;Código;Produto;Lote;Fornecedor;Quantidade;Peso KG;Nota Fiscal;Data da Solicitação;Data da Finalização;Observação\n";
 
     origem.forEach(function(item){
-        const solicitado=item.dataHora
-            ? new Date(item.dataHora).toLocaleString("pt-BR")
-            : "";
-        const finalizado=item.processadoEm
-            ? new Date(item.processadoEm).toLocaleString("pt-BR")
-            : "";
+        const solicitado=item.dataHora ? new Date(item.dataHora).toLocaleString("pt-BR") : "";
+        const finalizado=item.processadoEm ? new Date(item.processadoEm).toLocaleString("pt-BR") : "";
         const nf=item.nfFinalizacao || item.nf || item.notaFiscal || "";
 
         function campoExcel(valor){
             return String(valor ?? "").replace(/"/g,'""');
         }
 
-        csv +=
-            '"'+campoExcel(item.status || "")+'";'+
-            '"'+campoExcel(item.container || "")+'";'+
-            '"'+campoExcel(item.codigo || "")+'";'+
-            '"'+campoExcel(item.produto || "")+'";'+
-            '"'+campoExcel(item.lote || "")+'";'+
-            '"'+campoExcel(item.fornecedor || "")+'";'+
-            '"'+campoExcel(item.solicitanteNome || item.solicitante || "")+'";'+
+        csv += '"'+campoExcel(item.status||"")+'";'+
+            '"'+campoExcel(item.container||"")+'";'+
+            '"'+campoExcel(item.codigo||"")+'";'+
+            '"'+campoExcel(item.produto||"")+'";'+
+            '"'+campoExcel(item.lote||"")+'";'+
+            '"'+campoExcel(item.fornecedor||"")+'";'+
             '"'+campoExcel(item.quantidadeSolicitada ?? "")+'";'+
             '"'+campoExcel(item.pesoSolicitado ?? "")+'";'+
             '"'+campoExcel(nf)+'";'+
             '"'+campoExcel(solicitado)+'";'+
             '"'+campoExcel(finalizado)+'";'+
-            '"'+campoExcel(item.observacao || "")+'"\n';
+            '"'+campoExcel(item.observacao||"")+'"\n';
     });
 
-    baixarCsv("\ufeff"+csv,"historico_solicitacoes_comum.csv");
+    baixarCsv(csv,"historico_solicitacoes_comum.csv");
 }
-
 
 function exportarHistoricoParaExcel(){
     const idsOcultos = new Set(obterOcultosHistoricoUsuario());
@@ -8428,7 +8006,6 @@ window.atualizarStatusSolicitacaoMercadoriaAdmin = atualizarStatusSolicitacaoMer
 window.renderizarSolicitacoesRecebidasComum = renderizarSolicitacoesRecebidasComum;
 window.obterSolicitacoesFinalizadasComumVisiveis = obterSolicitacoesFinalizadasComumVisiveis;
 window.renderizarHistoricoSolicitacoesComum = renderizarHistoricoSolicitacoesComum;
-window.historicoSolicitacoesComumVisiveisCache = historicoSolicitacoesComumVisiveisCache;
 window.ocultarHistoricoSolicitacoesComum = ocultarHistoricoSolicitacoesComum;
 window.exportarHistoricoSolicitacoesComumExcel = exportarHistoricoSolicitacoesComumExcel;
 window.toggleHistoricoSolicitacoesComum = toggleHistoricoSolicitacoesComum;
@@ -8436,8 +8013,6 @@ window.normalizarBotoesHistoricoSolicitacoesComum = normalizarBotoesHistoricoSol
 console.log("✅ CONTROLE DE CONTAINERS — FIREBASE V6 carregado.");
 setTimeout(normalizarBotoesHistoricoSolicitacoesComum, 0);
 </script>
-
-
 <script id="notificacoes-push-completo">
 // ======================================================
 // NOTIFICAÇÕES PUSH — FCM WEB
@@ -8524,7 +8099,6 @@ document.addEventListener("DOMContentLoaded",function(){
     },500);
 });
 </script>
-
 <!-- FALLBACK GLOBAL: mantém os botões administrativos funcionando mesmo que
      outra rotina do script principal tenha sido interrompida em tempo de execução. -->
 <script>
@@ -8594,8 +8168,6 @@ document.addEventListener("DOMContentLoaded",function(){
     }
 })();
 </script>
-
-
 <script>
 // ======================================================
 // NOTIFICAÇÕES PUSH — FIREBASE CLOUD MESSAGING
@@ -8765,8 +8337,6 @@ async function ativarNotificacoesWeb(){
 
 document.addEventListener("DOMContentLoaded",function(){ atualizarBotaoNotificacoesWeb(); });
 </script>
-
-
 <script>
 /* ======================================================
    NOTIFICAÇÕES PUSH — ONESIGNAL
@@ -8988,7 +8558,6 @@ if(window.OneSignalDeferred){
     });
 }
 </script>
-
 <script>
 // Reforço: sempre que a subscription mudar, reafirma o vínculo do usuário atual.
 window.OneSignalDeferred = window.OneSignalDeferred || [];
@@ -9058,7 +8627,5 @@ async function chamarWorkerNotificacao(tipo, dados) {
     }
 }
 </script>
-
 </body>
-
 </html>
