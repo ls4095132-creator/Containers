@@ -1974,6 +1974,7 @@ let solicitacoesAlteracoesCache = [];
 let solicitacoesAcessoCache = [];
 let solicitacoesMercadoriaAdminCache = [];
 let solicitacoesMercadoriaComumCache = [];
+let historicoSolicitacoesComumVisiveisCache = [];
 let firebaseSincronizacaoAtiva = false;
 let firebaseListenersAtivos = false;
 let firebaseRefsAtivos = [];
@@ -2090,9 +2091,11 @@ function renderizarSolicitacoesRecebidasComum(){
     }).join("");
 }
 
+
 function obterSolicitacoesFinalizadasComumVisiveis(){
     const uid=firebaseAuth.currentUser ? String(firebaseAuth.currentUser.uid || "") : "";
     const identidade=[];
+
     if(usuarioLogadoAtual){
         [
             usuarioLogadoAtual.nome,
@@ -2126,13 +2129,19 @@ function obterSolicitacoesFinalizadasComumVisiveis(){
         if(ocultos.has(idItem)) return false;
 
         const solicitanteUid=String(item.solicitanteUid || "").trim();
+
         if(uid && solicitanteUid && solicitanteUid === uid) return true;
 
-        // Compatibilidade com solicitações antigas que não possuíam UID.
         if(!solicitanteUid && identidade.length){
-            const nomesItem=[item.solicitanteNome,item.solicitante,item.email,item.usuario]
-                .map(function(valor){ return String(valor || "").trim().toLowerCase(); })
-                .filter(Boolean);
+            const nomesItem=[
+                item.solicitanteNome,
+                item.solicitante,
+                item.email,
+                item.usuario,
+                item.login
+            ].map(function(valor){
+                return String(valor || "").trim().toLowerCase();
+            }).filter(Boolean);
 
             return nomesItem.some(function(nome){
                 return identidade.includes(nome);
@@ -2146,26 +2155,36 @@ function obterSolicitacoesFinalizadasComumVisiveis(){
     });
 }
 
+
+
 function renderizarHistoricoSolicitacoesComum(){
     const painel=document.getElementById("painel-historico-solicitacoes-comum");
     const area=document.getElementById("historico-solicitacoes-comum");
     const contador=document.getElementById("contador-historico-solicitacoes-comum");
+
     if(!painel || !area) return;
 
     const tipoAtual=String((usuarioLogadoAtual && (
-        usuarioLogadoAtual.tipo || usuarioLogadoAtual.tipoUsuario || usuarioLogadoAtual.perfil
+        usuarioLogadoAtual.tipo ||
+        usuarioLogadoAtual.tipoUsuario ||
+        usuarioLogadoAtual.perfil
     )) || "").trim().toLowerCase();
 
-    if(tipoAtual === "admin"){
+    if(tipoAtual === "admin" || tipoAtual === "administrador"){
         painel.style.display="none";
+        historicoSolicitacoesComumVisiveisCache=[];
         return;
     }
 
-    painel.style.display="block";
-
     const lista=obterSolicitacoesFinalizadasComumVisiveis();
 
-    if(contador) contador.innerText="("+lista.length+")";
+    historicoSolicitacoesComumVisiveisCache=lista.slice();
+
+    painel.style.display="block";
+
+    if(contador){
+        contador.innerText="("+lista.length+")";
+    }
 
     if(!lista.length){
         area.innerHTML='<div class="vazio">📭 Nenhuma solicitação finalizada.</div>';
@@ -2173,13 +2192,20 @@ function renderizarHistoricoSolicitacoesComum(){
     }
 
     area.innerHTML=lista.map(function(item){
-        const processado=item.processadoEm ? new Date(item.processadoEm).toLocaleString("pt-BR") : "—";
-        const solicitado=item.dataHora ? new Date(item.dataHora).toLocaleString("pt-BR") : "—";
+        const processado=item.processadoEm
+            ? new Date(item.processadoEm).toLocaleString("pt-BR")
+            : "—";
+        const solicitado=item.dataHora
+            ? new Date(item.dataHora).toLocaleString("pt-BR")
+            : "—";
         const nf=item.nfFinalizacao || item.nf || item.notaFiscal || "—";
         const peso=Number(item.pesoSolicitado || 0);
         const qtd=Number(item.quantidadeSolicitada || 0);
+        const idItem=String(item.id || "");
 
-        return '<div class="produto-item" style="margin-bottom:10px;padding:12px;border:1px solid var(--borda);border-radius:8px;">'+
+        return '<div class="produto-item" data-historico-solicitacao-id="'+
+            escaparHtmlSolicitacao(idItem)+
+            '" style="margin-bottom:10px;padding:12px;border:1px solid var(--borda);border-radius:8px;">'+
             '<div style="margin-bottom:8px;"><span class="tipo tipo-entrada">✅ Solicitação finalizada</span></div>'+
             '<div style="font-size:12px;line-height:1.8;">'+
             '<strong>📦 Container:</strong> '+escaparHtmlSolicitacao(item.container||"—")+'<br>'+
@@ -2189,14 +2215,19 @@ function renderizarHistoricoSolicitacoesComum(){
             '<strong>🏢 Fornecedor:</strong> '+escaparHtmlSolicitacao(item.fornecedor||"—")+'<br>'+
             '<strong>👤 Solicitante:</strong> '+escaparHtmlSolicitacao(item.solicitanteNome||item.solicitante||"—")+'<br>'+
             '<strong>🔢 Quantidade:</strong> '+escaparHtmlSolicitacao(qtd)+'<br>'+
-            '<strong>⚖️ Peso:</strong> '+escaparHtmlSolicitacao(peso.toLocaleString("pt-BR",{minimumFractionDigits:2}))+' KG<br>'+ 
+            '<strong>⚖️ Peso:</strong> '+escaparHtmlSolicitacao(
+                peso.toLocaleString("pt-BR",{minimumFractionDigits:2})
+            )+' KG<br>'+
             '<strong>🧾 Nota Fiscal:</strong> '+escaparHtmlSolicitacao(nf)+'<br>'+
             '<strong>🕒 Solicitação:</strong> '+escaparHtmlSolicitacao(solicitado)+'<br>'+
             '<strong>✅ Finalizada em:</strong> '+escaparHtmlSolicitacao(processado)+
-            (item.observacao ? '<br><strong>💬 Observação:</strong> '+escaparHtmlSolicitacao(item.observacao) : '')+
+            (item.observacao
+                ? '<br><strong>💬 Observação:</strong> '+escaparHtmlSolicitacao(item.observacao)
+                : '')+
             '</div></div>';
     }).join("");
 }
+
 
 // ABRIR / FECHAR SOLICITAÇÕES DE MERCADORIA
 // ======================================================
@@ -6570,19 +6601,20 @@ function salvarOcultosHistoricoSolicitacoesComum(lista){
     }catch(e){}
 }
 
+
 function toggleHistoricoSolicitacoesComum(){
     const painel=document.getElementById("painel-historico-solicitacoes-comum");
     const botao=document.getElementById("btn-toggle-historico-solicitacoes-comum");
-    if(!painel || !botao) return;
-
-    const aberto=painel.dataset.oculto !== "true";
-    painel.dataset.oculto=aberto ? "true" : "false";
-
     const conteudo=document.getElementById("historico-solicitacoes-comum");
-    if(conteudo) conteudo.style.display=aberto ? "none" : "block";
 
-    botao.innerText=aberto ? "👁️ Mostrar Histórico" : "🙈 Ocultar Histórico";
+    if(!painel || !botao || !conteudo) return;
+
+    const ocultando=conteudo.style.display !== "none";
+    conteudo.style.display=ocultando ? "none" : "block";
+    painel.dataset.oculto=ocultando ? "true" : "false";
+    botao.innerText=ocultando ? "👁️ Mostrar Histórico" : "🙈 Ocultar Histórico";
 }
+
 
 function normalizarBotoesHistoricoSolicitacoesComum(){
     const painel=document.getElementById("painel-historico-solicitacoes-comum");
@@ -6599,13 +6631,20 @@ function normalizarBotoesHistoricoSolicitacoesComum(){
     }
 }
 
+
 function ocultarHistoricoSolicitacoesComum(){
     if(!firebaseAuth.currentUser){
         alert("Faça login novamente.");
         return;
     }
 
-    const lista=obterSolicitacoesFinalizadasComumVisiveis();
+    let lista=Array.isArray(historicoSolicitacoesComumVisiveisCache)
+        ? historicoSolicitacoesComumVisiveisCache.slice()
+        : [];
+
+    if(!lista.length){
+        lista=obterSolicitacoesFinalizadasComumVisiveis();
+    }
 
     if(!lista.length){
         alert("Não existem solicitações finalizadas visíveis para apagar.");
@@ -6618,15 +6657,25 @@ function ocultarHistoricoSolicitacoesComum(){
     )) return;
 
     const ocultos=obterOcultosHistoricoSolicitacoesComum();
+
     lista.forEach(function(item){
-        const itemId=String(item.id || "");
-        if(itemId) ocultos.push(itemId);
+        const idItem=String(item && item.id || "");
+        if(idItem && !ocultos.includes(idItem)){
+            ocultos.push(idItem);
+        }
     });
 
     salvarOcultosHistoricoSolicitacoesComum(ocultos);
+    historicoSolicitacoesComumVisiveisCache=[];
     renderizarHistoricoSolicitacoesComum();
-    alert("✅ Solicitações finalizadas ocultadas somente nesta tela.");
+
+    alert(
+        "✅ "+lista.length+
+        " solicitação(ões) finalizada(s) ocultada(s) somente desta tela."
+    );
 }
+
+
 
 function exportarHistoricoSolicitacoesComumExcel(){
     if(!firebaseAuth.currentUser){
@@ -6634,40 +6683,54 @@ function exportarHistoricoSolicitacoesComumExcel(){
         return;
     }
 
-    const origem=obterSolicitacoesFinalizadasComumVisiveis();
+    let origem=Array.isArray(historicoSolicitacoesComumVisiveisCache)
+        ? historicoSolicitacoesComumVisiveisCache.slice()
+        : [];
+
+    if(!origem.length){
+        origem=obterSolicitacoesFinalizadasComumVisiveis();
+    }
 
     if(!origem.length){
         alert("Não existem solicitações finalizadas visíveis para exportar.");
         return;
     }
 
-    let csv="Status;Container;Código;Produto;Lote;Fornecedor;Quantidade;Peso KG;Nota Fiscal;Data da Solicitação;Data da Finalização;Observação\n";
+    let csv=
+        "Status;Container;Código;Produto;Lote;Fornecedor;Solicitante;Quantidade;Peso KG;Nota Fiscal;Data da Solicitação;Data da Finalização;Observação\n";
 
     origem.forEach(function(item){
-        const solicitado=item.dataHora ? new Date(item.dataHora).toLocaleString("pt-BR") : "";
-        const finalizado=item.processadoEm ? new Date(item.processadoEm).toLocaleString("pt-BR") : "";
+        const solicitado=item.dataHora
+            ? new Date(item.dataHora).toLocaleString("pt-BR")
+            : "";
+        const finalizado=item.processadoEm
+            ? new Date(item.processadoEm).toLocaleString("pt-BR")
+            : "";
         const nf=item.nfFinalizacao || item.nf || item.notaFiscal || "";
 
         function campoExcel(valor){
             return String(valor ?? "").replace(/"/g,'""');
         }
 
-        csv += '"'+campoExcel(item.status||"")+'";'+
-            '"'+campoExcel(item.container||"")+'";'+
-            '"'+campoExcel(item.codigo||"")+'";'+
-            '"'+campoExcel(item.produto||"")+'";'+
-            '"'+campoExcel(item.lote||"")+'";'+
-            '"'+campoExcel(item.fornecedor||"")+'";'+
+        csv +=
+            '"'+campoExcel(item.status || "")+'";'+
+            '"'+campoExcel(item.container || "")+'";'+
+            '"'+campoExcel(item.codigo || "")+'";'+
+            '"'+campoExcel(item.produto || "")+'";'+
+            '"'+campoExcel(item.lote || "")+'";'+
+            '"'+campoExcel(item.fornecedor || "")+'";'+
+            '"'+campoExcel(item.solicitanteNome || item.solicitante || "")+'";'+
             '"'+campoExcel(item.quantidadeSolicitada ?? "")+'";'+
             '"'+campoExcel(item.pesoSolicitado ?? "")+'";'+
             '"'+campoExcel(nf)+'";'+
             '"'+campoExcel(solicitado)+'";'+
             '"'+campoExcel(finalizado)+'";'+
-            '"'+campoExcel(item.observacao||"")+'"\n';
+            '"'+campoExcel(item.observacao || "")+'"\n';
     });
 
-    baixarCsv(csv,"historico_solicitacoes_comum.csv");
+    baixarCsv("\ufeff"+csv,"historico_solicitacoes_comum.csv");
 }
+
 
 function exportarHistoricoParaExcel(){
     const idsOcultos = new Set(obterOcultosHistoricoUsuario());
@@ -8365,6 +8428,7 @@ window.atualizarStatusSolicitacaoMercadoriaAdmin = atualizarStatusSolicitacaoMer
 window.renderizarSolicitacoesRecebidasComum = renderizarSolicitacoesRecebidasComum;
 window.obterSolicitacoesFinalizadasComumVisiveis = obterSolicitacoesFinalizadasComumVisiveis;
 window.renderizarHistoricoSolicitacoesComum = renderizarHistoricoSolicitacoesComum;
+window.historicoSolicitacoesComumVisiveisCache = historicoSolicitacoesComumVisiveisCache;
 window.ocultarHistoricoSolicitacoesComum = ocultarHistoricoSolicitacoesComum;
 window.exportarHistoricoSolicitacoesComumExcel = exportarHistoricoSolicitacoesComumExcel;
 window.toggleHistoricoSolicitacoesComum = toggleHistoricoSolicitacoesComum;
