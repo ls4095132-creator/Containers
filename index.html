@@ -2090,6 +2090,62 @@ function renderizarSolicitacoesRecebidasComum(){
     }).join("");
 }
 
+function obterSolicitacoesFinalizadasComumVisiveis(){
+    const uid=firebaseAuth.currentUser ? String(firebaseAuth.currentUser.uid || "") : "";
+    const identidade=[];
+    if(usuarioLogadoAtual){
+        [
+            usuarioLogadoAtual.nome,
+            usuarioLogadoAtual.usuario,
+            usuarioLogadoAtual.email,
+            usuarioLogadoAtual.login
+        ].forEach(function(valor){
+            const texto=String(valor || "").trim().toLowerCase();
+            if(texto) identidade.push(texto);
+        });
+    }
+
+    const ocultos=new Set(obterOcultosHistoricoSolicitacoesComum());
+    const origem=Array.isArray(solicitacoesMercadoriaComumCache)
+        ? solicitacoesMercadoriaComumCache.slice()
+        : [];
+
+    return origem.filter(function(item){
+        if(!item) return false;
+
+        const status=String(item.status || "").trim().toLowerCase();
+        const idItem=String(item.id || "");
+
+        if(!(
+            status === "atendido" ||
+            status === "finalizado" ||
+            status === "concluido" ||
+            status === "concluído"
+        )) return false;
+
+        if(ocultos.has(idItem)) return false;
+
+        const solicitanteUid=String(item.solicitanteUid || "").trim();
+        if(uid && solicitanteUid && solicitanteUid === uid) return true;
+
+        // Compatibilidade com solicitações antigas que não possuíam UID.
+        if(!solicitanteUid && identidade.length){
+            const nomesItem=[item.solicitanteNome,item.solicitante,item.email,item.usuario]
+                .map(function(valor){ return String(valor || "").trim().toLowerCase(); })
+                .filter(Boolean);
+
+            return nomesItem.some(function(nome){
+                return identidade.includes(nome);
+            });
+        }
+
+        return false;
+    }).sort(function(a,b){
+        return String(b.processadoEm || b.dataHora || "")
+            .localeCompare(String(a.processadoEm || a.dataHora || ""));
+    });
+}
+
 function renderizarHistoricoSolicitacoesComum(){
     const painel=document.getElementById("painel-historico-solicitacoes-comum");
     const area=document.getElementById("historico-solicitacoes-comum");
@@ -2107,24 +2163,7 @@ function renderizarHistoricoSolicitacoesComum(){
 
     painel.style.display="block";
 
-    const origem=Array.isArray(solicitacoesMercadoriaComumCache)
-        ? solicitacoesMercadoriaComumCache.slice()
-        : [];
-
-    const ocultos=new Set(obterOcultosHistoricoSolicitacoesComum());
-
-    // Histórico do usuário comum: todas as solicitações já finalizadas.
-    const lista=origem.filter(function(item){
-        if(!item) return false;
-        const status=String(item.status||"").trim().toLowerCase();
-        const idItem=String(item.id||"");
-        return (status === "atendido" || status === "finalizado" || status === "concluido" || status === "concluído") &&
-               !ocultos.has(idItem);
-    });
-
-    lista.sort(function(a,b){
-        return String(b.processadoEm||b.dataHora||"").localeCompare(String(a.processadoEm||a.dataHora||""));
-    });
+    const lista=obterSolicitacoesFinalizadasComumVisiveis();
 
     if(contador) contador.innerText="("+lista.length+")";
 
@@ -6566,19 +6605,7 @@ function ocultarHistoricoSolicitacoesComum(){
         return;
     }
 
-    const uid=firebaseAuth.currentUser.uid;
-    const ocultos=obterOcultosHistoricoSolicitacoesComum();
-    const ocultosSet=new Set(ocultos);
-    const lista=(Array.isArray(solicitacoesMercadoriaComumCache)
-        ? solicitacoesMercadoriaComumCache.slice()
-        : []).filter(function(item){
-            if(!item) return false;
-            const status=String(item.status||"").trim().toLowerCase();
-            const itemId=String(item.id||"");
-            return String(item.solicitanteUid||"") === String(uid||"") &&
-                !ocultosSet.has(itemId) &&
-                (status === "atendido" || status === "finalizado" || status === "concluido" || status === "concluído");
-        });
+    const lista=obterSolicitacoesFinalizadasComumVisiveis();
 
     if(!lista.length){
         alert("Não existem solicitações finalizadas visíveis para apagar.");
@@ -6586,14 +6613,13 @@ function ocultarHistoricoSolicitacoesComum(){
     }
 
     if(!confirm(
-        "Apagar as solicitações finalizadas desta tela?\n\n" +
+        "Apagar as solicitações finalizadas desta tela?\n\n"+
         "Os registros continuarão preservados no Firebase e não serão apagados para o administrador."
-    )){
-        return;
-    }
+    )) return;
 
+    const ocultos=obterOcultosHistoricoSolicitacoesComum();
     lista.forEach(function(item){
-        const itemId=String(item.id||"");
+        const itemId=String(item.id || "");
         if(itemId) ocultos.push(itemId);
     });
 
@@ -6608,22 +6634,7 @@ function exportarHistoricoSolicitacoesComumExcel(){
         return;
     }
 
-    const uid=firebaseAuth.currentUser.uid;
-    const ocultos=new Set(obterOcultosHistoricoSolicitacoesComum());
-    const origem=(Array.isArray(solicitacoesMercadoriaComumCache)
-        ? solicitacoesMercadoriaComumCache.slice()
-        : []).filter(function(item){
-            if(!item) return false;
-            const status=String(item.status||"").trim().toLowerCase();
-            const itemId=String(item.id||"");
-            return String(item.solicitanteUid||"") === String(uid||"") &&
-                !ocultos.has(itemId) &&
-                (status === "atendido" || status === "finalizado" || status === "concluido" || status === "concluído");
-        });
-
-    origem.sort(function(a,b){
-        return String(b.processadoEm||b.dataHora||"").localeCompare(String(a.processadoEm||a.dataHora||""));
-    });
+    const origem=obterSolicitacoesFinalizadasComumVisiveis();
 
     if(!origem.length){
         alert("Não existem solicitações finalizadas visíveis para exportar.");
@@ -8352,6 +8363,7 @@ window.tratarEnvioLogin = tratarEnvioLogin;
 window.sairDoSistema = sairDoSistema;
 window.atualizarStatusSolicitacaoMercadoriaAdmin = atualizarStatusSolicitacaoMercadoriaAdmin;
 window.renderizarSolicitacoesRecebidasComum = renderizarSolicitacoesRecebidasComum;
+window.obterSolicitacoesFinalizadasComumVisiveis = obterSolicitacoesFinalizadasComumVisiveis;
 window.renderizarHistoricoSolicitacoesComum = renderizarHistoricoSolicitacoesComum;
 window.ocultarHistoricoSolicitacoesComum = ocultarHistoricoSolicitacoesComum;
 window.exportarHistoricoSolicitacoesComumExcel = exportarHistoricoSolicitacoesComumExcel;
