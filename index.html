@@ -3772,6 +3772,7 @@ async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
             return;
         }
 
+
         // ==================================================
         // IDENTIFICAR TIPO DO USUÁRIO
         // ==================================================
@@ -3800,34 +3801,50 @@ async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
             // USUÁRIO EXTERNO → NF OBRIGATÓRIA
             // ==============================================
 
-            if(
+            const ehUsuarioExterno =
                 tipoUsuario === "externo" ||
                 tipoUsuario === "usuario externo" ||
-                tipoUsuario === "usuário externo"
-            ){
+                tipoUsuario === "usuário externo";
 
-                const campoNF = document.getElementById(
-                    "nf-solicitacao-" + id
-                );
+
+            if(ehUsuarioExterno){
+
+                const campoNF =
+                    document.getElementById(
+                        "nf-solicitacao-" + id
+                    );
 
                 if(!campoNF){
-                    alert("❌ Campo de Nota Fiscal não encontrado.");
+
+                    alert(
+                        "❌ Campo de Nota Fiscal não encontrado."
+                    );
+
                     return;
                 }
 
-                numeroNF = String(campoNF.value || "").trim();
+
+                numeroNF =
+                    String(
+                        campoNF.value || ""
+                    ).trim();
+
 
                 if(!numeroNF){
-                    alert("❌ É obrigatório informar o número da Nota Fiscal.");
+
+                    alert(
+                        "❌ É obrigatório informar o número da Nota Fiscal."
+                    );
+
                     campoNF.focus();
+
                     return;
                 }
-
             }
 
 
             // ==============================================
-            // USUÁRIO COMUM → SOMENTE ACEITE
+            // CONFIRMAÇÃO
             // ==============================================
 
             const mensagemConfirmacao =
@@ -3847,7 +3864,8 @@ async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
 
             const atualizacao = {
 
-                status: "atendido",
+                status:
+                    "atendido",
 
                 processadoEm:
                     new Date().toISOString(),
@@ -3861,164 +3879,150 @@ async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
                     typeof operadorAtual === "function"
                         ? operadorAtual()
                         : "Administrador"
-
             };
 
-// ==============================================
-// NF SOMENTE PARA EXTERNO
-// ==============================================
 
-if(numeroNF){
+            // ==============================================
+            // NF
+            // ==============================================
 
-    atualizacao.nfFinalizacao =
-        numeroNF;
+            if(numeroNF){
 
-    atualizacao.nf =
-        numeroNF;
+                atualizacao.nfFinalizacao =
+                    numeroNF;
 
-}
-
-
-// ==============================================
-// SALVA A FINALIZAÇÃO NO FIREBASE
-// ==============================================
-
-await ref.update(atualizacao);
-
-
-// ==============================================
-// NOTIFICAÇÃO — USUÁRIO EXTERNO
-// ==============================================
-
-if(
-    tipoUsuario === "externo" ||
-    tipoUsuario === "usuario externo" ||
-    tipoUsuario === "usuário externo"
-){
-
-    const solicitanteUid =
-        solicitacao.solicitanteUid || "";
-
-    if(solicitanteUid){
-
-        console.log(
-            "🔔 Enviando notificação de finalização para o usuário externo..."
-        );
-
-        await chamarWorkerNotificacao(
-            "solicitacao_finalizada",
-            {
-                solicitacao: {
-
-                    id: id,
-
-                    solicitanteUid:
-                        solicitanteUid,
-
-                    tipoUsuario:
-                        "externo",
-
-                    container:
-                        solicitacao.container || "",
-
-                    produto:
-                        solicitacao.produto || "",
-
-                    nf:
-                        numeroNF,
-
-                    nfFinalizacao:
-                        numeroNF,
-
-                    status:
-                        "atendido"
-                }
+                atualizacao.nf =
+                    numeroNF;
             }
-        );
-
-    }else{
-
-        console.warn(
-            "⚠️ Solicitação finalizada, mas não possui solicitanteUid."
-        );
-
-    }
-
-}
 
 
-// ==============================================
-// MENSAGEM DE CONFIRMAÇÃO
-// ==============================================
+            // ==============================================
+            // SALVAR NO FIREBASE
+            // ==============================================
 
-alert(
-    tipoUsuario === "comum"
-        ? "✅ Solicitação aceita com sucesso!"
-        : "✅ Solicitação finalizada com sucesso!"
-);
+            await ref.update(
+                atualizacao
+            );
 
 
-// ==============================================
-// ATUALIZA A LISTA IMEDIATAMENTE
-// ==============================================
-
-solicitacoesMercadoriaAdminCache =
-    solicitacoesMercadoriaAdminCache.filter(
-        function(item){
-
-            return item.id !== id;
-
-        }
-    );
+            console.log(
+                "✅ Solicitação atualizada no Firebase."
+            );
 
 
-if(
-    typeof renderizarSolicitacoesMercadoriaAdmin ===
-    "function"
-){
+            // ==============================================
+            // NOTIFICAÇÃO — USUÁRIO EXTERNO
+            // ==============================================
 
-    renderizarSolicitacoesMercadoriaAdmin();
+            if(
+                ehUsuarioExterno &&
+                numeroNF &&
+                pedido.solicitanteUid
+            ){
 
-}
+                console.log(
+                    "🔔 Enviando notificação de finalização para:",
+                    pedido.solicitanteUid
+                );
 
 
-atualizarIndicadorAdmin();
+                await chamarWorkerNotificacao(
+                    "solicitacao_finalizada",
+                    {
+                        solicitacao: {
 
-return;
-      
+                            id:
+                                id,
 
-// ======================================================
-// NOTIFICAÇÃO — SOLICITAÇÃO EXTERNA FINALIZADA
-// ======================================================
+                            solicitanteUid:
+                                pedido.solicitanteUid,
 
-if(
-    tipoUsuario !== "comum" &&
-    numeroNF &&
-    solicitacao.solicitanteUid &&
-    (
-        tipoUsuario === "externo" ||
-        tipoUsuario === "usuario externo" ||
-        tipoUsuario === "usuário externo"
-    )
-){
-    console.log("🔔 Enviando notificação de finalização...");
+                            tipoUsuario:
+                                "externo",
 
-    await chamarWorkerNotificacao(
-        "solicitacao_finalizada",
-        {
-            solicitacao: {
-                id: id,
-                solicitanteUid: solicitacao.solicitanteUid,
-                tipoUsuario: "externo",
-                container: solicitacao.container,
-                produto: solicitacao.produto,
-                nf: numeroNF,
-                nfFinalizacao: numeroNF,
-                status: "atendido"
+                            container:
+                                pedido.container || "",
+
+                            produto:
+                                pedido.produto || "",
+
+                            nf:
+                                numeroNF,
+
+                            nfFinalizacao:
+                                numeroNF,
+
+                            status:
+                                "atendido"
+                        }
+                    }
+                );
+
+
+                console.log(
+                    "✅ Notificação de finalização enviada."
+                );
             }
+            else{
+
+                console.log(
+                    "ℹ️ Notificação de finalização não enviada.",
+                    {
+                        externo:
+                            ehUsuarioExterno,
+
+                        nf:
+                            numeroNF,
+
+                        solicitanteUid:
+                            pedido.solicitanteUid || ""
+                    }
+                );
+            }
+
+
+            // ==============================================
+            // MENSAGEM DE CONFIRMAÇÃO
+            // ==============================================
+
+            alert(
+                tipoUsuario === "comum"
+                    ? "✅ Solicitação aceita com sucesso!"
+                    : "✅ Solicitação finalizada com sucesso!"
+            );
+
+
+            // ==============================================
+            // ATUALIZAR LISTA
+            // ==============================================
+
+            solicitacoesMercadoriaAdminCache =
+                solicitacoesMercadoriaAdminCache.filter(
+                    function(item){
+
+                        return item.id !== id;
+
+                    }
+                );
+
+
+            if(
+                typeof renderizarSolicitacoesMercadoriaAdmin ===
+                "function"
+            ){
+
+                renderizarSolicitacoesMercadoriaAdmin();
+
+            }
+
+
+            atualizarIndicadorAdmin();
+
+
+            return;
         }
-    );
-}
+
+
         // ==================================================
         // CANCELAMENTO
         // ==================================================
@@ -4034,7 +4038,8 @@ if(
 
             await ref.update({
 
-                status: "cancelado",
+                status:
+                    "cancelado",
 
                 processadoEm:
                     new Date().toISOString(),
@@ -4060,7 +4065,9 @@ if(
             solicitacoesMercadoriaAdminCache =
                 solicitacoesMercadoriaAdminCache.filter(
                     function(item){
+
                         return item.id !== id;
+
                     }
                 );
 
@@ -4077,7 +4084,10 @@ if(
 
             atualizarIndicadorAdmin();
 
+
+            return;
         }
+
 
     }catch(erro){
 
@@ -4086,16 +4096,17 @@ if(
             erro
         );
 
+
         alert(
-            "❌ Não foi possível processar a solicitação.\n\n"+
-            erro.message
+            "❌ Não foi possível processar a solicitação.\n\n" +
+            (
+                erro && erro.message
+                    ? erro.message
+                    : erro
+            )
         );
-
     }
-
 }
-
-
 
 
 // ======================================================
