@@ -708,6 +708,21 @@ button:disabled {
 .select-status {
     width:auto; min-width:145px; padding:7px 9px; margin:0;
 }
+.painel-visualizacao .status-linha{
+    margin-top:8px;
+    padding-top:8px;
+    border-top:1px solid var(--borda);
+}
+.btn-apagar-item-historico{
+    background:#7f1d1d;
+    color:white;
+    padding:6px 9px;
+    font-size:11px;
+    margin-top:9px;
+}
+.btn-apagar-item-historico:hover{
+    filter:brightness(1.15);
+}
 .seletor-containers {
     display:flex; align-items:center; gap:8px; margin-top:9px;
     flex-wrap:wrap;
@@ -1289,7 +1304,9 @@ Entrar
 <button class="btn-vis ativo" id="btn-vis-quadro-externo" onclick="alterarVisualizacaoContainers('externo','quadro')" type="button">▦ Quadro</button>
 <button class="btn-vis" id="btn-vis-lista-externo" onclick="alterarVisualizacaoContainers('externo','lista')" type="button">☷ Lista</button>
 </div>
-<strong style="margin-left:8px;">Status:</strong>
+</div>
+<div class="visualizacao-linha status-linha">
+<strong>📊 Status:</strong>
 <select class="select-status" id="filtro-status-containers-externo" onchange="aplicarFiltrosContainers('externo')">
 <option value="todos">Todos</option>
 <option value="cheios">🟢 Cheios</option>
@@ -1368,7 +1385,7 @@ Entrar
 </div>
 <div class="container-botoes" style="margin:0;justify-content:flex-end;">
 <button class="btn-produto" onclick="exportarMinhasSolicitacoesExternoExcel()" type="button">📊 Exportar Excel</button>
-<button class="btn-apagar-historico" onclick="ocultarMinhasSolicitacoesExterno()" type="button">🗑️ Apagar Solicitações</button>
+<button class="btn-apagar-historico" onclick="ocultarMinhasSolicitacoesExterno()" type="button">🗑️ Apagar Tudo</button>
 <button class="btn-vis" id="btn-toggle-minhas-solicitacoes-externo" onclick="toggleMinhasSolicitacoesExterno()" type="button">👁️ Ocultar Minhas Solicitações</button>
 </div>
 </div>
@@ -1553,7 +1570,9 @@ Containers ocupados: 0 / 60
 <button class="btn-vis ativo" id="btn-vis-quadro-admin" onclick="alterarVisualizacaoContainers('admin','quadro')" type="button">▦ Quadro</button>
 <button class="btn-vis" id="btn-vis-lista-admin" onclick="alterarVisualizacaoContainers('admin','lista')" type="button">☷ Lista</button>
 </div>
-<strong style="margin-left:8px;">Status:</strong>
+</div>
+<div class="visualizacao-linha status-linha">
+<strong>📊 Status:</strong>
 <select class="select-status" id="filtro-status-containers-admin" onchange="aplicarFiltrosContainers('admin')">
 <option value="todos">Todos</option>
 <option value="cheios">🟢 Cheios</option>
@@ -3784,7 +3803,13 @@ async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
                         : 0;
                 }
 
-                lista[indice] = atualizado;
+                // Se a quantidade chegou a zero, o item sai do estoque ativo.
+                // O registro da saída permanece no histórico.
+                if(novaQuantidade <= 0){
+                    lista.splice(indice, 1);
+                }else{
+                    lista[indice] = atualizado;
+                }
 
                 baixaEstoque = {
                     itemAnterior: item,
@@ -3836,7 +3861,9 @@ async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
                 id: Date.now() + Math.floor(Math.random()*1000),
                 data: new Date().toISOString().slice(0,10),
                 hora: new Date().toTimeString().slice(0,8),
-                tipo: "SAÍDA - SOLICITAÇÃO",
+                tipo: baixaEstoque.saldoQuantidadeDepois <= 0
+                    ? "CONTAINER ZERADO"
+                    : "SAÍDA - SOLICITAÇÃO",
                 num: baixaEstoque.itemAtual.num,
                 fornecedor: baixaEstoque.itemAtual.fornecedor || pedido.fornecedor || "",
                 nf: numeroNF || pedido.nf || "",
@@ -6387,6 +6414,37 @@ function exportarMinhasSolicitacoesExternoExcel(){
     baixarCsv(csv,"minhas_solicitacoes.csv");
 }
 
+function ocultarSolicitacaoExternoPorId(id){
+    if(!firebaseAuth.currentUser){
+        alert("Faça login novamente.");
+        return;
+    }
+
+    const idTexto=String(id || "");
+    if(!idTexto) return;
+
+    const pedido=solicitacoesMercadoriaExternoCache.find(function(item){
+        return String(item.id || "") === idTexto &&
+               String(item.solicitanteUid || "") === String(firebaseAuth.currentUser.uid);
+    });
+
+    if(!pedido){
+        alert("Histórico não encontrado.");
+        return;
+    }
+
+    if(!confirm(
+        "Apagar este histórico da sua tela?\n\n"+
+        "O registro continuará preservado no Firebase e no painel do administrador."
+    )) return;
+
+    const ocultos=obterOcultosSolicitacoesUsuario();
+    ocultos.push(idTexto);
+    salvarOcultosSolicitacoesUsuario(ocultos);
+
+    renderizarMinhasSolicitacoesExterno(solicitacoesMercadoriaExternoCache.slice());
+}
+
 function ocultarMinhasSolicitacoesExterno(){
     if(!firebaseAuth.currentUser){ alert("Faça login novamente."); return; }
     const uid=firebaseAuth.currentUser.uid;
@@ -7787,6 +7845,14 @@ function renderizarMinhasSolicitacoesExterno(
                                 :
                                 ""
                             }
+
+                            <button
+                                type="button"
+                                class="btn-apagar-item-historico"
+                                onclick="ocultarSolicitacaoExternoPorId('${String(pedido.id || "").replace(/'/g,"\\'") }')"
+                            >
+                                🗑️ Apagar este histórico
+                            </button>
 
                         </div>
 
