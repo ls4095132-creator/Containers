@@ -8141,55 +8141,7 @@ OneSignalDeferred.push(async function(OneSignal) {
 });
 </script>    
 
-async function chamarWorkerNotificacao(tipo, dados) {
-    try {
-        const user = firebaseAuth.currentUser;
-
-        if (!user) {
-            console.warn("Usuário não autenticado para enviar notificação.");
-            return;
-        }
-
-        const idToken = await user.getIdToken();
-
-        const resposta = await fetch(
-            "https://notificacoes-containers.ls4095132.workers.dev/",
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": "Bearer " + idToken
-                },
-                body: JSON.stringify({
-                    tipo: tipo,
-                    ...dados
-                })
-            }
-        );
-
-        const resultado = await resposta.json();
-
-        if (!resposta.ok || !resultado.ok) {
-            console.warn(
-                "Worker de notificações:",
-                resultado
-            );
-            return;
-        }
-
-        console.log(
-            "✅ Notificação enviada:",
-            resultado
-        );
-
-    } catch (erro) {
-        console.warn(
-            "⚠️ Falha ao enviar notificação:",
-            erro
-        );
-    }
-}
-
+<script>
 async function chamarWorkerNotificacao(tipo, dados) {
     console.log("🔔 Iniciando chamada do Worker:", tipo);
 
@@ -8222,27 +8174,43 @@ async function chamarWorkerNotificacao(tipo, dados) {
 
         const texto = await resposta.text();
 
-        console.log("📡 Resposta do Worker:", resposta.status, texto);
+        console.log(
+            "📡 Resposta do Worker:",
+            resposta.status,
+            texto
+        );
 
         let resultado = {};
 
         try {
             resultado = JSON.parse(texto);
         } catch (e) {
-            console.warn("⚠️ Resposta do Worker não é JSON.");
+            console.warn(
+                "⚠️ Resposta do Worker não é JSON."
+            );
         }
 
         if (!resposta.ok || !resultado.ok) {
-            console.error("❌ Worker recusou o envio:", resultado);
+            console.error(
+                "❌ Worker recusou o envio:",
+                resultado
+            );
             return;
         }
 
-        console.log("✅ Worker enviou a notificação:", resultado);
+        console.log(
+            "✅ Worker enviou a notificação:",
+            resultado
+        );
 
     } catch (erro) {
-        console.error("❌ Erro chamando Worker:", erro);
+        console.error(
+            "❌ Erro chamando Worker:",
+            erro
+        );
     }
-}   
+}
+</script>
     
 </body>
 
