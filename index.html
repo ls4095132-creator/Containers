@@ -1200,30 +1200,16 @@ body.usuario-admin .painel-solicitacoes-comum{display:none!important;}
 <script>
 window.OneSignalDeferred = window.OneSignalDeferred || [];
 
-OneSignalDeferred.push(async function(OneSignal) {
-  await OneSignal.init({
-    appId: "37744162-3909-4b8c-b452-3e6932ac6ece",
-
-    serviceWorkerPath: "/Containers/OneSignalSDKWorker.js",
-    serviceWorkerParam: {
-        scope: "/Containers/"
-    },
-
-    autoResubscribe: true,
-
-    notifyButton: {
-        enable: false
-    }
-});
-        welcomeNotification: {
-            disable: false,
-            title: "Controle de Containers",
-            message: "Notificações ativadas com sucesso!",
-            url: "https://ls4095132-creator.github.io/Containers/"
+window.OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+        appId: "37744162-3909-4b8c-b452-3e6932ac6ece",
+        autoResubscribe: true,
+        notifyButton: {
+            enable: false
         }
     });
 
-    console.log("OneSignal inicializado.");
+    console.log("✅ OneSignal inicializado.");
 });
 </script>
     
