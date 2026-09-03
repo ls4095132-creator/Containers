@@ -3864,57 +3864,130 @@ async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
 
             };
 
+// ==============================================
+// NF SOMENTE PARA EXTERNO
+// ==============================================
 
-            // ==============================================
-            // NF SOMENTE PARA EXTERNO
-            // ==============================================
+if(numeroNF){
 
-            if(numeroNF){
+    atualizacao.nfFinalizacao =
+        numeroNF;
 
-                atualizacao.nfFinalizacao =
-                    numeroNF;
+    atualizacao.nf =
+        numeroNF;
 
-                atualizacao.nf =
-                    numeroNF;
+}
 
+
+// ==============================================
+// SALVA A FINALIZAÇÃO NO FIREBASE
+// ==============================================
+
+await ref.update(atualizacao);
+
+
+// ==============================================
+// NOTIFICAÇÃO — USUÁRIO EXTERNO
+// ==============================================
+
+if(
+    tipoUsuario === "externo" ||
+    tipoUsuario === "usuario externo" ||
+    tipoUsuario === "usuário externo"
+){
+
+    const solicitanteUid =
+        solicitacao.solicitanteUid || "";
+
+    if(solicitanteUid){
+
+        console.log(
+            "🔔 Enviando notificação de finalização para o usuário externo..."
+        );
+
+        await chamarWorkerNotificacao(
+            "solicitacao_finalizada",
+            {
+                solicitacao: {
+
+                    id: id,
+
+                    solicitanteUid:
+                        solicitanteUid,
+
+                    tipoUsuario:
+                        "externo",
+
+                    container:
+                        solicitacao.container || "",
+
+                    produto:
+                        solicitacao.produto || "",
+
+                    nf:
+                        numeroNF,
+
+                    nfFinalizacao:
+                        numeroNF,
+
+                    status:
+                        "atendido"
+                }
             }
+        );
+
+    }else{
+
+        console.warn(
+            "⚠️ Solicitação finalizada, mas não possui solicitanteUid."
+        );
+
+    }
+
+}
 
 
-            await ref.update(atualizacao);
+// ==============================================
+// MENSAGEM DE CONFIRMAÇÃO
+// ==============================================
+
+alert(
+    tipoUsuario === "comum"
+        ? "✅ Solicitação aceita com sucesso!"
+        : "✅ Solicitação finalizada com sucesso!"
+);
 
 
-            alert(
-                tipoUsuario === "comum"
-                    ? "✅ Solicitação aceita com sucesso!"
-                    : "✅ Solicitação finalizada com sucesso!"
-            );
+// ==============================================
+// ATUALIZA A LISTA IMEDIATAMENTE
+// ==============================================
 
+solicitacoesMercadoriaAdminCache =
+    solicitacoesMercadoriaAdminCache.filter(
+        function(item){
 
-            // Atualiza a lista imediatamente
-            solicitacoesMercadoriaAdminCache =
-                solicitacoesMercadoriaAdminCache.filter(
-                    function(item){
-                        return item.id !== id;
-                    }
-                );
+            return item.id !== id;
 
-
-            if(
-                typeof renderizarSolicitacoesMercadoriaAdmin ===
-                "function"
-            ){
-
-                renderizarSolicitacoesMercadoriaAdmin();
-
-            }
-
-
-            atualizarIndicadorAdmin();
-
-            return;
         }
+    );
 
-        // ======================================================
+
+if(
+    typeof renderizarSolicitacoesMercadoriaAdmin ===
+    "function"
+){
+
+    renderizarSolicitacoesMercadoriaAdmin();
+
+}
+
+
+atualizarIndicadorAdmin();
+
+return;
+      
+
+// ======================================================
 // NOTIFICAÇÃO — SOLICITAÇÃO EXTERNA FINALIZADA
 // ======================================================
 
@@ -3946,7 +4019,6 @@ if(
         }
     );
 }
-
         // ==================================================
         // CANCELAMENTO
         // ==================================================
