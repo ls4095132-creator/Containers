@@ -8180,6 +8180,60 @@ async function chamarWorkerNotificacao(tipo, dados) {
         );
     }
 }
+
+async function chamarWorkerNotificacao(tipo, dados) {
+    console.log("🔔 Iniciando chamada do Worker:", tipo);
+
+    try {
+        const user = firebaseAuth.currentUser;
+
+        if (!user) {
+            console.error("❌ Usuário Firebase não encontrado.");
+            return;
+        }
+
+        const token = await user.getIdToken();
+
+        console.log("🔑 Token Firebase obtido.");
+
+        const resposta = await fetch(
+            "https://notificacoes-containers.ls4095132.workers.dev/",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + token
+                },
+                body: JSON.stringify({
+                    tipo: tipo,
+                    ...dados
+                })
+            }
+        );
+
+        const texto = await resposta.text();
+
+        console.log("📡 Resposta do Worker:", resposta.status, texto);
+
+        let resultado = {};
+
+        try {
+            resultado = JSON.parse(texto);
+        } catch (e) {
+            console.warn("⚠️ Resposta do Worker não é JSON.");
+        }
+
+        if (!resposta.ok || !resultado.ok) {
+            console.error("❌ Worker recusou o envio:", resultado);
+            return;
+        }
+
+        console.log("✅ Worker enviou a notificação:", resultado);
+
+    } catch (erro) {
+        console.error("❌ Erro chamando Worker:", erro);
+    }
+}   
     
 </body>
 
