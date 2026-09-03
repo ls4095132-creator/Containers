@@ -354,6 +354,18 @@ button:disabled {
     color: white;
 }
 
+.btn-apagar-solicitacao-individual{
+    background:transparent;
+    color:#fca5a5;
+    border:1px solid #7f1d1d;
+    padding:6px 10px;
+    font-size:11px;
+    border-radius:6px;
+}
+.btn-apagar-solicitacao-individual:hover{
+    background:rgba(185,28,28,.16);
+}
+
 .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -708,21 +720,6 @@ button:disabled {
 .select-status {
     width:auto; min-width:145px; padding:7px 9px; margin:0;
 }
-.painel-visualizacao .status-linha{
-    margin-top:8px;
-    padding-top:8px;
-    border-top:1px solid var(--borda);
-}
-.btn-apagar-item-historico{
-    background:#7f1d1d;
-    color:white;
-    padding:6px 9px;
-    font-size:11px;
-    margin-top:9px;
-}
-.btn-apagar-item-historico:hover{
-    filter:brightness(1.15);
-}
 .seletor-containers {
     display:flex; align-items:center; gap:8px; margin-top:9px;
     flex-wrap:wrap;
@@ -1042,6 +1039,23 @@ console.log("🔥 Firebase conectado!");
 /* Garante que Quadro / Lista / Status permaneçam compactos e visíveis. */
 .painel-visualizacao .visualizacao-botoes{display:flex!important;}
 .painel-visualizacao .select-status{display:inline-block!important;}
+/* Layout: Visualização na primeira linha e Status abaixo, nos três perfis. */
+.painel-visualizacao .visualizacao-linha{
+    display:grid;
+    grid-template-columns:auto 1fr;
+    grid-template-areas:
+        "visual visualbotoes"
+        "status statusselect";
+    align-items:center;
+    gap:8px 10px;
+}
+.painel-visualizacao .visualizacao-linha > strong:first-child{grid-area:visual;}
+.painel-visualizacao .visualizacao-linha .visualizacao-botoes{grid-area:visualbotoes;}
+.painel-visualizacao .visualizacao-linha > strong:nth-of-type(2){grid-area:status;margin-left:0!important;}
+.painel-visualizacao .visualizacao-linha .select-status{grid-area:statusselect;justify-self:start;}
+@media(max-width:700px){
+    .painel-visualizacao .visualizacao-linha{grid-template-columns:auto 1fr;}
+}
 @media(max-width:1100px){
     .layout-admin-operacional{grid-template-columns:1fr;}
     .layout-admin-operacional > #painel-admin-usuarios,
@@ -1206,7 +1220,7 @@ window.OneSignalDeferred = window.OneSignalDeferred || [];
 window.OneSignalDeferred.push(async function(OneSignal) {
     await OneSignal.init({
         appId: "37744162-3909-4b8c-b452-3e6932ac6ece",
-        serviceWorkerPath: "Containers/OneSignalSDKWorker.js",
+        serviceWorkerPath: "OneSignalSDKWorker.js",
         serviceWorkerParam: {
             scope: "/Containers/"
         },
@@ -1304,9 +1318,7 @@ Entrar
 <button class="btn-vis ativo" id="btn-vis-quadro-externo" onclick="alterarVisualizacaoContainers('externo','quadro')" type="button">▦ Quadro</button>
 <button class="btn-vis" id="btn-vis-lista-externo" onclick="alterarVisualizacaoContainers('externo','lista')" type="button">☷ Lista</button>
 </div>
-</div>
-<div class="visualizacao-linha status-linha">
-<strong>📊 Status:</strong>
+<strong style="margin-left:8px;">Status:</strong>
 <select class="select-status" id="filtro-status-containers-externo" onchange="aplicarFiltrosContainers('externo')">
 <option value="todos">Todos</option>
 <option value="cheios">🟢 Cheios</option>
@@ -1385,7 +1397,7 @@ Entrar
 </div>
 <div class="container-botoes" style="margin:0;justify-content:flex-end;">
 <button class="btn-produto" onclick="exportarMinhasSolicitacoesExternoExcel()" type="button">📊 Exportar Excel</button>
-<button class="btn-apagar-historico" onclick="ocultarMinhasSolicitacoesExterno()" type="button">🗑️ Apagar Tudo</button>
+<button class="btn-apagar-historico" onclick="ocultarMinhasSolicitacoesExterno()" type="button">🗑️ Apagar Solicitações</button>
 <button class="btn-vis" id="btn-toggle-minhas-solicitacoes-externo" onclick="toggleMinhasSolicitacoesExterno()" type="button">👁️ Ocultar Minhas Solicitações</button>
 </div>
 </div>
@@ -1570,9 +1582,7 @@ Containers ocupados: 0 / 60
 <button class="btn-vis ativo" id="btn-vis-quadro-admin" onclick="alterarVisualizacaoContainers('admin','quadro')" type="button">▦ Quadro</button>
 <button class="btn-vis" id="btn-vis-lista-admin" onclick="alterarVisualizacaoContainers('admin','lista')" type="button">☷ Lista</button>
 </div>
-</div>
-<div class="visualizacao-linha status-linha">
-<strong>📊 Status:</strong>
+<strong style="margin-left:8px;">Status:</strong>
 <select class="select-status" id="filtro-status-containers-admin" onchange="aplicarFiltrosContainers('admin')">
 <option value="todos">Todos</option>
 <option value="cheios">🟢 Cheios</option>
@@ -3803,10 +3813,11 @@ async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
                         : 0;
                 }
 
-                // Se a quantidade chegou a zero, o item sai do estoque ativo.
-                // O registro da saída permanece no histórico.
-                if(novaQuantidade <= 0){
-                    lista.splice(indice, 1);
+                // Quando a última quantidade é retirada, o item deixa o estoque ativo.
+                // A baixa continua registrada no histórico logo abaixo.
+                const itemFicouZerado = novaQuantidade === 0;
+                if(itemFicouZerado){
+                    lista.splice(indice,1);
                 }else{
                     lista[indice] = atualizado;
                 }
@@ -3861,7 +3872,7 @@ async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
                 id: Date.now() + Math.floor(Math.random()*1000),
                 data: new Date().toISOString().slice(0,10),
                 hora: new Date().toTimeString().slice(0,8),
-                tipo: baixaEstoque.saldoQuantidadeDepois <= 0
+                tipo: baixaEstoque.saldoQuantidadeDepois === 0
                     ? "CONTAINER ZERADO"
                     : "SAÍDA - SOLICITAÇÃO",
                 num: baixaEstoque.itemAtual.num,
@@ -6414,37 +6425,6 @@ function exportarMinhasSolicitacoesExternoExcel(){
     baixarCsv(csv,"minhas_solicitacoes.csv");
 }
 
-function ocultarSolicitacaoExternoPorId(id){
-    if(!firebaseAuth.currentUser){
-        alert("Faça login novamente.");
-        return;
-    }
-
-    const idTexto=String(id || "");
-    if(!idTexto) return;
-
-    const pedido=solicitacoesMercadoriaExternoCache.find(function(item){
-        return String(item.id || "") === idTexto &&
-               String(item.solicitanteUid || "") === String(firebaseAuth.currentUser.uid);
-    });
-
-    if(!pedido){
-        alert("Histórico não encontrado.");
-        return;
-    }
-
-    if(!confirm(
-        "Apagar este histórico da sua tela?\n\n"+
-        "O registro continuará preservado no Firebase e no painel do administrador."
-    )) return;
-
-    const ocultos=obterOcultosSolicitacoesUsuario();
-    ocultos.push(idTexto);
-    salvarOcultosSolicitacoesUsuario(ocultos);
-
-    renderizarMinhasSolicitacoesExterno(solicitacoesMercadoriaExternoCache.slice());
-}
-
 function ocultarMinhasSolicitacoesExterno(){
     if(!firebaseAuth.currentUser){ alert("Faça login novamente."); return; }
     const uid=firebaseAuth.currentUser.uid;
@@ -6458,6 +6438,24 @@ function ocultarMinhasSolicitacoesExterno(){
     salvarOcultosSolicitacoesUsuario(ocultos);
     renderizarMinhasSolicitacoesExterno(solicitacoesMercadoriaExternoCache.slice());
     alert("✅ Solicitações ocultadas somente para este usuário.");
+}
+
+function ocultarUmaSolicitacaoExterno(id){
+    if(!firebaseAuth.currentUser){ alert("Faça login novamente."); return; }
+    const idSolicitacao=String(id || "").trim();
+    if(!idSolicitacao) return;
+    const pedido=solicitacoesMercadoriaExternoCache.find(function(item){
+        return String(item.id || "") === idSolicitacao &&
+               String(item.solicitanteUid || "") === String(firebaseAuth.currentUser.uid);
+    });
+    if(!pedido){ alert("Solicitação não encontrada para este usuário."); return; }
+    if(!confirm("Ocultar esta solicitação do seu histórico?\n\nO registro continuará preservado no Firebase e no painel do administrador.")) return;
+    const ocultos=obterOcultosSolicitacoesUsuario();
+    if(!ocultos.includes(idSolicitacao)){
+        ocultos.push(idSolicitacao);
+        salvarOcultosSolicitacoesUsuario(ocultos);
+    }
+    renderizarMinhasSolicitacoesExterno(solicitacoesMercadoriaExternoCache.slice());
 }
 
 // ======================================================
@@ -7747,7 +7745,7 @@ function renderizarMinhasSolicitacoesExterno(
 
                     return `
 
-                        <div class="movimento">
+                        <div class="movimento" data-solicitacao-id="${escaparHtmlExterno(pedido.id || "")}">
 
                             <div
                                 class="tipo ${classeStatus}"
@@ -7846,13 +7844,15 @@ function renderizarMinhasSolicitacoesExterno(
                                 ""
                             }
 
-                            <button
-                                type="button"
-                                class="btn-apagar-item-historico"
-                                onclick="ocultarSolicitacaoExternoPorId('${String(pedido.id || "").replace(/'/g,"\\'") }')"
-                            >
-                                🗑️ Apagar este histórico
-                            </button>
+                            <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+                                <button
+                                    type="button"
+                                    class="btn-apagar-solicitacao-individual"
+                                    onclick='ocultarUmaSolicitacaoExterno(${JSON.stringify(String(pedido.id || ""))})'
+                                >
+                                    🗑️ Apagar este histórico
+                                </button>
+                            </div>
 
                         </div>
 
@@ -8064,11 +8064,21 @@ setInterval(function(){
     atualizarIndicadorAdmin();
 }, 2000);
 
+// ======================================================
+// CANCELAR SOLICITAÇÃO — ALIAS GLOBAL PARA O BOTÃO DO ADMIN
+// ======================================================
+// Os cartões usam diretamente este nome no onclick.
+// Mantemos a lógica centralizada em atualizarStatusSolicitacaoMercadoriaAdmin().
+async function cancelarSolicitacaoMercadoriaAdmin(id){
+    return atualizarStatusSolicitacaoMercadoriaAdmin(id, "cancelado");
+}
+
 // Compatibilidade: garante que os handlers usados pelos botões HTML
 // estejam disponíveis no escopo global do navegador.
 window.tratarEnvioLogin = tratarEnvioLogin;
 window.sairDoSistema = sairDoSistema;
 window.atualizarStatusSolicitacaoMercadoriaAdmin = atualizarStatusSolicitacaoMercadoriaAdmin;
+window.cancelarSolicitacaoMercadoriaAdmin = cancelarSolicitacaoMercadoriaAdmin;
 window.renderizarSolicitacoesRecebidasComum = renderizarSolicitacoesRecebidasComum;
 window.obterSolicitacoesFinalizadasComumVisiveis = obterSolicitacoesFinalizadasComumVisiveis;
 window.renderizarHistoricoSolicitacoesComum = renderizarHistoricoSolicitacoesComum;
