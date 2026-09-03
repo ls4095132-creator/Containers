@@ -1946,6 +1946,7 @@ style="margin-top:20px;"
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <span id="contador-historico-solicitacoes-comum" style="font-size:11px;color:var(--texto-fraco);"></span>
+            <button type="button" class="btn-historico" id="btn-toggle-historico-solicitacoes-comum" onclick="toggleHistoricoSolicitacoesComum()">🙈 Ocultar Histórico</button>
             <button type="button" class="btn-produto" onclick="exportarHistoricoSolicitacoesComumExcel()">📊 Exportar Excel</button>
             <button type="button" class="btn-apagar-historico" onclick="ocultarHistoricoSolicitacoesComum()">🗑️ Apagar da tela</button>
         </div>
@@ -6530,6 +6531,35 @@ function salvarOcultosHistoricoSolicitacoesComum(lista){
     }catch(e){}
 }
 
+function toggleHistoricoSolicitacoesComum(){
+    const painel=document.getElementById("painel-historico-solicitacoes-comum");
+    const botao=document.getElementById("btn-toggle-historico-solicitacoes-comum");
+    if(!painel || !botao) return;
+
+    const aberto=painel.dataset.oculto !== "true";
+    painel.dataset.oculto=aberto ? "true" : "false";
+
+    const conteudo=document.getElementById("historico-solicitacoes-comum");
+    if(conteudo) conteudo.style.display=aberto ? "none" : "block";
+
+    botao.innerText=aberto ? "👁️ Mostrar Histórico" : "🙈 Ocultar Histórico";
+}
+
+function normalizarBotoesHistoricoSolicitacoesComum(){
+    const painel=document.getElementById("painel-historico-solicitacoes-comum");
+    const botao=document.getElementById("btn-toggle-historico-solicitacoes-comum");
+    const conteudo=document.getElementById("historico-solicitacoes-comum");
+    if(!painel || !botao || !conteudo) return;
+
+    if(painel.dataset.oculto === "true"){
+        conteudo.style.display="none";
+        botao.innerText="👁️ Mostrar Histórico";
+    }else{
+        conteudo.style.display="block";
+        botao.innerText="🙈 Ocultar Histórico";
+    }
+}
+
 function ocultarHistoricoSolicitacoesComum(){
     if(!firebaseAuth.currentUser){
         alert("Faça login novamente.");
@@ -8325,7 +8355,10 @@ window.renderizarSolicitacoesRecebidasComum = renderizarSolicitacoesRecebidasCom
 window.renderizarHistoricoSolicitacoesComum = renderizarHistoricoSolicitacoesComum;
 window.ocultarHistoricoSolicitacoesComum = ocultarHistoricoSolicitacoesComum;
 window.exportarHistoricoSolicitacoesComumExcel = exportarHistoricoSolicitacoesComumExcel;
+window.toggleHistoricoSolicitacoesComum = toggleHistoricoSolicitacoesComum;
+window.normalizarBotoesHistoricoSolicitacoesComum = normalizarBotoesHistoricoSolicitacoesComum;
 console.log("✅ CONTROLE DE CONTAINERS — FIREBASE V6 carregado.");
+setTimeout(normalizarBotoesHistoricoSolicitacoesComum, 0);
 </script>
 
 
