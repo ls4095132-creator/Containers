@@ -1996,8 +1996,28 @@ function normalizarListaFirebase(valor){
     return [];
 }
 
+function limparUndefinedFirebase(valor){
+    if(Array.isArray(valor)) return valor.map(limparUndefinedFirebase);
+    if(valor && typeof valor === "object"){
+        const resultado={};
+        Object.keys(valor).forEach(function(chave){
+            if(valor[chave] !== undefined){
+                resultado[chave]=limparUndefinedFirebase(valor[chave]);
+            }
+        });
+        return resultado;
+    }
+    return valor;
+}
+
 // ======================================================
 // SOLICITAÇÕES DO USUÁRIO COMUM
+// ======================================================
+// ======================================================
+// SOLICITAÇÕES RECEBIDAS — USUÁRIO COMUM (SOMENTE LEITURA)
+// Mostra todas as solicitações ainda pendentes.
+// Quando o administrador finaliza, o listener move o registro
+// automaticamente para o histórico de solicitações.
 // ======================================================
 function renderizarSolicitacoesRecebidasComum(){
     const painel=document.getElementById("painel-solicitacoes-comum");
@@ -2016,29 +2036,22 @@ function renderizarSolicitacoesRecebidasComum(){
 
     painel.style.display="block";
 
-    const uid=firebaseAuth.currentUser ? String(firebaseAuth.currentUser.uid||"") : "";
     const origem=Array.isArray(solicitacoesMercadoriaComumCache)
         ? solicitacoesMercadoriaComumCache.slice()
         : [];
 
-    const ocultos = new Set(obterOcultosSolicitacoesUsuario());
+    const ocultos=new Set(obterOcultosSolicitacoesUsuario());
 
-    // Usuário comum visualiza as próprias solicitações pendentes.
-    // Solicitações atendidas são movidas para o histórico logo abaixo.
     const lista=origem.filter(function(item){
         if(!item) return false;
         const status=String(item.status||"pendente").trim().toLowerCase();
-        const solicitante=String(
-            item.solicitanteUid || item.usuarioUid || item.uidSolicitante || item.uid || ""
-        );
-        const itemId=String(item.id||"");
-        return solicitante===uid &&
-            status !== "atendido" &&
-            status !== "finalizado" &&
-            status !== "concluido" &&
-            status !== "concluído" &&
-            status !== "cancelado" &&
-            !ocultos.has(itemId);
+        const idItem=String(item.id||"");
+        return status !== "atendido" &&
+               status !== "finalizado" &&
+               status !== "concluido" &&
+               status !== "concluído" &&
+               status !== "cancelado" &&
+               !ocultos.has(idItem);
     });
 
     lista.sort(function(a,b){
@@ -2055,6 +2068,7 @@ function renderizarSolicitacoesRecebidasComum(){
     area.innerHTML=lista.map(function(item){
         const data=item.dataHora ? new Date(item.dataHora).toLocaleString("pt-BR") : "—";
         const nf=item.nf || item.notaFiscal || "—";
+        const solicitante=item.solicitanteNome || item.solicitante || "—";
 
         return '<div class="produto-item">'+
             '<div style="margin-bottom:7px;"><span class="tipo tipo-alteracao">⏳ Pendente</span></div>'+
@@ -2064,6 +2078,8 @@ function renderizarSolicitacoesRecebidasComum(){
             '<strong>🔢 Código:</strong> '+escaparHtmlSolicitacao(item.codigo||"—")+'<br>'+
             '<strong>🏷️ Lote:</strong> '+escaparHtmlSolicitacao(item.lote||"—")+'<br>'+
             '<strong>🏢 Fornecedor:</strong> '+escaparHtmlSolicitacao(item.fornecedor||"—")+'<br>'+
+            '<strong>👤 Solicitante:</strong> '+escaparHtmlSolicitacao(solicitante)+'<br>'+
+            '<strong>👥 Tipo:</strong> '+escaparHtmlSolicitacao(item.tipoUsuario||"—")+'<br>'+
             '<strong>🔢 Quantidade:</strong> '+escaparHtmlSolicitacao(item.quantidadeSolicitada ?? "—")+'<br>'+
             '<strong>⚖️ Peso:</strong> '+escaparHtmlSolicitacao(item.pesoSolicitado ?? "—")+' KG<br>'+
             '<strong>🧾 NF:</strong> '+escaparHtmlSolicitacao(nf)+'<br>'+
@@ -2090,22 +2106,19 @@ function renderizarHistoricoSolicitacoesComum(){
 
     painel.style.display="block";
 
-    const uid=firebaseAuth.currentUser ? firebaseAuth.currentUser.uid : "";
     const origem=Array.isArray(solicitacoesMercadoriaComumCache)
         ? solicitacoesMercadoriaComumCache.slice()
         : [];
 
-    // O histórico é individual: cada usuário comum visualiza somente
-    // as solicitações que ele próprio fez e que já foram processadas.
-    const ocultos = new Set(obterOcultosHistoricoSolicitacoesComum());
+    const ocultos=new Set(obterOcultosHistoricoSolicitacoesComum());
 
+    // Histórico do usuário comum: todas as solicitações já finalizadas.
     const lista=origem.filter(function(item){
         if(!item) return false;
         const status=String(item.status||"").trim().toLowerCase();
-        const itemId=String(item.id || "");
-        return String(item.solicitanteUid||"") === String(uid||"") &&
-            !ocultos.has(itemId) &&
-            (status === "atendido" || status === "finalizado" || status === "concluido" || status === "concluído");
+        const idItem=String(item.id||"");
+        return (status === "atendido" || status === "finalizado" || status === "concluido" || status === "concluído") &&
+               !ocultos.has(idItem);
     });
 
     lista.sort(function(a,b){
@@ -2134,8 +2147,9 @@ function renderizarHistoricoSolicitacoesComum(){
             '<strong>🔢 Código:</strong> '+escaparHtmlSolicitacao(item.codigo||"—")+'<br>'+
             '<strong>🏷️ Lote:</strong> '+escaparHtmlSolicitacao(item.lote||"—")+'<br>'+
             '<strong>🏢 Fornecedor:</strong> '+escaparHtmlSolicitacao(item.fornecedor||"—")+'<br>'+
+            '<strong>👤 Solicitante:</strong> '+escaparHtmlSolicitacao(item.solicitanteNome||item.solicitante||"—")+'<br>'+
             '<strong>🔢 Quantidade:</strong> '+escaparHtmlSolicitacao(qtd)+'<br>'+
-            '<strong>⚖️ Peso:</strong> '+escaparHtmlSolicitacao(peso.toLocaleString("pt-BR",{minimumFractionDigits:2}))+' KG<br>'+
+            '<strong>⚖️ Peso:</strong> '+escaparHtmlSolicitacao(peso.toLocaleString("pt-BR",{minimumFractionDigits:2}))+' KG<br>'+ 
             '<strong>🧾 Nota Fiscal:</strong> '+escaparHtmlSolicitacao(nf)+'<br>'+
             '<strong>🕒 Solicitação:</strong> '+escaparHtmlSolicitacao(solicitado)+'<br>'+
             '<strong>✅ Finalizada em:</strong> '+escaparHtmlSolicitacao(processado)+
@@ -4082,10 +4096,11 @@ async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
                 });
 
                 // Guarda kg por volume quando a estrutura já utiliza esse campo.
-                if(item.kg != null && quantidadeSolicitada > 0){
-                    atualizado.kg = novoPeso > 0 && novaQuantidade > 0
-                        ? novoPeso / novaQuantidade
-                        : item.kg;
+                if("kg" in item){
+                    const kgAtual=Number(item.kg);
+                    atualizado.kg = Number.isFinite(kgAtual)
+                        ? (novaQuantidade > 0 ? (novoPeso / novaQuantidade) : kgAtual)
+                        : 0;
                 }
 
                 lista[indice] = atualizado;
@@ -4169,8 +4184,14 @@ async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
             movimentoSaida.peso = Number(movimentoSaida.peso || 0);
 
             await firebaseDB.ref("historico").transaction(function(valorAtual){
-                const listaHistorico = normalizarListaFirebase(valorAtual);
-                listaHistorico.push(movimentoSaida);
+                const listaHistorico = limparUndefinedFirebase(
+                    normalizarListaFirebase(valorAtual)
+                );
+
+                listaHistorico.push(
+                    limparUndefinedFirebase(movimentoSaida)
+                );
+
                 return listaHistorico;
             });
 
@@ -4208,6 +4229,28 @@ async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
                         solicitacao: {
                             id: id,
                             solicitanteUid: pedido.solicitanteUid,
+                            tipoUsuario: ehUsuarioExterno ? "externo" : "comum",
+                            container: pedido.container || "",
+                            produto: pedido.produto || "",
+                            codigo: pedido.codigo || "",
+                            quantidadeSolicitada: quantidadeSolicitada,
+                            pesoSolicitado: baixaEstoque.pesoBaixado,
+                            nf: numeroNF || pedido.nf || "",
+                            nfFinalizacao: numeroNF || pedido.nf || "",
+                            status: "atendido"
+                        }
+                    }
+                );
+            }
+
+            // Notifica também todos os usuários comuns sobre a finalização.
+            if(ehUsuarioExterno || ehUsuarioComum){
+                await chamarWorkerNotificacao(
+                    "solicitacao_finalizada_comum",
+                    {
+                        solicitacao: {
+                            id: id,
+                            solicitanteUid: pedido.solicitanteUid || "",
                             tipoUsuario: ehUsuarioExterno ? "externo" : "comum",
                             container: pedido.container || "",
                             produto: pedido.produto || "",
@@ -8278,6 +8321,10 @@ setInterval(function(){
 window.tratarEnvioLogin = tratarEnvioLogin;
 window.sairDoSistema = sairDoSistema;
 window.atualizarStatusSolicitacaoMercadoriaAdmin = atualizarStatusSolicitacaoMercadoriaAdmin;
+window.renderizarSolicitacoesRecebidasComum = renderizarSolicitacoesRecebidasComum;
+window.renderizarHistoricoSolicitacoesComum = renderizarHistoricoSolicitacoesComum;
+window.ocultarHistoricoSolicitacoesComum = ocultarHistoricoSolicitacoesComum;
+window.exportarHistoricoSolicitacoesComumExcel = exportarHistoricoSolicitacoesComumExcel;
 console.log("✅ CONTROLE DE CONTAINERS — FIREBASE V6 carregado.");
 </script>
 
