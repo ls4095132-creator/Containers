@@ -3769,6 +3769,51 @@ function renderizarSolicitacoesFinalizadasAdmin(){
 }
 
 // ======================================================
+// LIMPAR VALORES UNDEFINED ANTES DE ENVIAR AO FIREBASE
+// ======================================================
+
+function limparUndefinedFirebase(valor){
+
+    if(valor === undefined){
+        return null;
+    }
+
+    if(valor === null){
+        return null;
+    }
+
+    if(Array.isArray(valor)){
+
+        return valor.map(function(item){
+
+            return limparUndefinedFirebase(item);
+
+        });
+
+    }
+
+    if(typeof valor === "object"){
+
+        const resultado = {};
+
+        Object.keys(valor).forEach(function(chave){
+
+            if(valor[chave] !== undefined){
+
+                resultado[chave] =
+                    limparUndefinedFirebase(valor[chave]);
+
+            }
+
+        });
+
+        return resultado;
+    }
+
+    return valor;
+}
+    
+// ======================================================
 // ATUALIZAR STATUS DA SOLICITAÇÃO DE MERCADORIA
 // ======================================================
 
