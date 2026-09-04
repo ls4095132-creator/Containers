@@ -1666,23 +1666,20 @@ async function comTimeoutFirebase(promessa, ms, mensagem){
 }
 
 function normalizarListaFirebase(valor){
-    if(Array.isArray(valor)) return valor;
-    if(valor && typeof valor === "object") return Object.values(valor);
-    return [];
-}
 
-function limparUndefinedFirebase(valor){
-    if(Array.isArray(valor)) return valor.map(limparUndefinedFirebase);
-    if(valor && typeof valor === "object"){
-        const resultado={};
-        Object.keys(valor).forEach(function(chave){
-            if(valor[chave] !== undefined){
-                resultado[chave]=limparUndefinedFirebase(valor[chave]);
-            }
-        });
-        return resultado;
+    let lista = [];
+
+    if(Array.isArray(valor)){
+        lista = valor;
+    } 
+    else if(valor && typeof valor === "object"){
+        lista = Object.values(valor);
     }
-    return valor;
+
+    // Remove registros vazios ou inválidos
+    return lista.filter(function(item){
+        return item && typeof item === "object";
+    });
 }
 
 // ======================================================
@@ -2186,8 +2183,13 @@ function gerarIdEstoque(){
 function garantirIdsEstoque(){
     let alterado = false;
     estoque.forEach(function(item){
-        if(!item.id){ item.id = gerarIdEstoque(); alterado = true; }
-    });
+    if(!item || typeof item !== "object") return;
+
+    if(!item.id){
+        item.id = gerarIdEstoque();
+        alterado = true;
+    }
+});
     if(alterado && firebaseAuth.currentUser && firebaseSincronizacaoAtiva){
         firebaseDB.ref("estoque").set(estoque).catch(function(e){ console.error("Erro ao completar IDs do estoque:",e); });
     }
