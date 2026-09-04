@@ -5,6 +5,7 @@
 <link href="./manifest.webmanifest" rel="manifest"/>
 <meta content="#0a0f1c" name="theme-color"/>
 <link href="./icon-192.png" rel="apple-touch-icon"/>
+<link href="./icon-192.png" rel="icon" type="image/png"/>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>Controle de Containers — Firebase V6</title>
@@ -1220,7 +1221,7 @@ window.OneSignalDeferred = window.OneSignalDeferred || [];
 window.OneSignalDeferred.push(async function(OneSignal) {
     await OneSignal.init({
         appId: "37744162-3909-4b8c-b452-3e6932ac6ece",
-        serviceWorkerPath: "OneSignalSDKWorker.js",
+        serviceWorkerPath: "/Containers/OneSignalSDKWorker.js",
         serviceWorkerParam: {
             scope: "/Containers/"
         },
@@ -1437,7 +1438,7 @@ Entrar
 <button class="btn-apagar-historico" onclick="ocultarSolicitacoesAdmin()" type="button">
             🗑️ Apagar Solicitações
         </button>
-<button class="btn-cancelar" onclick="limparPendenciasMercadoriaAdmin()" type="button" title="Marca como canceladas as solicitações de mercadoria que ainda estão pendentes, preservando os registros no Firebase.">
+        <button class="btn-historico" onclick="limparPendenciasAntigasAdmin()" type="button">
             🧹 Limpar Pendências Antigas
         </button>
 <button class="btn-historico" id="btn-solicitacoes-finalizadas-admin" onclick="toggleSolicitacoesFinalizadasAdmin()" type="button">
@@ -3656,6 +3657,64 @@ async function limparPendenciasMercadoriaAdmin(){
 
 window.limparPendenciasMercadoriaAdmin = limparPendenciasMercadoriaAdmin;
 
+// Limpeza explícita de pendências antigas: preserva os registros no Firebase
+// e apenas muda o status para cancelado, retirando-os do contador de pendências.
+async function limparPendenciasAntigasAdmin(){
+    if(!usuarioEhAdmin()) return;
+
+    const pendentes=(Array.isArray(solicitacoesMercadoriaAdminCache) ? solicitacoesMercadoriaAdminCache.slice() : [])
+        .filter(function(item){
+            return item && String(item.status || "").trim().toLowerCase() === "pendente";
+        });
+
+    if(!pendentes.length){
+        alert("✅ Nenhuma solicitação de mercadoria pendente para limpar.");
+        return;
+    }
+
+    if(!confirm(
+        "Existem " + pendentes.length + " solicitação(ões) pendente(s).\n\n" +
+        "As pendências atuais serão marcadas como CANCELADAS para limpar o indicador.\n" +
+        "Nenhum registro será apagado do Firebase.\n\nContinuar?"
+    )) return;
+
+    try{
+        const agora=new Date().toISOString();
+        const uid=firebaseAuth.currentUser ? firebaseAuth.currentUser.uid : "";
+        const operador=typeof operadorAtual === "function" ? operadorAtual() : "Administrador";
+
+        await Promise.all(pendentes.map(function(item){
+            return firebaseDB.ref("solicitacoesMercadoria/" + item.id).update({
+                status:"cancelado",
+                processadoEm:agora,
+                processadoPorUid:uid,
+                processadoPor:operador,
+                canceladoPorLimpezaAdmin:true
+            });
+        }));
+
+        solicitacoesMercadoriaAdminCache=solicitacoesMercadoriaAdminCache.map(function(item){
+            if(!item || String(item.status || "").trim().toLowerCase() !== "pendente") return item;
+            return Object.assign({}, item, {
+                status:"cancelado",
+                processadoEm:agora,
+                processadoPorUid:uid,
+                processadoPor:operador,
+                canceladoPorLimpezaAdmin:true
+            });
+        });
+
+        renderizarSolicitacoesMercadoriaAdmin();
+        renderizarSolicitacoesFinalizadasAdmin();
+        atualizarIndicadorAdmin();
+        alert("✅ Pendências anteriores limpas. Os registros foram preservados como cancelados.");
+    }catch(erro){
+        console.error("Erro ao limpar pendências anteriores:",erro);
+        alert("❌ Não foi possível limpar as pendências anteriores.\n\n" + (erro && erro.message ? erro.message : erro));
+    }
+}
+window.limparPendenciasAntigasAdmin = limparPendenciasAntigasAdmin;
+
 function renderizarSolicitacoesFinalizadasAdmin(){
     const area = document.getElementById("lista-solicitacoes-finalizadas-admin");
     if(!area || !usuarioEhAdmin()) return;
@@ -4024,27 +4083,9 @@ async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
                 );
             }
 
-            // Notifica também todos os usuários comuns sobre a finalização.
-            if(ehUsuarioExterno || ehUsuarioComum){
-                await chamarWorkerNotificacao(
-                    "solicitacao_finalizada_comum",
-                    {
-                        solicitacao: {
-                            id: id,
-                            solicitanteUid: pedido.solicitanteUid || "",
-                            tipoUsuario: ehUsuarioExterno ? "externo" : "comum",
-                            container: pedido.container || "",
-                            produto: pedido.produto || "",
-                            codigo: pedido.codigo || "",
-                            quantidadeSolicitada: quantidadeSolicitada,
-                            pesoSolicitado: baixaEstoque.pesoBaixado,
-                            nf: numeroNF || pedido.nf || "",
-                            nfFinalizacao: numeroNF || pedido.nf || "",
-                            status: "atendido"
-                        }
-                    }
-                );
-            }
+            // A notificação de finalização já é enviada acima para o solicitante.
+            // O tipo "solicitacao_finalizada_comum" foi removido porque o Worker atual
+            // não o reconhece e retornava HTTP 400.
 
             // Atualização visual imediata e os listeners do Firebase fazem
             // a sincronização dos demais dispositivos.
@@ -4056,7 +4097,7 @@ async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
             solicitacoesMercadoriaAdminCache =
                 solicitacoesMercadoriaAdminCache.map(function(item){
                     if(String(item.id || "") !== String(id)) return item;
-                    return Object.assign({}, item, atualizacao);
+                    return Object.assign({}, item, pedido, atualizacao);
                 });
 
             mostrarEstoque();
