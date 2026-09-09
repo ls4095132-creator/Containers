@@ -174,7 +174,7 @@ input::placeholder, textarea::placeholder {
 
 /* Linha 1: data + container + fornecedor + NF */
 .painel-entrada .linha-identificacao {
-    grid-template-columns: 125px 135px 260px 220px;
+    grid-template-columns: 125px 105px 260px 220px;
 }
 
 /* Linha 2: código + produto + lote */
@@ -184,8 +184,16 @@ input::placeholder, textarea::placeholder {
 
 /* Linha 3: quantidade + peso */
 .painel-entrada .linha-quantidade {
-    grid-template-columns: 150px 150px 190px;
+    grid-template-columns: 100px 115px 130px 160px;
     max-width: 520px;
+}
+
+/* Validade compacta, mantendo Quantidade com mais espaço */
+.painel-entrada .campo-validade {
+    min-width: 0;
+}
+.painel-entrada .campo-validade input {
+    width: 100%;
 }
 
 .painel-entrada .campo-produto {
@@ -1134,7 +1142,7 @@ console.log("🔥 Firebase conectado!");
     grid-template-columns:1fr 1.8fr 1fr;
 }
 .layout-admin-operacional > .painel-entrada .linha-quantidade{
-    grid-template-columns:1fr 1fr;
+    grid-template-columns:150px minmax(220px,1fr);
     max-width:100%;
 }
 .layout-admin-operacional > .painel-entrada label{
@@ -1193,14 +1201,14 @@ body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada{
     box-shadow:0 4px 14px rgba(0,0,0,.35);
 }
 body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-identificacao{
-    grid-template-columns:125px 135px 260px 220px;
+    grid-template-columns:125px 105px 260px 220px;
 }
 body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-produto{
     grid-template-columns:125px 430px 260px;
 }
 body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-quantidade{
-    grid-template-columns:170px 190px;
-    max-width:380px;
+    grid-template-columns:100px 115px 130px 160px;
+    max-width:100%;
 }
 body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada input{
     height:27px;
@@ -1452,16 +1460,12 @@ Entrar
 <!-- PAINEL ADMIN: USUÁRIOS CADASTRADOS -->
 <div class="painel" id="painel-admin-usuarios" style="display:none;">
 <h2>👑 Usuários Cadastrados</h2>
-<div class="erro-login" id="erro-admin-usuarios" style="display:none;"></div>
-<div style="margin:12px 0;padding:12px;border:1px solid var(--borda);border-radius:8px;">
-<strong>➕ Cadastrar Usuário</strong>
-<div class="linha-form" style="margin-top:10px;">
-<div class="campo"><label>📧 E-mail:</label><input id="admin-novo-usuario" type="email" placeholder="E-mail do usuário"></div>
-<div class="campo"><label>🔑 Senha:</label><input id="admin-nova-senha" type="password" placeholder="Mínimo 6 caracteres"></div>
-<div class="campo"><label>👤 Tipo:</label><select id="admin-novo-tipo" onchange="atualizarOpcoesFilialNovoUsuario()"><option value="usuario">Usuário comum</option><option value="admin">Administrador</option><option value="externo">Usuário externo</option></select></div>
-<div class="campo"><label>🏢 Filial:</label><select id="admin-nova-filial"><option value="ST. AFONSO">ST. AFONSO</option></select></div>
+<div style="margin:12px 0;padding:12px;border:1px solid var(--borda);border-radius:8px;background:rgba(59,130,246,.08);">
+<strong>🔐 Cadastro de usuários pelo Firebase</strong>
+<div style="margin-top:6px;font-size:12px;line-height:1.6;color:var(--texto-fraco);">
+Os novos usuários devem ser cadastrados diretamente no Firebase Authentication.
+Depois, o perfil e a filial podem ser configurados no Realtime Database.
 </div>
-<div class="container-botoes" style="margin-top:8px;"><button class="btn-salvar" type="button" onclick="cadastrarUsuarioAdmin()">➕ Cadastrar Usuário</button></div>
 </div>
 
 <div id="painel-aprovacoes-alteracoes" style="background:rgba(245,158,11,.10);border:1px solid #f59e0b;padding:12px;border-radius:8px;margin-bottom:18px;">
@@ -1580,12 +1584,12 @@ Entrar
 </div>
 <div class="campo">
 <label>🏷️ Lote:</label>
-<input id="lote" placeholder="Número do lote" type="text"/>
+<input id="lote" maxlength="25" placeholder="Número do lote" type="text" inputmode="numeric"/>
 </div>
 </div>
 <!-- Linha 3: quantidade + KG por volume + peso total -->
 <div class="linha-form linha-quantidade">
-<div class="campo">
+<div class="campo campo-validade">
 <label>📅 Validade:</label>
 <input id="validade" type="date"/>
 </div>
