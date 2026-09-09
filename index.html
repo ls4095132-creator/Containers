@@ -6547,8 +6547,19 @@ async function garantirPerfilFirebase(user){
     if(perfil){
         perfil.email=perfil.email || emailNormalizado(user.email);
         perfil.ativo=perfil.ativo !== false;
-        perfil.filial = normalizarFilialUsuario(perfil.tipo,perfil.filial);
+
+        // A filial definida no Realtime Database passa a ser a fonte oficial.
+        // Se ainda não existir, cria a filial padrão conforme o tipo.
+        const filialNormalizada=normalizarFilialUsuario(perfil.tipo,perfil.filial);
+        const precisaGravarFilial=String(perfil.filial || "").trim().toUpperCase() !== filialNormalizada;
+        perfil.filial=filialNormalizada;
+
         perfisUsuariosCache[uid]=perfil;
+
+        if(precisaGravarFilial){
+            await firebaseDB.ref("perfisUsuarios/"+uid+"/filial").set(filialNormalizada);
+        }
+
         return perfil;
     }
 
@@ -6561,7 +6572,7 @@ async function garantirPerfilFirebase(user){
         usuario:email,
         nome:user.displayName || email,
         tipo:tipo,
-        filial:tipo === "externo" ? "FILIAL 02 - EXTERNA" : "FILIAL 01 - INTERNA",
+        filial:tipo === "externo" ? "MATRIZ" : "ST. AFONSO",
         ativo:true,
         criadoEm:firebase.database.ServerValue.TIMESTAMP
     };
@@ -6610,10 +6621,20 @@ async function concluirLoginFirebase(user,perfil){
     perfil.email=perfil.email||emailNormalizado(user.email);
     perfil.ativo=perfil.ativo!==false;
     if(perfil.ativo===false){await firebaseAuth.signOut().catch(function(){});mostrarErroLogin("Este usuário está bloqueado pelo administrador.");return false;}
+    const filialUsuario=normalizarFilialUsuario(perfil.tipo,perfil.filial);
+
+    // Mantém a filial do perfil sincronizada no Firebase a cada login.
+    // Admin e usuário comum = ST. AFONSO.
+    // Externo = LAGOA, MINISTRO ou MATRIZ.
+    if(String(perfil.filial || "").trim().toUpperCase() !== filialUsuario){
+        await firebaseDB.ref("perfisUsuarios/"+user.uid+"/filial").set(filialUsuario);
+        perfil.filial=filialUsuario;
+    }
+
     usuarioLogadoAtual={uid:user.uid,usuario:perfil.usuario||perfil.nome||perfil.email||user.email,nome:perfil.nome||perfil.usuario||user.email,email:user.email||perfil.email,tipo:perfil.tipo === "admin"
     ? "admin"
     : (perfil.tipo === "externo" ? "externo" : "usuario"),
-    filial:normalizarFilialUsuario(perfil.tipo,perfil.filial),
+    filial:filialUsuario,
     ativo:true};
     perfisUsuariosCache[user.uid]=perfil;
     if(typeof configurarNotificacoesOneSignal === "function"){
