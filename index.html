@@ -1462,6 +1462,47 @@ window.OneSignalDeferred.push(async function(OneSignal) {
     }
 }
 </style>
+
+<style id="ajuste-layout-admin-igual-comum">
+/* ======================================================
+   ADMIN — MESMO PADRÃO VISUAL DO USUÁRIO COMUM
+   Esquerda: solicitações/usuários | Direita: entrada
+   ====================================================== */
+.layout-admin-operacional{
+    grid-template-columns:minmax(0,39fr) minmax(0,61fr) !important;
+    gap:14px !important;
+    align-items:stretch !important;
+}
+.layout-admin-operacional > #painel-admin-usuarios,
+.layout-admin-operacional > .painel-entrada{
+    box-sizing:border-box;
+    min-width:0;
+    margin-bottom:0 !important;
+}
+.layout-admin-operacional > #painel-admin-usuarios{
+    min-height:680px;
+}
+.layout-admin-operacional > .painel-entrada{
+    min-height:680px;
+}
+/* O formulário do Admin mantém exatamente o padrão compacto
+   já usado no usuário comum. */
+body.usuario-admin .layout-admin-operacional > .painel-entrada{
+    padding:14px 12px !important;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-form{
+    width:100%;
+}
+@media(max-width:1100px){
+    .layout-admin-operacional{
+        grid-template-columns:1fr !important;
+    }
+    .layout-admin-operacional > #painel-admin-usuarios,
+    .layout-admin-operacional > .painel-entrada{
+        min-height:0;
+    }
+}
+</style>
 </head>
 <body>
 <!-- TELA DE LOGIN -->
