@@ -1373,6 +1373,9 @@ Entre com seu usuário e senha
 <button class="btn-login" id="btn-acao-login" onclick="tratarEnvioLogin()" type="button">
 Entrar
 </button>
+<button class="btn-login" id="btn-novo-acesso" onclick="novoAcessoLogin()" type="button" style="margin-top:8px;background:#3b465f;">
+🔄 Novo acesso
+</button>
 <div class="alternar-login" id="alternar-login" style="display:none;">
 </div>
 </div>
@@ -6839,6 +6842,45 @@ async function solicitarPermissaoOneSignalNoLogin(){
     }
 }
 
+// ======================================================
+// LOGIN: LEMBRAR SOMENTE O USUÁRIO
+// ======================================================
+// Somente o identificador digitado é lembrado no navegador.
+// A senha NUNCA é armazenada.
+const CHAVE_USUARIO_LOGIN = "containers_usuario_login";
+
+function lembrarUsuarioLogin(usuario){
+    try{
+        if(usuario){
+            localStorage.setItem(CHAVE_USUARIO_LOGIN, String(usuario).trim());
+        }
+    }catch(e){
+        console.warn("Não foi possível lembrar o usuário neste navegador:",e);
+    }
+}
+
+function carregarUsuarioLogin(){
+    try{
+        const salvo=(localStorage.getItem(CHAVE_USUARIO_LOGIN)||"").trim();
+        const campo=document.getElementById("login-usuario");
+        if(campo && salvo) campo.value=salvo;
+    }catch(e){
+        console.warn("Não foi possível recuperar o usuário salvo:",e);
+    }
+}
+
+function novoAcessoLogin(){
+    // Remove somente o usuário lembrado para permitir outro acesso.
+    // A sessão Firebase não é encerrada aqui porque o botão só atua na tela de login.
+    try{ localStorage.removeItem(CHAVE_USUARIO_LOGIN); }catch(e){}
+    const campoUsuario=document.getElementById("login-usuario");
+    const campoSenha=document.getElementById("login-senha");
+    if(campoUsuario) campoUsuario.value="";
+    if(campoSenha) campoSenha.value="";
+    esconderErroLogin();
+    if(campoUsuario) campoUsuario.focus();
+}
+
 async function tratarEnvioLogin(){
     if(loginEmProcessamento)return;
     esconderErroLogin();
@@ -6858,6 +6900,9 @@ async function tratarEnvioLogin(){
         await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
         const cred=await comTimeoutFirebase(firebaseAuth.signInWithEmailAndPassword(email,senha),15000,"Tempo esgotado ao autenticar no Firebase.");
         console.log("✅ Firebase Authentication: usuário autenticado",cred.user.uid);
+        // Lembra somente o usuário após um login bem-sucedido.
+        // A senha nunca é salva.
+        lembrarUsuarioLogin(usuarioDigitado);
         await verificarAutenticacao(cred.user);
     }catch(erro){
         console.error("Erro no login Firebase:",erro);
@@ -8979,6 +9024,14 @@ async function iniciarAutenticacao(){
 }
 iniciarAutenticacao();
 
+// Ao abrir/reabrir a página, preenche somente o usuário anteriormente usado.
+// A senha permanece sempre vazia.
+if(document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", carregarUsuarioLogin);
+}else{
+    carregarUsuarioLogin();
+}
+
 // Permite enviar o formulário de login pressionando Enter.
 
 document.addEventListener("keydown",function(evento){
@@ -9017,6 +9070,7 @@ async function cancelarSolicitacaoMercadoriaAdmin(id){
 // Compatibilidade: garante que os handlers usados pelos botões HTML
 // estejam disponíveis no escopo global do navegador.
 window.tratarEnvioLogin = tratarEnvioLogin;
+window.novoAcessoLogin = novoAcessoLogin;
 window.sairDoSistema = sairDoSistema;
 window.atualizarStatusSolicitacaoMercadoriaAdmin = atualizarStatusSolicitacaoMercadoriaAdmin;
 window.cancelarSolicitacaoMercadoriaAdmin = cancelarSolicitacaoMercadoriaAdmin;
