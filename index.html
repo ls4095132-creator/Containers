@@ -10037,3 +10037,55 @@ body.usuario-admin .layout-admin-operacional > .painel-entrada .container-botoes
     }
 }
 </style>
+
+<style id="ajuste-admin-painel-igual-solicitacoes">
+/* ======================================================
+   ADMIN — PAINÉIS COM O MESMO TAMANHO
+   Solicitações/Notificações à esquerda e Entrada à direita.
+   Mantém todas as funções e alterações anteriores.
+   ====================================================== */
+body.usuario-admin .layout-admin-operacional{
+    display:grid !important;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    gap:14px !important;
+    align-items:stretch !important;
+    margin-bottom:18px !important;
+}
+body.usuario-admin .layout-admin-operacional > #painel-admin-usuarios,
+body.usuario-admin .layout-admin-operacional > .painel-entrada{
+    width:100% !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+    float:none !important;
+    margin:0 !important;
+}
+body.usuario-admin .layout-admin-operacional > #painel-admin-usuarios{
+    grid-column:1 !important;
+    height:100% !important;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada{
+    grid-column:2 !important;
+    height:100% !important;
+    min-height:100% !important;
+    align-self:stretch !important;
+}
+/* O formulário ocupa toda a largura interna disponível, sem alterar seus campos. */
+body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-identificacao,
+body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-produto,
+body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-quantidade{
+    width:100% !important;
+    max-width:none !important;
+    box-sizing:border-box !important;
+}
+@media(max-width:1100px){
+    body.usuario-admin .layout-admin-operacional{
+        grid-template-columns:1fr !important;
+    }
+    body.usuario-admin .layout-admin-operacional > #painel-admin-usuarios,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada{
+        grid-column:1 !important;
+        height:auto !important;
+        min-height:0 !important;
+    }
+}
+</style>
