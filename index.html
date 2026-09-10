@@ -6160,7 +6160,7 @@ function excelCriarZip(arquivos){
     });
     const corpo=excelConcatArrays(locais), centralDir=excelConcatArrays(centrais);
     const fim=excelConcatArrays([
-        new Uint8Array([0x50,0x4b,0x05,0x06]),new Uint8Array(6),excelU16(centrais.length),excelU16(centrais.length),excelU32(centralDir.length),excelU32(corpo.length),excelU16(0)
+        new Uint8Array([0x50,0x4b,0x05,0x06]),new Uint8Array(4),excelU16(centrais.length),excelU16(centrais.length),excelU32(centralDir.length),excelU32(corpo.length),excelU16(0)
     ]);
     return new Blob([corpo,centralDir,fim],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 }
