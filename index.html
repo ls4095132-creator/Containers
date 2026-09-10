@@ -1503,6 +1503,309 @@ body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-form{
     }
 }
 </style>
+
+<style id="ajuste-responsivo-mobile-final">
+/* ======================================================
+   RESPONSIVIDADE FINAL — PC / NOTEBOOK / CELULAR
+   Mantém o layout atual no PC e notebook e cria uma versão
+   compacta e confortável para telas de celular.
+   ====================================================== */
+
+/* Notebook: mantém duas colunas quando houver espaço suficiente. */
+@media (min-width: 901px){
+    .layout-admin-operacional{
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+        gap: 14px !important;
+        align-items: stretch !important;
+    }
+
+    .layout-admin-operacional > #painel-admin-usuarios,
+    .layout-admin-operacional > .painel-entrada{
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        float: none !important;
+        margin: 0 !important;
+    }
+
+    .layout-admin-operacional > .painel-entrada{
+        min-height: 100% !important;
+    }
+}
+
+/* Tablet / notebook pequeno: evita campos apertados sem gerar rolagem horizontal. */
+@media (min-width: 701px) and (max-width: 900px){
+    .layout-admin-operacional{
+        grid-template-columns: 1fr !important;
+        gap: 14px !important;
+    }
+
+    .layout-admin-operacional > #painel-admin-usuarios,
+    .layout-admin-operacional > .painel-entrada{
+        width: 100% !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+    }
+
+    .painel-entrada .linha-identificacao,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-identificacao{
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    .painel-entrada .linha-produto,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-produto{
+        grid-template-columns: minmax(90px,.8fr) minmax(180px,1.8fr) minmax(110px,1fr) !important;
+    }
+
+    .painel-entrada .linha-quantidade,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-quantidade{
+        grid-template-columns: repeat(4, minmax(0,1fr)) !important;
+        max-width: 100% !important;
+    }
+}
+
+/* CELULAR — layout compacto, sem cortes e sem rolagem horizontal. */
+@media (max-width: 700px){
+    html, body{
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    body{
+        margin: 0 !important;
+        padding: 8px !important;
+        font-size: 13px;
+    }
+
+    #app-principal{
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* Barra superior compacta e organizada. */
+    .barra-usuario{
+        width: 100% !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
+        padding: 6px 0 !important;
+    }
+
+    .barra-usuario > span{
+        width: 100%;
+        text-align: center;
+        font-size: 11px;
+        white-space: normal;
+    }
+
+    .barra-usuario button{
+        width: auto !important;
+        min-width: 0 !important;
+        padding: 7px 9px !important;
+        font-size: 11px !important;
+    }
+
+    h1{
+        font-size: 22px !important;
+        margin: 8px 0 14px !important;
+        padding-bottom: 9px !important;
+        gap: 6px !important;
+    }
+
+    /* Painéis ocupam toda a largura do celular. */
+    .layout-admin-operacional{
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        gap: 10px !important;
+        margin-bottom: 12px !important;
+    }
+
+    .layout-admin-operacional > #painel-admin-usuarios,
+    .layout-admin-operacional > .painel-entrada,
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada{
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        float: none !important;
+        margin: 0 0 10px 0 !important;
+        padding: 12px 10px !important;
+        height: auto !important;
+        min-height: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Formulário de entrada: uma coluna no celular, com campos confortáveis. */
+    .painel-entrada .linha-form,
+    .painel-entrada .linha-identificacao,
+    .painel-entrada .linha-produto,
+    .painel-entrada .linha-quantidade,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-identificacao,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-produto,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-quantidade{
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        gap: 5px !important;
+        width: 100% !important;
+    }
+
+    .painel-entrada .campo,
+    .painel-entrada .campo-produto,
+    .painel-entrada .campo-validade{
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+    }
+
+    .painel-entrada label{
+        font-size: 11px !important;
+        margin-bottom: 1px !important;
+    }
+
+    .painel-entrada input,
+    .painel-entrada select,
+    .painel-entrada textarea{
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        height: 34px !important;
+        min-height: 34px !important;
+        padding: 6px 8px !important;
+        font-size: 13px !important;
+        margin: 2px 0 5px !important;
+    }
+
+    .painel-entrada h2{
+        font-size: 15px !important;
+        margin-bottom: 8px !important;
+    }
+
+    .painel-entrada .container-botoes{
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        width: 100% !important;
+        gap: 7px !important;
+        padding-top: 9px !important;
+        margin-top: 5px !important;
+    }
+
+    .painel-entrada .container-botoes button{
+        width: 100% !important;
+        padding: 9px 10px !important;
+        font-size: 12px !important;
+    }
+
+    /* Solicitações, usuários e notificações sem ultrapassar a tela. */
+    .painel{
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .container-botoes{
+        flex-wrap: wrap !important;
+        max-width: 100% !important;
+    }
+
+    .container-botoes button{
+        max-width: 100%;
+    }
+
+    #painel-admin-usuarios .cabecalho-usuarios-admin{
+        flex-wrap: wrap !important;
+    }
+
+    #lista-usuarios-cadastrados,
+    #lista-solicitacoes-admin,
+    #lista-solicitacoes-comum,
+    #lista-minhas-solicitacoes,
+    .grid{
+        max-width: 100% !important;
+        overflow-x: hidden !important;
+    }
+
+    /* Cards de containers: uma coluna no celular. */
+    .grid{
+        grid-template-columns: 1fr !important;
+        gap: 8px !important;
+    }
+
+    .box,
+    .produto-item{
+        min-width: 0 !important;
+        width: 100% !important;
+        padding: 11px !important;
+    }
+
+    /* Campo de pesquisa ocupa a tela inteira. */
+    .painel-busca{
+        width: 100% !important;
+        padding: 10px !important;
+        margin-bottom: 10px !important;
+    }
+
+    .painel-busca input{
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    /* Visualização / filtros ficam empilhados. */
+    .painel-visualizacao{
+        width: 100% !important;
+        padding: 10px !important;
+    }
+
+    .painel-visualizacao .visualizacao-linha{
+        grid-template-columns: 1fr !important;
+        grid-template-areas:
+            "visual"
+            "visualbotoes"
+            "status"
+            "statusselect" !important;
+        gap: 6px !important;
+    }
+
+    .painel-visualizacao .visualizacao-botoes{
+        flex-wrap: wrap !important;
+    }
+
+    .painel-visualizacao .select-status{
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* Modal de solicitação sempre cabe na tela. */
+    .modal-solicitacao-caixa{
+        width: calc(100vw - 20px) !important;
+        max-width: calc(100vw - 20px) !important;
+        max-height: 94vh !important;
+    }
+
+    /* Login compacto para telas pequenas. */
+    .tela-login{
+        padding: 12px !important;
+    }
+
+    .cartao-login{
+        width: 100% !important;
+        max-width: 330px !important;
+        padding: 18px !important;
+    }
+}
+
+/* Telefones muito estreitos. */
+@media (max-width: 380px){
+    body{padding: 5px !important;}
+    h1{font-size: 19px !important;}
+    .barra-usuario button{font-size: 10px !important;padding: 6px 7px !important;}
+    .painel-entrada input,
+    .painel-entrada select{font-size: 12px !important;}
+}
+</style>
 </head>
 <body>
 <!-- TELA DE LOGIN -->
