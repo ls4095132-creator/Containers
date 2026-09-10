@@ -174,7 +174,7 @@ input::placeholder, textarea::placeholder {
 
 /* Linha 1: data + container + fornecedor + NF */
 .painel-entrada .linha-identificacao {
-    grid-template-columns: 125px 105px 260px 220px;
+    grid-template-columns: 125px 135px 260px 220px;
 }
 
 /* Linha 2: código + produto + lote */
@@ -184,16 +184,8 @@ input::placeholder, textarea::placeholder {
 
 /* Linha 3: quantidade + peso */
 .painel-entrada .linha-quantidade {
-    grid-template-columns: 100px 115px 130px 160px;
+    grid-template-columns: 150px 150px 190px;
     max-width: 520px;
-}
-
-/* Validade compacta, mantendo Quantidade com mais espaço */
-.painel-entrada .campo-validade {
-    min-width: 0;
-}
-.painel-entrada .campo-validade input {
-    width: 100%;
 }
 
 .painel-entrada .campo-produto {
@@ -374,38 +366,6 @@ button:disabled {
 .btn-apagar-solicitacao-individual:hover{
     background:rgba(185,28,28,.16);
 }
-.btn-apagar-movimentacao{
-    background:transparent;
-    color:#fca5a5;
-    border:1px solid #7f1d1d;
-    padding:6px 10px;
-    font-size:11px;
-    border-radius:6px;
-    margin-top:12px;
-}
-.btn-apagar-movimentacao:hover{
-    background:rgba(185,28,28,.16);
-}
-.painel-solicitacoes-comum .cabecalho-solicitacoes-comum{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:10px;
-    margin-bottom:10px;
-}
-.painel-solicitacoes-comum .btn-toggle-solicitacoes-comum{
-    white-space:nowrap;
-}
-@media(max-width:700px){
-    .painel-solicitacoes-comum .cabecalho-solicitacoes-comum{
-        align-items:stretch;
-        flex-direction:column;
-    }
-    .painel-solicitacoes-comum .btn-toggle-solicitacoes-comum{
-        width:100%;
-    }
-}
-
 
 .grid {
     display: grid;
@@ -720,22 +680,6 @@ button:disabled {
     color: var(--texto-fraco);
 }
 
-
-.btn-atualizar-sistema {
-    padding: 8px 12px;
-    border: 1px solid var(--borda-forte);
-    border-radius: 7px;
-    background: var(--bg-input);
-    color: var(--texto);
-    font-weight: 700;
-    cursor: pointer;
-    white-space: nowrap;
-}
-
-.btn-atualizar-sistema:hover {
-    filter: brightness(1.08);
-}
-
 .btn-sair {
     background: var(--bg-painel-2);
     color: var(--texto);
@@ -1045,7 +989,6 @@ button:disabled {
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script>
 const firebaseConfig = {
     apiKey: "AIzaSyB7nueKFNhlXRNg5aOH-JknVcmF5Eihawc",
@@ -1061,8 +1004,8 @@ firebase.initializeApp(firebaseConfig);
 const firebaseAuth = firebase.auth();
 const firebaseDB = firebase.database();
 const firebaseFunctions = firebase.functions();
-// A sessão não fica persistida entre recarregamentos/aberturas.
-// A função configurarAutenticacaoSessao() confirma isso antes do login.
+// A sessão permanece durante recarregamentos, mas não é uma sessão permanente.
+// O Firebase usa SESSION para manter o login nesta aba enquanto ela estiver aberta.
 console.log("🔥 Firebase conectado!");
 </script>
 <style id="ajuste-layout-admin-final">
@@ -1158,7 +1101,7 @@ console.log("🔥 Firebase conectado!");
     grid-template-columns:1fr 1.8fr 1fr;
 }
 .layout-admin-operacional > .painel-entrada .linha-quantidade{
-    grid-template-columns:150px minmax(220px,1fr);
+    grid-template-columns:1fr 1fr;
     max-width:100%;
 }
 .layout-admin-operacional > .painel-entrada label{
@@ -1217,14 +1160,14 @@ body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada{
     box-shadow:0 4px 14px rgba(0,0,0,.35);
 }
 body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-identificacao{
-    grid-template-columns:125px 105px 260px 220px;
+    grid-template-columns:125px 135px 260px 220px;
 }
 body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-produto{
     grid-template-columns:125px 430px 260px;
 }
 body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-quantidade{
-    grid-template-columns:100px 115px 130px 160px;
-    max-width:100%;
+    grid-template-columns:170px 190px;
+    max-width:380px;
 }
 body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada input{
     height:27px;
@@ -1346,7 +1289,7 @@ Entrar
 <div class="barra-usuario">
 <span id="texto-usuario-externo"></span>
 <button class="btn-notificacao-web" id="btn-notificacoes-externo" onclick="ativarNotificacoesWeb()" type="button">🔔 Ativar</button>
-<button class="btn-atualizar-sistema" onclick="atualizarSistemaSemDeslogar()" type="button">🔄 Atualizar</button>
+<button class="btn-notificacao-web" onclick="atualizarPaginaSemDeslogar()" type="button">🔄 Atualizar</button>
 <button class="btn-sair" onclick="sairDoSistema()" type="button">
             🚪 Sair
         </button>
@@ -1467,7 +1410,7 @@ Entrar
 <div class="barra-usuario">
 <span id="texto-usuario-logado"></span>
 <button class="btn-notificacao-web" id="btn-notificacoes-app" onclick="ativarNotificacoesWeb()" type="button">🔔 Ativar</button>
-<button class="btn-atualizar-sistema" onclick="atualizarSistemaSemDeslogar()" type="button">🔄 Atualizar</button>
+<button class="btn-notificacao-web" onclick="atualizarPaginaSemDeslogar()" type="button">🔄 Atualizar</button>
 <button class="btn-historico" id="btn-abrir-painel-admin" onclick="toggleAdminUsuarios()" style="display:none;" type="button">
 👑 Usuários Cadastrados
 </button>
@@ -1478,14 +1421,7 @@ Entrar
 <!-- PAINEL ADMIN: USUÁRIOS CADASTRADOS -->
 <div class="painel" id="painel-admin-usuarios" style="display:none;">
 <h2>👑 Usuários Cadastrados</h2>
-<div style="margin:12px 0;padding:12px;border:1px solid var(--borda);border-radius:8px;background:rgba(59,130,246,.08);">
-<strong>🔐 Cadastro de usuários pelo Firebase</strong>
-<div style="margin-top:6px;font-size:12px;line-height:1.6;color:var(--texto-fraco);">
-Os novos usuários devem ser cadastrados diretamente no Firebase Authentication.
-Depois, o perfil e a filial podem ser configurados no Realtime Database.
-</div>
-</div>
-
+<div class="erro-login" id="erro-admin-usuarios" style="display:none;"></div>
 <div id="painel-aprovacoes-alteracoes" style="background:rgba(245,158,11,.10);border:1px solid #f59e0b;padding:12px;border-radius:8px;margin-bottom:18px;">
 <h2 style="margin-top:0;color:#fbbf24;">🔔 Alterações aguardando aprovação <span id="contador-alteracoes-admin" style="font-size:12px;color:var(--texto-fraco);"></span></h2>
 <div id="lista-alteracoes-admin"></div>
@@ -1547,21 +1483,17 @@ Depois, o perfil e a filial podem ser configurados no Realtime Database.
 </div>
 <!-- SOLICITAÇÕES RECEBIDAS — USUÁRIO COMUM (SOMENTE VISUALIZAÇÃO) -->
 <div class="painel painel-solicitacoes-comum" id="painel-solicitacoes-comum" style="display:none;">
-<div class="cabecalho-solicitacoes-comum">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;">
 <div>
 <h2 style="margin:0;">📦 Solicitações Recebidas</h2>
 <div style="font-size:11px;color:var(--texto-fraco);margin-top:4px;">Visualização somente leitura das solicitações de mercadoria.</div>
 </div>
-<div style="display:flex;align-items:center;gap:8px;">
 <span id="contador-solicitacoes-comum" style="font-size:11px;color:var(--texto-fraco);"></span>
-<button class="btn-vis btn-toggle-solicitacoes-comum" id="btn-toggle-solicitacoes-comum" onclick="toggleSolicitacoesComum()" type="button">🙈 Minimizar Solicitações</button>
 </div>
-</div>
-<div id="conteudo-solicitacoes-comum">
 <div id="lista-solicitacoes-comum"><div class="vazio">📭 Nenhuma solicitação recebida.</div></div>
 <div style="margin-top:10px;font-size:11px;color:var(--texto-fraco);display:flex;justify-content:flex-end;">
 <button class="btn-notificacao-web" id="btn-notificacoes-comum" onclick="ativarNotificacoesWeb()" type="button">🔔 Ativar notificações</button>
-</div>
+<button class="btn-notificacao-web" onclick="atualizarPaginaSemDeslogar()" type="button">🔄 Atualizar</button>
 </div>
 </div>
 <!-- FORMULÁRIO -->
@@ -1602,15 +1534,11 @@ Depois, o perfil e a filial podem ser configurados no Realtime Database.
 </div>
 <div class="campo">
 <label>🏷️ Lote:</label>
-<input id="lote" maxlength="25" placeholder="Número do lote" type="text" inputmode="numeric"/>
+<input id="lote" placeholder="Número do lote" type="text"/>
 </div>
 </div>
 <!-- Linha 3: quantidade + KG por volume + peso total -->
 <div class="linha-form linha-quantidade">
-<div class="campo campo-validade">
-<label>📅 Validade:</label>
-<input id="validade" type="date"/>
-</div>
 <div class="campo">
 <label>🔢 Quantidade:</label>
 <input id="qtd" min="0" oninput="calcularPesoTotal()" placeholder="Quantidade de volumes" step="1" type="number"/>
@@ -1827,7 +1755,6 @@ function renderizarSolicitacoesRecebidasComum(){
             '<strong>🏢 Fornecedor:</strong> '+escaparHtmlSolicitacao(item.fornecedor||"—")+'<br>'+
             '<strong>👤 Solicitante:</strong> '+escaparHtmlSolicitacao(solicitante)+'<br>'+
             '<strong>👥 Tipo:</strong> '+escaparHtmlSolicitacao(item.tipoUsuario||"—")+'<br>'+
-            '<strong>🏢 Filial:</strong> '+escaparHtmlSolicitacao(item.filial || "NÃO CADASTRADA")+'<br>'+
             '<strong>🔢 Quantidade:</strong> '+escaparHtmlSolicitacao(item.quantidadeSolicitada ?? "—")+'<br>'+
             '<strong>⚖️ Peso:</strong> '+escaparHtmlSolicitacao(item.pesoSolicitado ?? "—")+' KG<br>'+
             '<strong>🧾 NF:</strong> '+escaparHtmlSolicitacao(nf)+'<br>'+
@@ -1945,31 +1872,6 @@ function renderizarHistoricoSolicitacoesComum(){
     }).join("");
 }
 
-// MINIMIZAR / ABRIR SOLICITAÇÕES — USUÁRIO COMUM
-// ======================================================
-
-function toggleSolicitacoesComum(){
-
-    const conteudo=document.getElementById(
-        "conteudo-solicitacoes-comum"
-    );
-
-    const botao=document.getElementById(
-        "btn-toggle-solicitacoes-comum"
-    );
-
-    if(!conteudo || !botao) return;
-
-    const oculto=conteudo.style.display==="none";
-
-    conteudo.style.display=oculto ? "block" : "none";
-
-    botao.innerText=oculto
-        ? "🙈 Minimizar Solicitações"
-        : "👁️ Mostrar Solicitações";
-}
-
-
 // ABRIR / FECHAR SOLICITAÇÕES DE MERCADORIA
 // ======================================================
 
@@ -2077,7 +1979,6 @@ async function iniciarSincronizacaoFirebase(){
 
         estoque=estoqueSnap ? normalizarListaFirebase(estoqueSnap.val()) : [];
         historico=historicoSnap ? normalizarListaFirebase(historicoSnap.val()) : [];
-        garantirIdsHistorico();
         produtosCadastrados=produtosSnap ? normalizarListaFirebase(produtosSnap.val()) : [];
         solicitacoesAlteracoesCache=alteracoesSnap ? normalizarListaFirebase(alteracoesSnap.val()) : [];
         solicitacoesAcessoCache=souAdmin && acessoSnap ? normalizarListaFirebase(acessoSnap.val()) : [];
@@ -2119,7 +2020,6 @@ async function iniciarSincronizacaoFirebase(){
 
         registrar(historicoRef,"value",function(snapshot){
             historico=normalizarListaFirebase(snapshot.val());
-            garantirIdsHistorico();
             mostrarHistorico();
         },function(e){console.error("Firebase histórico:",e);});
 
@@ -2315,7 +2215,6 @@ async function solicitarAlteracaoAdmin(tipo, dados, descricao){
         dados: dados,
         operador: operadorAtual(),
         operadorUid: firebaseAuth.currentUser.uid,
-        filial: (usuarioLogadoAtual && usuarioLogadoAtual.filial) || "NÃO CADASTRADA",
         data: new Date().toISOString(),
         status: "pendente"
     };
@@ -4489,7 +4388,7 @@ detalhes=""
 
 const movimento={
 
-id:"HST-"+Date.now()+"-"+Math.random().toString(36).slice(2,8),
+id:Date.now(),
 
 data:item.data,
 
@@ -4507,17 +4406,13 @@ prod:item.prod,
 
 lote:item.lote,
 
-validade:item.validade || "",
-
 qtd:item.qtd,
 
 kg:item.kg,
 
 peso:item.peso,
 
-detalhes:detalhes,
-
-filial: item.filial || (usuarioLogadoAtual && usuarioLogadoAtual.filial) || (usuarioLogadoAtual && usuarioLogadoAtual.tipo === "externo" ? "FILIAL 02 - EXTERNA" : "FILIAL 01 - INTERNA")
+detalhes:detalhes
 
 };
 
@@ -4932,7 +4827,6 @@ const nf = document.getElementById("nf").value.trim();
 const prod = document.getElementById("prod").value.trim();
 const codigo = document.getElementById("codigo").value.trim();
 const lote = document.getElementById("lote").value.trim();
-const validade = document.getElementById("validade").value;
 const qtd = document.getElementById("qtd").value;
 const kg = document.getElementById("kg").value;
 calcularPesoTotal();
@@ -4946,7 +4840,6 @@ if(!fornecedor){ alert("Informe o fornecedor."); return; }
 if(!nf){ alert("Informe a Nota Fiscal."); return; }
 if(!prod){ alert("Informe o produto."); return; }
 if(!lote){ alert("Informe o lote."); return; }
-if(!validade){ alert("Informe a validade."); return; }
 if(!qtd || Number(qtd) <= 0){ alert("Informe a quantidade."); return; }
 if(!kg || Number(kg) <= 0){ alert("Informe o KG por volume."); return; }
 if(!peso || Number(peso) <= 0){ alert("O peso total não pôde ser calculado."); return; }
@@ -4974,8 +4867,6 @@ const item={
     prod:prod,
     codigo:codigo || produtoCadastrado.codigo || "",
     lote:lote,
-    validade:validade,
-    filial:(usuarioLogadoAtual && usuarioLogadoAtual.filial) || "NÃO CADASTRADA",
     qtd:Number(qtd),
     kg:Number(kg),
     peso:Number(peso)
@@ -5027,9 +4918,6 @@ document.getElementById("prod").value="";
 document.getElementById("codigo").value="";
 
 document.getElementById("lote").value="";
-
-const campoValidade=document.getElementById("validade");
-if(campoValidade) campoValidade.value="";
 
 document.getElementById("qtd").value="";
 
@@ -5130,10 +5018,6 @@ ${item.codigo ? item.codigo+" - " : ""}${item.prod}
 <br>
 
 🏷️ Lote: ${item.lote}
-
-<br>
-
-📅 Validade: ${item.validade ? formatarData(item.validade) : "—"}
 
 <br>
 
@@ -5239,9 +5123,6 @@ item.codigo || "";
 
 document.getElementById("lote").value =
 item.lote;
-
-const campoValidadeEdicao=document.getElementById("validade");
-if(campoValidadeEdicao) campoValidadeEdicao.value=item.validade || "";
 
 document.getElementById("qtd").value =
 item.qtd;
@@ -5431,199 +5312,172 @@ oculto
 }
 
 
-function garantirIdsHistorico(){
-    let alterado=false;
-    const usados=new Set();
-
-    historico.forEach(function(item){
-        if(!item || typeof item!=="object") return;
-
-        let id=String(item.id || "").trim();
-
-        if(!id || usados.has(id)){
-            id="HST-"+Date.now()+"-"+Math.random().toString(36).slice(2,10);
-            while(usados.has(id)){
-                id="HST-"+Date.now()+"-"+Math.random().toString(36).slice(2,10);
-            }
-            item.id=id;
-            alterado=true;
-        }
-
-        usados.add(id);
-    });
-
-    if(alterado && firebaseAuth.currentUser && firebaseSincronizacaoAtiva){
-        firebaseDB.ref("historico").set(historico).catch(function(e){
-            console.error("Erro ao completar IDs do histórico:",e);
-        });
-    }
-}
-
 function mostrarHistorico(){
 
-    const area=document.getElementById("historico");
+const area =
+document.getElementById(
+"historico"
+);
 
-    if(!area) return;
 
-    area.innerHTML="";
+area.innerHTML="";
 
-    garantirIdsHistorico();
 
-    if(historico.length===0){
-        area.innerHTML=`
-        <div class="sem-historico">
-        📋 Nenhuma movimentação registrada.
-        </div>`;
-        return;
-    }
+if(historico.length===0){
 
-    const idsOcultosHistorico = new Set(obterOcultosHistoricoUsuario());
+area.innerHTML=
+`
+<div class="sem-historico">
+📋 Nenhuma movimentação registrada.
+</div>
+`;
 
-    const lista=[...historico].filter(function(item){
-        if(!item || typeof item!=="object") return false;
+return;
 
-        return !idsOcultosHistorico.has(
-            String(item.id || item.dataHora || item.data || "")
-        );
-    }).reverse();
-
-    lista.forEach(function(item){
-
-        const div=document.createElement("div");
-
-        let classe="movimento";
-        let classeTipo="tipo-entrada";
-
-        if(item.tipo==="ALTERAÇÃO"){
-            classe+=" alteracao";
-            classeTipo="tipo-alteracao";
-        }else if(item.tipo==="EXCLUSÃO"){
-            classe+=" exclusao";
-            classeTipo="tipo-exclusao";
-        }else if(item.tipo==="CONTAINER ZERADO"){
-            classe+=" zerado";
-            classeTipo="tipo-zerado";
-        }else{
-            classe+=" entrada";
-        }
-
-        div.className=classe;
-
-        const idHistorico=String(
-            item.id || item.dataHora || item.data || ""
-        );
-
-        div.innerHTML=`
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-            <span class="tipo ${classeTipo}">
-                ${iconeMovimentacao(item.tipo)}
-                ${escaparHtmlExterno(item.tipo || "MOVIMENTAÇÃO")}
-            </span>
-
-            <button
-                type="button"
-                class="btn-apagar-movimentacao"
-                onclick='excluirMovimentacaoHistorico(${JSON.stringify(idHistorico)})'
-            >
-                🗑️ Excluir esta linha
-            </button>
-        </div>
-
-        <strong>📅 ${formatarData(item.data || "")}</strong>
-
-        <hr>
-
-        📦 <strong>Container:</strong>
-        ${escaparHtmlExterno(item.num ?? "")}
-
-        <br>
-
-        📋 <strong>Produto:</strong>
-        ${escaparHtmlExterno(item.prod || "")}
-        ${item.codigo ? " (Cód: "+escaparHtmlExterno(item.codigo)+")" : ""}
-
-        <br>
-
-        🏷️ <strong>Lote:</strong>
-        ${escaparHtmlExterno(item.lote || "")}
-
-        <br>
-
-        🏢 <strong>Fornecedor:</strong>
-        ${escaparHtmlExterno(item.fornecedor || "")}
-
-        <br>
-
-        🧾 <strong>NF:</strong>
-        ${escaparHtmlExterno(item.nf || "")}
-
-        <br>
-
-        🔢 <strong>Quantidade:</strong>
-        ${escaparHtmlExterno(item.qtd ?? "")}
-
-        <br>
-
-        ⚖️ <strong>Peso:</strong>
-        ${escaparHtmlExterno(item.peso ?? "")} KG
-
-        ${
-            item.detalhes
-            ? `<hr>ℹ️ ${escaparHtmlExterno(item.detalhes)}`
-            : ""
-        }
-        `;
-
-        area.appendChild(div);
-    });
 }
 
-async function excluirMovimentacaoHistorico(id){
 
-    if(!firebaseAuth.currentUser){
-        alert("Faça login novamente.");
-        return;
-    }
+const idsOcultosHistorico = new Set(obterOcultosHistoricoUsuario());
+const lista =
+[...historico].filter(function(item){
+    return !idsOcultosHistorico.has(String(item.id || item.dataHora || item.data || ""));
+}).reverse();
 
-    const idHistorico=String(id || "").trim();
 
-    if(!idHistorico){
-        alert("Movimentação inválida.");
-        return;
-    }
+lista.forEach(
+function(item){
 
-    const indice=historico.findIndex(function(item){
-        return item && String(item.id || "")===idHistorico;
-    });
+const div =
+document.createElement("div");
 
-    if(indice<0){
-        alert("Esta movimentação não foi encontrada.");
-        return;
-    }
 
-    if(!confirm(
-        "Excluir esta movimentação do histórico?\n\n"+
-        "Ela será removida do Firebase e do histórico de todos os usuários.\n\n"+
-        "O estoque atual NÃO será alterado."
-    )) return;
+let classe =
+"movimento";
 
-    try{
-        historico.splice(indice,1);
+let classeTipo =
+"tipo-entrada";
 
-        await firebaseDB.ref("historico").set(historico);
 
-        mostrarHistorico();
+if(item.tipo==="ALTERAÇÃO"){
 
-        alert("✅ Movimentação excluída com sucesso.");
-    }catch(erro){
-        console.error("Erro ao excluir movimentação:",erro);
+classe+=" alteracao";
 
-        alert(
-            "❌ Não foi possível excluir a movimentação.\n\n"+
-            "Detalhe: "+(erro.message || erro)
-        );
-    }
+classeTipo=
+"tipo-alteracao";
+
 }
+
+else if(item.tipo==="EXCLUSÃO"){
+
+classe+=" exclusao";
+
+classeTipo=
+"tipo-exclusao";
+
+}
+
+else if(
+item.tipo==="CONTAINER ZERADO"
+){
+
+classe+=" zerado";
+
+classeTipo=
+"tipo-zerado";
+
+}
+
+else{
+
+classe+=" entrada";
+
+}
+
+
+div.className=
+classe;
+
+
+div.innerHTML=`
+
+<div>
+
+<span class="tipo ${classeTipo}">
+
+${iconeMovimentacao(item.tipo)}
+
+${item.tipo}
+
+</span>
+
+</div>
+
+
+<strong>
+📅 ${formatarData(item.data)}
+</strong>
+
+
+
+<hr>
+
+
+📦 <strong>Container:</strong>
+${String(item.num).padStart(2,"0")}
+
+<br>
+
+📋 <strong>Produto:</strong>
+${item.prod}
+${item.codigo ? " (Cód: "+item.codigo+")" : ""}
+
+<br>
+
+🏷️ <strong>Lote:</strong>
+${item.lote}
+
+<br>
+
+🏢 <strong>Fornecedor:</strong>
+${item.fornecedor}
+
+<br>
+
+🧾 <strong>NF:</strong>
+${item.nf}
+
+<br>
+
+🔢 <strong>Quantidade:</strong>
+${item.qtd}
+
+<br>
+
+⚖️ <strong>Peso:</strong>
+${item.peso} KG
+
+
+${
+item.detalhes
+?
+`
+<hr>
+ℹ️ ${item.detalhes}
+`
+:
+""
+}
+
+`;
+
+
+area.appendChild(div);
+
+}
+);
+
+}
+
 
 // ======================================================
 // ÍCONE DO HISTÓRICO
@@ -5860,542 +5714,78 @@ async function restaurarBackup(campoArquivo){
 // ======================================================
 // ======================================================
 
-function escaparValorExcel(valor){
-    if(valor===null || valor===undefined) return "";
-    return String(valor);
-}
-
-function criarResumoExcel(rows,cfg){
-
-    if(!cfg || !Array.isArray(rows)) return [];
-
-    const mapa={};
-
-    rows.forEach(function(row){
-
-        const chave=String(
-            row[cfg.grupoIndex] ?? "Sem informação"
-        ).trim() || "Sem informação";
-
-        if(!mapa[chave]){
-            mapa[chave]={
-                quantidade:0,
-                peso:0,
-                registros:0
-            };
-        }
-
-        mapa[chave].registros++;
-
-        if(cfg.quantidadeIndex!==undefined){
-            mapa[chave].quantidade +=
-                Number(
-                    String(row[cfg.quantidadeIndex] ?? "")
-                    .replace(",",".")
-                ) || 0;
-        }
-
-        if(cfg.pesoIndex!==undefined){
-            mapa[chave].peso +=
-                Number(
-                    String(row[cfg.pesoIndex] ?? "")
-                    .replace(",",".")
-                ) || 0;
-        }
-    });
-
-    const saida=[
-        [
-            cfg.grupoTitulo || "Agrupamento",
-            "Registros",
-            "Quantidade Total",
-            "Peso Total KG"
-        ]
-    ];
-
-    Object.keys(mapa)
-    .sort(function(a,b){
-        return a.localeCompare(b,"pt-BR");
-    })
-    .forEach(function(chave){
-
-        saida.push([
-            chave,
-            mapa[chave].registros,
-            Number(mapa[chave].quantidade.toFixed(2)),
-            Number(mapa[chave].peso.toFixed(2))
-        ]);
-
-    });
-
-    return saida;
-}
-
-function exportarTabelaExcel(headers,rows,nomeArquivo,nomeAba,configuracao){
-
-    if(typeof XLSX==="undefined"){
-        alert("❌ O módulo Excel não foi carregado. Atualize a página e tente novamente.");
-        return;
-    }
-
-    configuracao=configuracao || {};
-
-    const dados=[headers].concat(
-        rows.map(function(row){
-            return row.map(escaparValorExcel);
-        })
-    );
-
-    const ws=XLSX.utils.aoa_to_sheet(dados);
-
-    if(dados.length>1){
-
-        const ultimaColuna=XLSX.utils.encode_col(
-            headers.length-1
-        );
-
-        ws["!autofilter"]={
-            ref:"A1:"+ultimaColuna+dados.length
-        };
-
-        ws["!freeze"]={
-            xSplit:0,
-            ySplit:1
-        };
-
-        ws["!cols"]=headers.map(function(_,coluna){
-
-            let maior=String(
-                headers[coluna] || ""
-            ).length;
-
-            for(let i=1;i<dados.length;i++){
-                maior=Math.max(
-                    maior,
-                    String(dados[i][coluna] ?? "").length
-                );
-            }
-
-            return {
-                wch:Math.min(
-                    Math.max(maior+2,12),
-                    42
-                )
-            };
-        });
-    }
-
-    const wb=XLSX.utils.book_new();
-
-    XLSX.utils.book_append_sheet(
-        wb,
-        ws,
-        String(nomeAba || "Dados").slice(0,31)
-    );
-
-    // Aba complementar com agrupamento estilo tabela dinâmica.
-    if(configuracao.resumo){
-
-        const resumo=criarResumoExcel(
-            rows,
-            configuracao.resumo
-        );
-
-        if(resumo.length>1){
-
-            const wsResumo=XLSX.utils.aoa_to_sheet(resumo);
-
-            const ultimaColunaResumo=XLSX.utils.encode_col(
-                resumo[0].length-1
-            );
-
-            wsResumo["!autofilter"]={
-                ref:"A1:"+ultimaColunaResumo+resumo.length
-            };
-
-            wsResumo["!freeze"]={
-                xSplit:0,
-                ySplit:1
-            };
-
-            wsResumo["!cols"]=resumo[0].map(function(_,coluna){
-
-                let maior=String(
-                    resumo[0][coluna] || ""
-                ).length;
-
-                for(let i=1;i<resumo.length;i++){
-                    maior=Math.max(
-                        maior,
-                        String(resumo[i][coluna] ?? "").length
-                    );
-                }
-
-                return {
-                    wch:Math.min(
-                        Math.max(maior+2,14),
-                        38
-                    )
-                };
-            });
-
-            XLSX.utils.book_append_sheet(
-                wb,
-                wsResumo,
-                "Resumo Dinâmico"
-            );
-        }
-    }
-
-    const nomeFinal=String(
-        nomeArquivo || "exportacao"
-    ).replace(/\.xlsx$/i,"")+".xlsx";
-
-    XLSX.writeFile(wb,nomeFinal);
-}
-
 function exportarParaExcel(){
 
-    if(estoque.length===0){
-        alert("Não existem dados para exportar.");
-        return;
-    }
+if(estoque.length===0){
 
-    const rows=estoque.map(function(item){
-        return [
-            formatarData(item.data || ""),
-            "ESTOQUE",
-            item.num || "",
-            item.fornecedor || "",
-            item.nf || "",
-            item.codigo || "",
-            item.prod || "",
-            item.lote || "",
-            item.qtd || "",
-            item.peso || ""
-        ];
-    });
+alert(
+"Não existem dados para exportar."
+);
 
-    exportarTabelaExcel(
-        ["Data","Tipo","Container","Fornecedor","Nota Fiscal","Código","Produto","Lote","Quantidade","Peso KG"],
-        rows,
-        "controle_estoque",
-        "Estoque",
-        {
-            nomeTabela:"TabelaEstoque",
-            resumo:{
-                grupoIndex:6,
-                grupoTitulo:"Produto",
-                quantidadeIndex:8,
-                pesoIndex:9
-            }
-        }
-    );
+return;
+
 }
 
-function exportarHistoricoSolicitacoesComumExcel(){
 
-    if(!firebaseAuth.currentUser){
-        alert("Faça login novamente.");
-        return;
-    }
+let csv =
+"Data;Tipo;Container;Fornecedor;Nota Fiscal;Código;Produto;Lote;Quantidade;Peso KG\n";
 
-    const origem=obterSolicitacoesFinalizadasComumVisiveis();
 
-    if(!origem.length){
-        alert("Não existem solicitações finalizadas visíveis para exportar.");
-        return;
-    }
+estoque.forEach(
+function(item){
 
-    const rows=origem.map(function(item){
+csv +=
+`"${formatarData(item.data)}";`+
+`"ESTOQUE";`+
+`"${item.num}";`+
+`"${item.fornecedor}";`+
+`"${item.nf}";`+
+`"${item.codigo || ""}";`+
+`"${item.prod}";`+
+`"${item.lote}";`+
+`"${item.qtd}";`+
+`"${item.peso}"\n`;
 
-        const solicitado=item.dataHora
-            ? new Date(item.dataHora).toLocaleString("pt-BR")
-            : "";
+}
+);
 
-        const finalizado=item.processadoEm
-            ? new Date(item.processadoEm).toLocaleString("pt-BR")
-            : "";
 
-        const nf=item.nfFinalizacao || item.nf || item.notaFiscal || "";
+const blob =
+new Blob(
+[
+"\ufeff"+csv
+],
+{
+type:
+"text/csv;charset=utf-8;"
+}
+);
 
-        return [
-            item.status || "",
-            item.container || "",
-            item.codigo || "",
-            item.produto || "",
-            item.lote || "",
-            item.fornecedor || "",
-            item.quantidadeSolicitada ?? "",
-            item.pesoSolicitado ?? "",
-            nf,
-            solicitado,
-            finalizado,
-            item.observacao || ""
-        ];
-    });
 
-    exportarTabelaExcel(
-        ["Status","Container","Código","Produto","Lote","Fornecedor","Quantidade","Peso KG","Nota Fiscal","Data da Solicitação","Data da Finalização","Observação"],
-        rows,
-        "historico_solicitacoes_comum",
-        "Solicitações",
-        {
-            nomeTabela:"TabelaSolicitacoesComum",
-            resumo:{
-                grupoIndex:3,
-                grupoTitulo:"Produto",
-                quantidadeIndex:6,
-                pesoIndex:7
-            }
-        }
-    );
+const url =
+URL.createObjectURL(blob);
+
+
+const link =
+document.createElement("a");
+
+
+link.href=url;
+
+link.download=
+"controle_estoque.csv";
+
+
+document.body.appendChild(link);
+
+link.click();
+
+document.body.removeChild(link);
+
+URL.revokeObjectURL(url);
+
 }
 
-function exportarHistoricoParaExcel(){
-
-    const idsOcultos=new Set(
-        obterOcultosHistoricoUsuario()
-    );
-
-    const lista=historico.filter(function(item){
-        return item &&
-            !idsOcultos.has(
-                String(item.id || item.dataHora || item.data || "")
-            );
-    });
-
-    if(!lista.length){
-        alert("Não existem movimentações visíveis para exportar.");
-        return;
-    }
-
-    const rows=lista.map(function(item){
-        return [
-            formatarData(item.data || ""),
-            item.tipo || "",
-            item.num || "",
-            item.fornecedor || "",
-            item.nf || "",
-            item.codigo || "",
-            item.prod || "",
-            item.lote || "",
-            item.qtd || "",
-            item.peso || ""
-        ];
-    });
-
-    exportarTabelaExcel(
-        ["Data","Tipo","Container","Fornecedor","Nota Fiscal","Código","Produto","Lote","Quantidade","Peso KG"],
-        rows,
-        "historico_movimentacoes",
-        "Movimentações",
-        {
-            nomeTabela:"TabelaMovimentacoes",
-            resumo:{
-                grupoIndex:6,
-                grupoTitulo:"Produto",
-                quantidadeIndex:8,
-                pesoIndex:9
-            }
-        }
-    );
-}
-
-function baixarCsv(csv,nomeArquivo){
-    // Compatibilidade com funções antigas.
-    const blob=new Blob(
-        ["\ufeff"+csv],
-        {type:"text/csv;charset=utf-8;"}
-    );
-
-    const url=URL.createObjectURL(blob);
-    const link=document.createElement("a");
-
-    link.href=url;
-    link.download=nomeArquivo;
-
-    document.body.appendChild(link);
-    link.click();
-
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-}
-
-function ocultarMovimentacoesUsuario(){
-
-    if(!firebaseAuth.currentUser){
-        alert("Faça login novamente.");
-        return;
-    }
-
-    const visiveis=historico.filter(function(item){
-        return item &&
-            !new Set(
-                obterOcultosHistoricoUsuario()
-            ).has(
-                String(item.id || item.dataHora || item.data || "")
-            );
-    });
-
-    if(!visiveis.length){
-        alert("Não existem movimentações visíveis para apagar.");
-        return;
-    }
-
-    if(!confirm(
-        "Apagar as movimentações da sua tela?\n\n"+
-        "Esses registros não serão removidos do Firebase e não afetarão o administrador."
-    )) return;
-
-    const ids=obterOcultosHistoricoUsuario();
-
-    visiveis.forEach(function(item){
-        ids.push(
-            String(item.id || item.dataHora || item.data || "")
-        );
-    });
-
-    salvarOcultosHistoricoUsuario(ids);
-    mostrarHistorico();
-
-    alert("✅ Movimentações ocultadas somente desta tela.");
-}
-
-function exportarSolicitacoesAdminExcel(){
-
-    const ocultos=new Set(
-        obterOcultosSolicitacoesUsuario()
-    );
-
-    const lista=solicitacoesMercadoriaAdminCache.filter(function(item){
-        return item &&
-            !ocultos.has(String(item.id || ""));
-    });
-
-    if(!lista.length){
-        alert("Não existem solicitações visíveis para exportar.");
-        return;
-    }
-
-    const rows=lista.map(function(item){
-        return [
-            item.status || "",
-            item.container || "",
-            item.codigo || "",
-            item.produto || "",
-            item.lote || "",
-            item.fornecedor || "",
-            item.solicitanteNome || item.solicitante || "",
-            item.tipoUsuario || item.tipo || "",
-            item.quantidadeSolicitada || "",
-            item.pesoSolicitado || "",
-            item.dataHora || "",
-            item.nf || item.notaFiscal || "",
-            item.observacao || ""
-        ];
-    });
-
-    exportarTabelaExcel(
-        ["Status","Container","Código","Produto","Lote","Fornecedor","Solicitante","Tipo Usuário","Quantidade","Peso KG","Data/Hora","NF","Observação"],
-        rows,
-        "solicitacoes_mercadoria",
-        "Solicitações",
-        {
-            nomeTabela:"TabelaSolicitacoesAdmin",
-            resumo:{
-                grupoIndex:3,
-                grupoTitulo:"Produto",
-                quantidadeIndex:8,
-                pesoIndex:9
-            }
-        }
-    );
-}
-
-function ocultarSolicitacoesAdmin(){
-
-    if(!usuarioEhAdmin()) return;
-
-    const visiveis=solicitacoesMercadoriaAdminCache.filter(function(item){
-        return !new Set(
-            obterOcultosSolicitacoesUsuario()
-        ).has(String(item.id || ""));
-    });
-
-    if(!visiveis.length){
-        alert("Não existem solicitações visíveis para apagar.");
-        return;
-    }
-
-    if(!confirm(
-        "Apagar as solicitações desta tela?\n\n"+
-        "As solicitações continuarão preservadas no Firebase e não serão apagadas do banco."
-    )) return;
-
-    const ids=obterOcultosSolicitacoesUsuario();
-
-    visiveis.forEach(function(item){
-        ids.push(String(item.id || ""));
-    });
-
-    salvarOcultosSolicitacoesUsuario(ids);
-    renderizarSolicitacoesMercadoriaAdmin();
-
-    alert("✅ Solicitações ocultadas somente neste painel.");
-}
-
-function exportarMinhasSolicitacoesExternoExcel(){
-
-    const ocultos=new Set(
-        obterOcultosSolicitacoesUsuario()
-    );
-
-    const uid=firebaseAuth.currentUser
-        ? firebaseAuth.currentUser.uid
-        : "";
-
-    const origem=solicitacoesMercadoriaExternoCache.filter(function(item){
-        return String(item.solicitanteUid || "")===String(uid) &&
-            !ocultos.has(String(item.id || ""));
-    });
-
-    if(!origem.length){
-        alert("Não existem solicitações visíveis para exportar.");
-        return;
-    }
-
-    const rows=origem.map(function(item){
-        return [
-            item.status || "",
-            item.container || "",
-            item.codigo || "",
-            item.produto || "",
-            item.lote || "",
-            item.quantidadeSolicitada || "",
-            item.pesoSolicitado || "",
-            item.dataHora || "",
-            item.nf || item.notaFiscal || "",
-            item.observacao || ""
-        ];
-    });
-
-    exportarTabelaExcel(
-        ["Status","Container","Código","Produto","Lote","Quantidade","Peso KG","Data/Hora","NF","Observação"],
-        rows,
-        "minhas_solicitacoes",
-        "Solicitações",
-        {
-            nomeTabela:"TabelaMinhasSolicitacoes",
-            resumo:{
-                grupoIndex:3,
-                grupoTitulo:"Produto",
-                quantidadeIndex:5,
-                pesoIndex:6
-            }
-        }
-    );
-}
 
 // ======================================================
 // INICIALIZAÇÃO
@@ -6497,46 +5887,6 @@ function esconderErroAdminUsuarios(){
     erro.style.display="none";
 }
 
-// ======================================================
-// FILIAIS POR PERFIL
-// ADMIN E USUARIO COMUM -> ST. AFONSO
-// USUARIO EXTERNO -> LAGOA / MINISTRO / MATRIZ
-// ======================================================
-const FILIAIS_EXTERNAS = ["LAGOA","MINISTRO","MATRIZ"];
-
-function normalizarFilialUsuario(tipo, filialAtual){
-    // A filial cadastrada no Realtime Database é obrigatória e é a fonte oficial.
-    // NÃO atribui filial automaticamente para usuários antigos.
-    const tipoNormalizado=String(tipo||"").trim().toLowerCase();
-    const f=String(filialAtual||"").trim().toUpperCase();
-    if(tipoNormalizado === "externo" || tipoNormalizado === "usuario externo" || tipoNormalizado === "usuário externo"){
-        return FILIAIS_EXTERNAS.includes(f) ? f : "";
-    }
-    return f === "ST. AFONSO" ? "ST. AFONSO" : "";
-}
-
-function filialValidaParaPerfil(tipo, filial){
-    const tipoNormalizado=String(tipo||"").trim().toLowerCase();
-    const f=String(filial||"").trim().toUpperCase();
-    if(tipoNormalizado === "externo" || tipoNormalizado === "usuario externo" || tipoNormalizado === "usuário externo"){
-        return FILIAIS_EXTERNAS.includes(f);
-    }
-    return f === "ST. AFONSO";
-}
-
-function atualizarOpcoesFilialNovoUsuario(){
-    const tipo=document.getElementById("admin-novo-tipo");
-    const filial=document.getElementById("admin-nova-filial");
-    if(!tipo || !filial) return;
-    const externo=tipo.value === "externo";
-    filial.innerHTML=externo
-        ? '<option value="LAGOA">LAGOA</option><option value="MINISTRO">MINISTRO</option><option value="MATRIZ">MATRIZ</option>'
-        : '<option value="ST. AFONSO">ST. AFONSO</option>';
-    filial.disabled=!externo;
-    if(!externo) filial.value="ST. AFONSO";
-    else if(!FILIAIS_EXTERNAS.includes(String(filial.value||"").toUpperCase())) filial.value="MATRIZ";
-}
-
 // Retorna os perfis que já foram carregados do Firebase.
 function carregarUsuariosCadastrados(){
     return Object.keys(perfisUsuariosCache).map(function(uid){
@@ -6549,7 +5899,6 @@ function carregarUsuariosCadastrados(){
             tipo:p.tipo === "admin"
     ? "admin"
     : (p.tipo === "externo" ? "externo" : "usuario"),
-            filial:String(p.filial || "").trim().toUpperCase(),
             ativo:p.ativo !== false,
             criadoEm:p.criadoEm || null
         };
@@ -6576,11 +5925,6 @@ async function garantirPerfilFirebase(user){
     if(perfil){
         perfil.email=perfil.email || emailNormalizado(user.email);
         perfil.ativo=perfil.ativo !== false;
-
-        // A filial definida no Realtime Database é obrigatória e permanece como fonte oficial.
-        // Usuários antigos SEM filial não recebem uma filial automaticamente: precisam ser
-        // configurados no Firebase antes de conseguir entrar no sistema.
-        perfil.filial=String(perfil.filial || "").trim().toUpperCase();
         perfisUsuariosCache[uid]=perfil;
         return perfil;
     }
@@ -6594,8 +5938,6 @@ async function garantirPerfilFirebase(user){
         usuario:email,
         nome:user.displayName || email,
         tipo:tipo,
-        // Mesmo perfis criados automaticamente precisam receber filial no Firebase.
-        filial:"",
         ativo:true,
         criadoEm:firebase.database.ServerValue.TIMESTAMP
     };
@@ -6611,8 +5953,7 @@ function atualizarTelaUsuarioLogado(){
     if(texto){
         texto.innerText=(usuario && usuario.tipo === "admin" ? "👑 " : "👤 ")+
             ((usuario && (usuario.nome || usuario.usuario || usuario.email)) || "Usuário")+
-            (usuario && usuario.tipo === "admin" ? " (admin)" : "")+
-            (usuario && usuario.filial ? " — " + usuario.filial : "");
+            (usuario && usuario.tipo === "admin" ? " (admin)" : "");
     }
 
     const botaoAdmin=document.getElementById("btn-abrir-painel-admin");
@@ -6644,25 +5985,9 @@ async function concluirLoginFirebase(user,perfil){
     perfil.email=perfil.email||emailNormalizado(user.email);
     perfil.ativo=perfil.ativo!==false;
     if(perfil.ativo===false){await firebaseAuth.signOut().catch(function(){});mostrarErroLogin("Este usuário está bloqueado pelo administrador.");return false;}
-    const filialUsuario=normalizarFilialUsuario(perfil.tipo,perfil.filial);
-
-    // A filial é obrigatória no Realtime Database.
-    // Não cria, corrige ou substitui automaticamente a filial de usuários antigos.
-    if(!filialValidaParaPerfil(perfil.tipo,filialUsuario)){
-        await firebaseAuth.signOut().catch(function(){});
-        usuarioLogadoAtual=null;
-        const tipoDescricao=String(perfil.tipo||"").toLowerCase()==="externo" ?
-            "LAGOA, MINISTRO ou MATRIZ" : "ST. AFONSO";
-        mostrarErroLogin("Este usuário ainda não possui uma filial válida cadastrada no Firebase.\n\nCadastre em Realtime Database → perfisUsuarios → "+user.uid+" → filial.\n\nFilial permitida para este usuário: "+tipoDescricao+".");
-        return false;
-    }
-    perfil.filial=filialUsuario;
-
     usuarioLogadoAtual={uid:user.uid,usuario:perfil.usuario||perfil.nome||perfil.email||user.email,nome:perfil.nome||perfil.usuario||user.email,email:user.email||perfil.email,tipo:perfil.tipo === "admin"
     ? "admin"
-    : (perfil.tipo === "externo" ? "externo" : "usuario"),
-    filial:filialUsuario,
-    ativo:true};
+    : (perfil.tipo === "externo" ? "externo" : "usuario"),ativo:true};
     perfisUsuariosCache[user.uid]=perfil;
     if(typeof configurarNotificacoesOneSignal === "function"){
         await configurarNotificacoesOneSignal();
@@ -6776,8 +6101,7 @@ if(usuarioObjeto && usuarioObjeto.tipo === "externo"){
             (usuarioObjeto.nome ||
              usuarioObjeto.usuario ||
              usuarioObjeto.email ||
-             "Usuário externo") +
-            (usuarioObjeto.filial ? " — " + usuarioObjeto.filial : "");
+             "Usuário externo");
     }
 
     iniciarTelaUsuarioExterno();
@@ -6821,26 +6145,13 @@ if(usuarioObjeto && usuarioObjeto.tipo === "externo"){
     }
 }
 
-
-async function atualizarSistemaSemDeslogar(){
-    try{
-        // A autenticação usa Persistence.SESSION, portanto atualizar a página
-        // não encerra a sessão desta aba.
-        const usuarioAntes = firebaseAuth.currentUser;
-        if(!usuarioAntes){
-            window.location.reload();
-            return;
-        }
-        // Atualiza a página sem executar sairDoSistema(). O Firebase restaura
-        // automaticamente o usuário da sessão da aba após o reload.
-        window.location.reload();
-    }catch(erro){
-        console.error("Erro ao atualizar o sistema:",erro);
-        alert("Não foi possível atualizar o sistema.");
-    }
+function atualizarPaginaSemDeslogar(){
+    // O Firebase Authentication está usando Persistence.SESSION.
+    // Portanto, o recarregamento não encerra o login.
+    window.location.reload();
 }
 
-window.atualizarSistemaSemDeslogar = atualizarSistemaSemDeslogar;
+window.atualizarPaginaSemDeslogar = atualizarPaginaSemDeslogar;
 
 async function sairDoSistema(){
     try{
@@ -6930,11 +6241,9 @@ async function cadastrarUsuarioAdmin(){
     const campoUsuario=document.getElementById("admin-novo-usuario");
     const campoSenha=document.getElementById("admin-nova-senha");
     const campoTipo=document.getElementById("admin-novo-tipo");
-    const campoFilial=document.getElementById("admin-nova-filial");
     const novoUsuario=(campoUsuario ? campoUsuario.value : "").trim().toLowerCase();
     const novaSenha=campoSenha ? campoSenha.value : "";
-    const novoTipo=campoTipo ? (campoTipo.value === "externo" ? "externo" : (campoTipo.value === "admin" ? "admin" : "usuario")) : "usuario";
-    const novaFilial=normalizarFilialUsuario(novoTipo,campoFilial ? campoFilial.value : "");
+    const novoTipo=campoTipo && campoTipo.value === "admin" ? "admin" : "usuario";
 
     if(!novoUsuario){ mostrarErroAdminUsuarios("Informe o e-mail do novo usuário."); return; }
     if(!novoUsuario.includes("@")){ mostrarErroAdminUsuarios("Informe um e-mail válido."); return; }
@@ -6942,20 +6251,13 @@ async function cadastrarUsuarioAdmin(){
 
     try{
         const criarUsuario = firebaseFunctions.httpsCallable("criarUsuario");
-        await criarUsuario({email:novoUsuario, senha:novaSenha, tipo:novoTipo, filial:novaFilial});
+        await criarUsuario({email:novoUsuario, senha:novaSenha, tipo:novoTipo});
 
         await carregarPerfisUsuariosFirebase();
-        const perfilCriado=Object.keys(perfisUsuariosCache).map(function(uid){ return {uid:uid, perfil:perfisUsuariosCache[uid]}; }).find(function(reg){ return emailNormalizado(reg.perfil && reg.perfil.email) === novoUsuario; });
-        if(perfilCriado){
-            const filialCriada=novaFilial;
-            await firebaseDB.ref("perfisUsuarios/"+perfilCriado.uid+"/filial").set(filialCriada);
-            perfisUsuariosCache[perfilCriado.uid].filial=filialCriada;
-        }
         await renderizarUsuariosCadastradosAdmin();
         if(campoUsuario)campoUsuario.value="";
         if(campoSenha)campoSenha.value="";
         if(campoTipo)campoTipo.value="usuario";
-        atualizarOpcoesFilialNovoUsuario();
         alert("✅ Usuário criado no Firebase Authentication e no Realtime Database.");
     }catch(erro){
         console.error("Erro ao cadastrar usuário Firebase:",erro);
@@ -6988,8 +6290,8 @@ async function renderizarUsuariosCadastradosAdmin(){
         const status=item.ativo === false ? "🚫 Bloqueado" : "✅ Ativo";
         return '<div class="produto-item">'+
             '<strong>'+escaparHtmlSolicitacao(item.email || item.usuario)+'</strong> — '+
-            (item.tipo === "admin" ? "👑 Administrador" : (item.tipo === "externo" ? "🌐 Usuário externo" : "👤 Usuário comum"))+'<br>'+
-            '<span style="font-size:11px;color:var(--texto-fraco);">'+status+' • 🏢 Filial: '+(item.filial ? escaparHtmlSolicitacao(item.filial) : '<span style="color:#ffb300;font-weight:bold;">⚠️ NÃO CADASTRADA NO FIREBASE</span>')+'</span>'+
+            (item.tipo === "admin" ? "👑 Administrador" : "👤 Usuário comum")+'<br>'+
+            '<span style="font-size:11px;color:var(--texto-fraco);">'+status+'</span>'+
             '<div class="acoes-item">'+
             '<button class="btn-acao" onclick="redefinirSenhaUsuarioAdmin('+index+')" title="Enviar redefinição de senha">🔑</button>'+
             '<button class="btn-acao" onclick="alternarBloqueioUsuarioAdmin('+index+')" title="Bloquear/ativar usuário">'+(item.ativo === false ? "🔓" : "🚫")+'</button>'+
@@ -8274,9 +7576,6 @@ async function enviarSolicitacaoMercadoria(){
         tipoUsuario:
             tipoUsuarioPedido,
 
-        filial:
-            usuarioLogadoAtual.filial || "NÃO CADASTRADA",
-
         solicitanteUid:
             firebaseAuth.currentUser.uid,
 
@@ -8883,26 +8182,38 @@ window.atualizarIndicadorAdmin = atualizarIndicadorAdmin;
 // INICIALIZAÇÃO DA AUTENTICAÇÃO
 // ======================================================
 // O Firebase Authentication usa persistência SESSION.
-// A sessão fica vinculada à aba atual: permanece ao atualizar a página,
-// mas é encerrada quando a sessão da aba é finalizada.
-// O botão Atualizar nunca chama sairDoSistema().
+// O login permanece durante atualizações da página, mas a sessão da aba é encerrada ao fechá-la.
+// A configuração é concluída antes de registrar o listener de autenticação.
 async function configurarAutenticacaoSessao(){
     try{
         await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+        // A persistência SESSION mantém o login durante atualizações da página,
+        // mas a sessão é encerrada quando a aba/janela é fechada.
     }catch(erro){
-        console.error("Erro ao configurar autenticação de sessão:",erro);
+        console.error("Erro ao configurar autenticação sem persistência:",erro);
     }
 }
 
 async function iniciarAutenticacao(){
-    try{await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION);}catch(e){console.error("Erro ao configurar autenticação de sessão:",e);}
-    firebaseAuth.onAuthStateChanged(function(user){
+    try{await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION);}catch(e){console.error("Erro ao configurar autenticação sem persistência:",e);}
+    firebaseAuth.onAuthStateChanged(async function(user){
         if(!user){
             document.body.classList.remove("usuario-admin");
             usuarioLogadoAtual=null;perfisUsuariosCache={};desligarListenersFirebase();
             const app=document.getElementById("app-principal"),login=document.getElementById("tela-login");
             if(app){app.classList.remove("app-visivel");app.style.display="none";}
+            const externo=document.getElementById("app-externo");
+            if(externo){externo.style.display="none";}
             if(login){login.classList.remove("login-oculta");login.style.display="flex";}
+            return;
+        }
+
+        // Ao atualizar a página, o Firebase restaura a sessão da aba.
+        // Reentra automaticamente no aplicativo sem exigir novo login.
+        try{
+            await verificarAutenticacao(user);
+        }catch(e){
+            console.error("Erro ao restaurar sessão após atualização:",e);
         }
     });
 }
