@@ -1809,7 +1809,7 @@ function renderizarSolicitacoesRecebidasComum(){
             '<strong>🏢 Fornecedor:</strong> '+escaparHtmlSolicitacao(item.fornecedor||"—")+'<br>'+
             '<strong>👤 Solicitante:</strong> '+escaparHtmlSolicitacao(solicitante)+'<br>'+
             '<strong>👥 Tipo:</strong> '+escaparHtmlSolicitacao(item.tipoUsuario||"—")+'<br>'+
-            '<strong>🏢 Filial:</strong> '+escaparHtmlSolicitacao(item.filial || (String(item.tipoUsuario||"").toLowerCase()==="externo" ? "FILIAL 02 - EXTERNA" : "FILIAL 01 - INTERNA"))+'<br>'+
+            '<strong>🏢 Filial:</strong> '+escaparHtmlSolicitacao(item.filial || "NÃO CADASTRADA")+'<br>'+
             '<strong>🔢 Quantidade:</strong> '+escaparHtmlSolicitacao(item.quantidadeSolicitada ?? "—")+'<br>'+
             '<strong>⚖️ Peso:</strong> '+escaparHtmlSolicitacao(item.pesoSolicitado ?? "—")+' KG<br>'+
             '<strong>🧾 NF:</strong> '+escaparHtmlSolicitacao(nf)+'<br>'+
@@ -2297,7 +2297,7 @@ async function solicitarAlteracaoAdmin(tipo, dados, descricao){
         dados: dados,
         operador: operadorAtual(),
         operadorUid: firebaseAuth.currentUser.uid,
-        filial: (usuarioLogadoAtual && usuarioLogadoAtual.filial) || "FILIAL 01 - INTERNA",
+        filial: (usuarioLogadoAtual && usuarioLogadoAtual.filial) || "NÃO CADASTRADA",
         data: new Date().toISOString(),
         status: "pendente"
     };
@@ -4957,7 +4957,7 @@ const item={
     codigo:codigo || produtoCadastrado.codigo || "",
     lote:lote,
     validade:validade,
-    filial:(usuarioLogadoAtual && usuarioLogadoAtual.filial) || (usuarioEhAdmin() ? "FILIAL 01 - INTERNA" : "FILIAL 01 - INTERNA"),
+    filial:(usuarioLogadoAtual && usuarioLogadoAtual.filial) || "NÃO CADASTRADA",
     qtd:Number(qtd),
     kg:Number(kg),
     peso:Number(peso)
@@ -6487,12 +6487,23 @@ function esconderErroAdminUsuarios(){
 const FILIAIS_EXTERNAS = ["LAGOA","MINISTRO","MATRIZ"];
 
 function normalizarFilialUsuario(tipo, filialAtual){
+    // A filial cadastrada no Realtime Database é obrigatória e é a fonte oficial.
+    // NÃO atribui filial automaticamente para usuários antigos.
     const tipoNormalizado=String(tipo||"").trim().toLowerCase();
+    const f=String(filialAtual||"").trim().toUpperCase();
     if(tipoNormalizado === "externo" || tipoNormalizado === "usuario externo" || tipoNormalizado === "usuário externo"){
-        const f=String(filialAtual||"").trim().toUpperCase();
-        return FILIAIS_EXTERNAS.includes(f) ? f : "MATRIZ";
+        return FILIAIS_EXTERNAS.includes(f) ? f : "";
     }
-    return "ST. AFONSO";
+    return f === "ST. AFONSO" ? "ST. AFONSO" : "";
+}
+
+function filialValidaParaPerfil(tipo, filial){
+    const tipoNormalizado=String(tipo||"").trim().toLowerCase();
+    const f=String(filial||"").trim().toUpperCase();
+    if(tipoNormalizado === "externo" || tipoNormalizado === "usuario externo" || tipoNormalizado === "usuário externo"){
+        return FILIAIS_EXTERNAS.includes(f);
+    }
+    return f === "ST. AFONSO";
 }
 
 function atualizarOpcoesFilialNovoUsuario(){
@@ -6520,7 +6531,7 @@ function carregarUsuariosCadastrados(){
             tipo:p.tipo === "admin"
     ? "admin"
     : (p.tipo === "externo" ? "externo" : "usuario"),
-            filial:normalizarFilialUsuario(p.tipo,p.filial),
+            filial:String(p.filial || "").trim().toUpperCase(),
             ativo:p.ativo !== false,
             criadoEm:p.criadoEm || null
         };
@@ -6548,18 +6559,11 @@ async function garantirPerfilFirebase(user){
         perfil.email=perfil.email || emailNormalizado(user.email);
         perfil.ativo=perfil.ativo !== false;
 
-        // A filial definida no Realtime Database passa a ser a fonte oficial.
-        // Se ainda não existir, cria a filial padrão conforme o tipo.
-        const filialNormalizada=normalizarFilialUsuario(perfil.tipo,perfil.filial);
-        const precisaGravarFilial=String(perfil.filial || "").trim().toUpperCase() !== filialNormalizada;
-        perfil.filial=filialNormalizada;
-
+        // A filial definida no Realtime Database é obrigatória e permanece como fonte oficial.
+        // Usuários antigos SEM filial não recebem uma filial automaticamente: precisam ser
+        // configurados no Firebase antes de conseguir entrar no sistema.
+        perfil.filial=String(perfil.filial || "").trim().toUpperCase();
         perfisUsuariosCache[uid]=perfil;
-
-        if(precisaGravarFilial){
-            await firebaseDB.ref("perfisUsuarios/"+uid+"/filial").set(filialNormalizada);
-        }
-
         return perfil;
     }
 
@@ -6572,7 +6576,8 @@ async function garantirPerfilFirebase(user){
         usuario:email,
         nome:user.displayName || email,
         tipo:tipo,
-        filial:tipo === "externo" ? "MATRIZ" : "ST. AFONSO",
+        // Mesmo perfis criados automaticamente precisam receber filial no Firebase.
+        filial:"",
         ativo:true,
         criadoEm:firebase.database.ServerValue.TIMESTAMP
     };
@@ -6623,13 +6628,17 @@ async function concluirLoginFirebase(user,perfil){
     if(perfil.ativo===false){await firebaseAuth.signOut().catch(function(){});mostrarErroLogin("Este usuário está bloqueado pelo administrador.");return false;}
     const filialUsuario=normalizarFilialUsuario(perfil.tipo,perfil.filial);
 
-    // Mantém a filial do perfil sincronizada no Firebase a cada login.
-    // Admin e usuário comum = ST. AFONSO.
-    // Externo = LAGOA, MINISTRO ou MATRIZ.
-    if(String(perfil.filial || "").trim().toUpperCase() !== filialUsuario){
-        await firebaseDB.ref("perfisUsuarios/"+user.uid+"/filial").set(filialUsuario);
-        perfil.filial=filialUsuario;
+    // A filial é obrigatória no Realtime Database.
+    // Não cria, corrige ou substitui automaticamente a filial de usuários antigos.
+    if(!filialValidaParaPerfil(perfil.tipo,filialUsuario)){
+        await firebaseAuth.signOut().catch(function(){});
+        usuarioLogadoAtual=null;
+        const tipoDescricao=String(perfil.tipo||"").toLowerCase()==="externo" ?
+            "LAGOA, MINISTRO ou MATRIZ" : "ST. AFONSO";
+        mostrarErroLogin("Este usuário ainda não possui uma filial válida cadastrada no Firebase.\n\nCadastre em Realtime Database → perfisUsuarios → "+user.uid+" → filial.\n\nFilial permitida para este usuário: "+tipoDescricao+".");
+        return false;
     }
+    perfil.filial=filialUsuario;
 
     usuarioLogadoAtual={uid:user.uid,usuario:perfil.usuario||perfil.nome||perfil.email||user.email,nome:perfil.nome||perfil.usuario||user.email,email:user.email||perfil.email,tipo:perfil.tipo === "admin"
     ? "admin"
@@ -6941,7 +6950,7 @@ async function renderizarUsuariosCadastradosAdmin(){
         return '<div class="produto-item">'+
             '<strong>'+escaparHtmlSolicitacao(item.email || item.usuario)+'</strong> — '+
             (item.tipo === "admin" ? "👑 Administrador" : (item.tipo === "externo" ? "🌐 Usuário externo" : "👤 Usuário comum"))+'<br>'+
-            '<span style="font-size:11px;color:var(--texto-fraco);">'+status+' • 🏢 Filial: '+escaparHtmlSolicitacao(item.filial)+'</span>'+
+            '<span style="font-size:11px;color:var(--texto-fraco);">'+status+' • 🏢 Filial: '+(item.filial ? escaparHtmlSolicitacao(item.filial) : '<span style="color:#ffb300;font-weight:bold;">⚠️ NÃO CADASTRADA NO FIREBASE</span>')+'</span>'+
             '<div class="acoes-item">'+
             '<button class="btn-acao" onclick="redefinirSenhaUsuarioAdmin('+index+')" title="Enviar redefinição de senha">🔑</button>'+
             '<button class="btn-acao" onclick="alternarBloqueioUsuarioAdmin('+index+')" title="Bloquear/ativar usuário">'+(item.ativo === false ? "🔓" : "🚫")+'</button>'+
@@ -8227,7 +8236,7 @@ async function enviarSolicitacaoMercadoria(){
             tipoUsuarioPedido,
 
         filial:
-            usuarioLogadoAtual.filial || (tipoUsuarioPedido === "externo" ? "FILIAL 02 - EXTERNA" : "FILIAL 01 - INTERNA"),
+            usuarioLogadoAtual.filial || "NÃO CADASTRADA",
 
         solicitanteUid:
             firebaseAuth.currentUser.uid,
