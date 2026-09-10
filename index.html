@@ -1111,8 +1111,8 @@ firebase.initializeApp(firebaseConfig);
 const firebaseAuth = firebase.auth();
 const firebaseDB = firebase.database();
 const firebaseFunctions = firebase.functions();
-// A sessão não fica persistida entre recarregamentos/aberturas.
-// A função configurarAutenticacaoSessao() confirma isso antes do login.
+// A sessão usa persistência SESSION: permanece ao atualizar a página na mesma aba
+// e é encerrada quando a sessão/aba é finalizada.
 console.log("🔥 Firebase conectado!");
 </script>
 <style id="ajuste-layout-admin-final">
@@ -2075,8 +2075,183 @@ body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-form{
 }
 </style>
 
+
+<style id="correcao-padrao-compacto-comum-admin-externo">
+/* PADRÃO FINAL DO REGISTRO — IGUAL PARA COMUM, ADMIN E EXTERNO */
+.painel-entrada {
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+    overflow:hidden !important;
+}
+.painel-entrada .linha-form {
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+    gap:7px !important;
+}
+.painel-entrada .campo {
+    min-width:0 !important;
+    width:auto !important;
+    max-width:100% !important;
+    box-sizing:border-box !important;
+}
+.painel-entrada input,
+.painel-entrada select {
+    width:100% !important;
+    min-width:0 !important;
+    max-width:100% !important;
+    height:27px !important;
+    min-height:27px !important;
+    box-sizing:border-box !important;
+    padding:3px 6px !important;
+    margin:2px 0 3px !important;
+    font-size:12px !important;
+}
+.painel-entrada label {
+    font-size:11px !important;
+    line-height:1.1 !important;
+    margin-bottom:1px !important;
+}
+/* Desktop: medidas fixas e compactas, iguais ao padrão aprovado do admin. */
+.painel-entrada .linha-identificacao {
+    grid-template-columns:125px 105px 260px 220px !important;
+    width:max-content !important;
+    max-width:100% !important;
+}
+.painel-entrada .linha-produto {
+    grid-template-columns:125px 430px 260px !important;
+    width:max-content !important;
+    max-width:100% !important;
+}
+.painel-entrada .linha-quantidade {
+    grid-template-columns:100px 115px 130px 160px !important;
+    width:max-content !important;
+    max-width:100% !important;
+}
+.painel-entrada .container-botoes {
+    display:flex !important;
+    flex-wrap:wrap !important;
+    gap:7px !important;
+    margin-top:7px !important;
+    padding-top:8px !important;
+}
+.painel-entrada .container-botoes button {
+    padding:7px 11px !important;
+    min-height:31px !important;
+    font-size:12px !important;
+}
+/* Notebook/janela menor: mesma estrutura, duas colunas, sem rolagem horizontal. */
+@media (max-width:1100px) {
+    .painel-entrada .linha-identificacao,
+    .painel-entrada .linha-produto,
+    .painel-entrada .linha-quantidade {
+        width:100% !important;
+        max-width:100% !important;
+    }
+    .painel-entrada .linha-identificacao {
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    }
+    .painel-entrada .linha-produto {
+        grid-template-columns:minmax(0,1fr) minmax(0,1.45fr) !important;
+    }
+    .painel-entrada .linha-produto .campo:nth-child(3) {
+        grid-column:1 / -1 !important;
+    }
+    .painel-entrada .linha-quantidade {
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    }
+}
+/* Celular: exatamente o mesmo desenho do admin, só reduzido para caber na tela. */
+@media (max-width:700px) {
+    .painel-entrada {
+        padding:10px !important;
+        width:100% !important;
+        max-width:100% !important;
+        overflow:hidden !important;
+    }
+    .painel-entrada .linha-form {
+        width:100% !important;
+        gap:5px !important;
+        margin-bottom:4px !important;
+    }
+    .painel-entrada .linha-identificacao,
+    .painel-entrada .linha-produto,
+    .painel-entrada .linha-quantidade {
+        width:100% !important;
+        max-width:100% !important;
+        min-width:0 !important;
+    }
+    .painel-entrada .linha-identificacao {
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    }
+    .painel-entrada .linha-produto {
+        grid-template-columns:minmax(0,1fr) minmax(0,1.35fr) !important;
+    }
+    .painel-entrada .linha-produto .campo:nth-child(3) {
+        grid-column:1 / -1 !important;
+    }
+    .painel-entrada .linha-quantidade {
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    }
+    .painel-entrada .campo,
+    .painel-entrada input,
+    .painel-entrada select {
+        min-width:0 !important;
+        max-width:100% !important;
+    }
+    .painel-entrada label {
+        font-size:9.5px !important;
+    }
+    .painel-entrada input,
+    .painel-entrada select {
+        height:25px !important;
+        min-height:25px !important;
+        font-size:11px !important;
+        padding:2px 5px !important;
+        margin:1px 0 2px !important;
+    }
+    .painel-entrada .container-botoes {
+        gap:4px !important;
+        padding-top:6px !important;
+        margin-top:4px !important;
+    }
+    .painel-entrada .container-botoes button {
+        flex:1 1 0 !important;
+        min-width:0 !important;
+        padding:6px 5px !important;
+        min-height:28px !important;
+        font-size:10px !important;
+    }
+}
+@media (max-width:380px) {
+    .painel-entrada { padding:8px !important; }
+    .painel-entrada .linha-form { gap:4px !important; }
+    .painel-entrada label { font-size:9px !important; }
+    .painel-entrada input, .painel-entrada select {
+        height:24px !important; min-height:24px !important; font-size:10.5px !important;
+    }
+    .painel-entrada .container-botoes button { font-size:9.5px !important; padding:5px 4px !important; }
+}
+</style>
+
+<style id="ajuste-login-sem-flicker">
+/* Evita que a tela de login apareça durante a restauração da sessão Firebase. */
+body.auth-carregando #tela-login{
+    opacity:0 !important;
+    visibility:hidden !important;
+    pointer-events:none !important;
+}
+body.auth-carregando #app-principal,
+body.auth-carregando #app-externo{
+    visibility:hidden !important;
+}
+#tela-login{transition:opacity .08s ease;}
+</style>
 </head>
-<body>
+<body class="auth-carregando">
 <!-- TELA DE LOGIN -->
 <div class="tela-login" id="tela-login">
 <div class="cartao-login">
@@ -9752,26 +9927,50 @@ async function configurarAutenticacaoSessao(){
 }
 
 async function iniciarAutenticacao(){
-    try{await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION);}catch(e){console.error("Erro ao configurar autenticação de sessão:",e);}
+    try{
+        await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+    }catch(e){
+        console.error("Erro ao configurar autenticação de sessão:",e);
+    }
+
+    let primeiraRespostaAuth=true;
+
     firebaseAuth.onAuthStateChanged(function(user){
+        // Durante a restauração da sessão, a tela de login permanece invisível.
+        // Só mostramos o login depois que o Firebase confirmar que não existe
+        // uma sessão válida. Assim, o botão 🔄 Atualizar não causa nenhum
+        // "pisca" ou atraso visual da tela de login.
         if(!user){
             document.body.classList.remove("usuario-admin");
-            usuarioLogadoAtual=null;perfisUsuariosCache={};desligarListenersFirebase();
+            usuarioLogadoAtual=null;
+            perfisUsuariosCache={};
+            desligarListenersFirebase();
             const app=document.getElementById("app-principal"),login=document.getElementById("tela-login");
             if(app){app.classList.remove("app-visivel");app.style.display="none";}
             const appExterno=document.getElementById("app-externo");
             if(appExterno){appExterno.style.display="none";}
-            if(login){login.classList.remove("login-oculta");login.style.display="flex";}
+            if(login){
+                login.classList.remove("login-oculta");
+                login.style.display="flex";
+            }
+            document.body.classList.remove("auth-carregando");
+            primeiraRespostaAuth=false;
             return;
         }
 
         // Depois de um F5, da seta do navegador ou do botão 🔄 Atualizar,
-        // o Firebase restaura o usuário da sessão desta aba. Reabre o app
-        // diretamente em vez de mostrar a tela de login.
+        // o Firebase restaura o usuário da sessão desta aba. O login continua
+        // invisível enquanto o perfil é carregado e o app é reaberto diretamente.
         if(!usuarioLogadoAtual || usuarioLogadoAtual.uid !== user.uid){
             verificarAutenticacao(user).catch(function(erro){
                 console.error("Erro ao restaurar sessão após atualização:",erro);
+            }).finally(function(){
+                document.body.classList.remove("auth-carregando");
+                primeiraRespostaAuth=false;
             });
+        }else{
+            document.body.classList.remove("auth-carregando");
+            primeiraRespostaAuth=false;
         }
     });
 }
