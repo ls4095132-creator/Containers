@@ -1045,7 +1045,6 @@ button:disabled {
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx-js-style.js"></script>
 <script>
 const firebaseConfig = {
     apiKey: "AIzaSyB7nueKFNhlXRNg5aOH-JknVcmF5Eihawc",
@@ -5979,198 +5978,218 @@ function criarResumoExcel(rows,cfg){
     return saida;
 }
 
+function excelXmlEscapar(valor){
+    return String(valor ?? "")
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&apos;");
+}
+
+function excelColunaLetra(numero){
+    let n=numero+1, texto="";
+    while(n>0){
+        const resto=(n-1)%26;
+        texto=String.fromCharCode(65+resto)+texto;
+        n=Math.floor((n-1)/26);
+    }
+    return texto;
+}
+
+function excelValorNumerico(valor){
+    if(typeof valor==='number' && Number.isFinite(valor)) return valor;
+    const texto=String(valor ?? "").trim();
+    if(!texto) return null;
+    if(/^[-+]?\d+(?:[.,]\d+)?$/.test(texto)){
+        const n=Number(texto.replace(',','.'));
+        return Number.isFinite(n) ? n : null;
+    }
+    return null;
+}
+
+function excelCelulaXml(linha,coluna,valor,estilo){
+    const ref=excelColunaLetra(coluna)+linha;
+    const numero=excelValorNumerico(valor);
+    if(numero!==null){
+        return '<c r="'+ref+'" s="'+estilo+'"><v>'+numero+'</v></c>';
+    }
+    return '<c r="'+ref+'" t="inlineStr" s="'+estilo+'"><is><t xml:space="preserve">'+excelXmlEscapar(valor)+'</t></is></c>';
+}
+
+function excelWorksheetXml(dados){
+    const ultimaColuna=excelColunaLetra(Math.max(0,dados[0].length-1));
+    const ultimaLinha=dados.length;
+    let xml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+    xml+='<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';
+    xml+='<dimension ref="A1:'+ultimaColuna+ultimaLinha+'"/>';
+    xml+='<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A2" sqref="A2"/></sheetView></sheetViews>';
+    xml+='<sheetFormatPr defaultRowHeight="20"/>';
+    xml+='<cols>';
+    for(let c=0;c<dados[0].length;c++){
+        let maior=String(dados[0][c]??"").length;
+        for(let r=1;r<dados.length;r++) maior=Math.max(maior,String(dados[r][c]??"").length);
+        const largura=Math.min(Math.max(maior+2,12),42);
+        xml+='<col min="'+(c+1)+'" max="'+(c+1)+'" width="'+largura+'" customWidth="1"/>';
+    }
+    xml+='</cols><sheetData>';
+    for(let r=0;r<dados.length;r++){
+        xml+='<row r="'+(r+1)+'" ht="'+(r===0?24:20)+'">';
+        for(let c=0;c<dados[r].length;c++){
+            xml+=excelCelulaXml(r+1,c,dados[r][c],r===0?1:(r%2===1?2:3));
+        }
+        xml+='</row>';
+    }
+    xml+='</sheetData>';
+    xml+='<autoFilter ref="A1:'+ultimaColuna+ultimaLinha+'"/>';
+    xml+='<pageMargins left="0.25" right="0.25" top="0.5" bottom="0.5" header="0.2" footer="0.2"/>';
+    xml+='</worksheet>';
+    return xml;
+}
+
+function excelStylesXml(){
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'+
+    '<numFmts count="0"/>'+
+    '<fonts count="2">'+
+      '<font><sz val="11"/><name val="Calibri"/></font>'+
+      '<font><b/><color rgb="FFFFFFFF"/><sz val="11"/><name val="Calibri"/></font>'+
+    '</fonts>'+
+    '<fills count="5">'+
+      '<fill><patternFill patternType="none"/></fill>'+
+      '<fill><patternFill patternType="gray125"/></fill>'+
+      '<fill><patternFill patternType="solid"><fgColor rgb="FF4F81BD"/><bgColor indexed="64"/></patternFill></fill>'+
+      '<fill><patternFill patternType="solid"><fgColor rgb="FFB8CCE4"/><bgColor indexed="64"/></patternFill></fill>'+
+      '<fill><patternFill patternType="solid"><fgColor rgb="FFDCE6F1"/><bgColor indexed="64"/></patternFill></fill>'+
+    '</fills>'+
+    '<borders count="2">'+
+      '<border><left/><right/><top/><bottom/><diagonal/></border>'+
+      '<border><left style="thin"><color rgb="FFD9E2F3"/></left><right style="thin"><color rgb="FFD9E2F3"/></right><top/><bottom style="thin"><color rgb="FFD9E2F3"/></bottom><diagonal/></border>'+
+    '</borders>'+
+    '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'+
+    '<cellXfs count="4">'+
+      '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" applyAlignment="1"><alignment vertical="center"/></xf>'+
+      '<xf numFmtId="0" fontId="1" fillId="2" borderId="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>'+
+      '<xf numFmtId="0" fontId="0" fillId="3" borderId="1" applyAlignment="1"><alignment vertical="center"/></xf>'+
+      '<xf numFmtId="0" fontId="0" fillId="4" borderId="1" applyAlignment="1"><alignment vertical="center"/></xf>'+
+    '</cellXfs>'+
+    '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'+
+    '</styleSheet>';
+}
+
+function excelContentTypesXml(numeroAbas){
+    let xml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+    xml+='<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">';
+    xml+='<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>';
+    xml+='<Default Extension="xml" ContentType="application/xml"/>';
+    xml+='<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>';
+    xml+='<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>';
+    for(let i=1;i<=numeroAbas;i++) xml+='<Override PartName="/xl/worksheets/sheet'+i+'.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';
+    xml+='<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>';
+    xml+='<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>';
+    return xml+'</Types>';
+}
+
+function excelWorkbookXml(nomesAbas){
+    let xml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+    xml+='<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">';
+    xml+='<bookViews><workbookView xWindow="0" yWindow="0" windowWidth="18000" windowHeight="12000"/></bookViews><sheets>';
+    nomesAbas.forEach(function(nome,i){xml+='<sheet name="'+excelXmlEscapar(nome)+'" sheetId="'+(i+1)+'" r:id="rId'+(i+1)+'"/>';});
+    return xml+'</sheets></workbook>';
+}
+
+function excelWorkbookRelsXml(numeroAbas){
+    let xml='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+    xml+='<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">';
+    for(let i=1;i<=numeroAbas;i++) xml+='<Relationship Id="rId'+i+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet'+i+'.xml"/>';
+    xml+='<Relationship Id="rId'+(numeroAbas+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>';
+    return xml+'</Relationships>';
+}
+
+function excelRootRelsXml(){
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'+
+    '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>'+
+    '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>'+
+    '</Relationships>';
+}
+
+function excelCoreXml(){
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'+
+    '<dc:title>Controle de Containers</dc:title><dc:creator>Controle de Containers</dc:creator><cp:lastModifiedBy>Controle de Containers</cp:lastModifiedBy></cp:coreProperties>';
+}
+
+function excelAppXml(numeroAbas){
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">'+
+    '<Application>Controle de Containers</Application><DocSecurity>0</DocSecurity><ScaleCrop>false</ScaleCrop><HeadingPairs><vt:vector size="2" baseType="variant"><vt:variant><vt:lpstr>Worksheets</vt:lpstr></vt:variant><vt:variant><vt:i4>'+numeroAbas+'</vt:i4></vt:variant></vt:vector></HeadingPairs></Properties>';
+}
+
+function excelCrc32(bytes){
+    let crc=0xFFFFFFFF;
+    for(let i=0;i<bytes.length;i++){
+        crc^=bytes[i];
+        for(let j=0;j<8;j++) crc=(crc>>>1)^((crc&1)?0xEDB88320:0);
+    }
+    return (crc^0xFFFFFFFF)>>>0;
+}
+
+function excelU16(n){return new Uint8Array([n&255,(n>>>8)&255]);}
+function excelU32(n){return new Uint8Array([n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255]);}
+function excelConcatArrays(arrays){
+    let total=0; arrays.forEach(a=>total+=a.length);
+    const out=new Uint8Array(total); let pos=0;
+    arrays.forEach(a=>{out.set(a,pos);pos+=a.length;}); return out;
+}
+
+function excelCriarZip(arquivos){
+    const encoder=new TextEncoder();
+    const locais=[],centrais=[]; let offset=0;
+    arquivos.forEach(function(arq){
+        const nome=encoder.encode(arq.nome), dados=encoder.encode(arq.conteudo), crc=excelCrc32(dados);
+        const cab=excelConcatArrays([
+            new Uint8Array([0x50,0x4b,0x03,0x04]),excelU16(20),excelU16(0x0800),excelU16(0),excelU16(0),excelU16(0),excelU32(crc),excelU32(dados.length),excelU32(dados.length),excelU16(nome.length),excelU16(0),nome,dados
+        ]);
+        locais.push(cab);
+        const central=excelConcatArrays([
+            new Uint8Array([0x50,0x4b,0x01,0x02]),excelU16(20),excelU16(20),excelU16(0x0800),excelU16(0),excelU16(0),excelU16(0),excelU32(crc),excelU32(dados.length),excelU32(dados.length),excelU16(nome.length),excelU16(0),excelU16(0),excelU16(0),excelU16(0),excelU32(0),excelU32(offset),nome
+        ]);
+        centrais.push(central); offset+=cab.length;
+    });
+    const corpo=excelConcatArrays(locais), centralDir=excelConcatArrays(centrais);
+    const fim=excelConcatArrays([
+        new Uint8Array([0x50,0x4b,0x05,0x06]),new Uint8Array(6),excelU16(centrais.length),excelU16(centrais.length),excelU32(centralDir.length),excelU32(corpo.length),excelU16(0)
+    ]);
+    return new Blob([corpo,centralDir,fim],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+
 function exportarTabelaExcel(headers,rows,nomeArquivo,nomeAba,configuracao){
-
-    if(typeof XLSX==="undefined"){
-        alert("❌ O módulo Excel não foi carregado. Atualize a página e tente novamente.");
-        return;
-    }
-
-    configuracao=configuracao || {};
-
-    const dados=[headers].concat(
-        rows.map(function(row){
-            return row.map(escaparValorExcel);
-        })
-    );
-
-    const ws=XLSX.utils.aoa_to_sheet(dados);
-
-    if(dados.length>1){
-
-        const ultimaColuna=XLSX.utils.encode_col(
-            headers.length-1
-        );
-
-        ws["!autofilter"]={
-            ref:"A1:"+ultimaColuna+dados.length
-        };
-
-        ws["!freeze"]={
-            xSplit:0,
-            ySplit:1
-        };
-
-        ws["!cols"]=headers.map(function(_,coluna){
-
-            let maior=String(
-                headers[coluna] || ""
-            ).length;
-
-            for(let i=1;i<dados.length;i++){
-                maior=Math.max(
-                    maior,
-                    String(dados[i][coluna] ?? "").length
-                );
-            }
-
-            return {
-                wch:Math.min(
-                    Math.max(maior+2,12),
-                    42
-                )
-            };
-        });
-
-        // ======================================================
-        // PADRÃO VISUAL DO EXCEL
-        // Mesmo layout para Admin, Usuário Comum e Externo.
-        // ======================================================
-        const estiloCabecalho={
-            font:{bold:true,color:{rgb:"FFFFFF"}},
-            fill:{patternType:"solid",fgColor:{rgb:"4F81BD"}},
-            alignment:{horizontal:"center",vertical:"center",wrapText:true},
-            border:{
-                top:{style:"thin",color:{rgb:"FFFFFF"}},
-                bottom:{style:"thin",color:{rgb:"FFFFFF"}},
-                left:{style:"thin",color:{rgb:"FFFFFF"}},
-                right:{style:"thin",color:{rgb:"FFFFFF"}}
-            }
-        };
-
-        const estiloLinhaPar={
-            fill:{patternType:"solid",fgColor:{rgb:"B8CCE4"}},
-            alignment:{vertical:"center"},
-            border:{
-                bottom:{style:"thin",color:{rgb:"D9E2F3"}},
-                right:{style:"thin",color:{rgb:"D9E2F3"}}
-            }
-        };
-
-        const estiloLinhaImpar={
-            fill:{patternType:"solid",fgColor:{rgb:"DCE6F1"}},
-            alignment:{vertical:"center"},
-            border:{
-                bottom:{style:"thin",color:{rgb:"D9E2F3"}},
-                right:{style:"thin",color:{rgb:"D9E2F3"}}
-            }
-        };
-
-        headers.forEach(function(_,coluna){
-            const celula=XLSX.utils.encode_cell({r:0,c:coluna});
-            if(ws[celula]) ws[celula].s=estiloCabecalho;
-        });
-
-        for(let linha=1;linha<dados.length;linha++){
-            for(let coluna=0;coluna<headers.length;coluna++){
-                const celula=XLSX.utils.encode_cell({r:linha,c:coluna});
-                if(ws[celula]) ws[celula].s=(linha%2===1)?estiloLinhaPar:estiloLinhaImpar;
-            }
-        }
-
-        ws["!rows"]=[{hpt:24}];
-        for(let linha=1;linha<dados.length;linha++) ws["!rows"].push({hpt:20});
-    }
-
-    const wb=XLSX.utils.book_new();
-
-    XLSX.utils.book_append_sheet(
-        wb,
-        ws,
-        String(nomeAba || "Dados").slice(0,31)
-    );
-
-    // Aba complementar com agrupamento estilo tabela dinâmica.
+    configuracao=configuracao||{};
+    if(!Array.isArray(headers)||!headers.length){alert('Não existem colunas para exportar.');return;}
+    rows=Array.isArray(rows)?rows:[];
+    const dados=[headers].concat(rows.map(function(row){return headers.map(function(_,i){return escaparValorExcel(row[i]);});}));
+    const abas=[{nome:String(nomeAba||'Dados').slice(0,31),dados:dados}];
     if(configuracao.resumo){
-
-        const resumo=criarResumoExcel(
-            rows,
-            configuracao.resumo
-        );
-
-        if(resumo.length>1){
-
-            const wsResumo=XLSX.utils.aoa_to_sheet(resumo);
-
-            const ultimaColunaResumo=XLSX.utils.encode_col(
-                resumo[0].length-1
-            );
-
-            wsResumo["!autofilter"]={
-                ref:"A1:"+ultimaColunaResumo+resumo.length
-            };
-
-            wsResumo["!freeze"]={
-                xSplit:0,
-                ySplit:1
-            };
-
-            wsResumo["!cols"]=resumo[0].map(function(_,coluna){
-
-                let maior=String(
-                    resumo[0][coluna] || ""
-                ).length;
-
-                for(let i=1;i<resumo.length;i++){
-                    maior=Math.max(
-                        maior,
-                        String(resumo[i][coluna] ?? "").length
-                    );
-                }
-
-                return {
-                    wch:Math.min(
-                        Math.max(maior+2,14),
-                        38
-                    )
-                };
-            });
-
-            // Mesmo padrão visual da planilha principal.
-            resumo[0].forEach(function(_,coluna){
-                const celula=XLSX.utils.encode_cell({r:0,c:coluna});
-                if(wsResumo[celula]) wsResumo[celula].s={
-                    font:{bold:true,color:{rgb:"FFFFFF"}},
-                    fill:{patternType:"solid",fgColor:{rgb:"4F81BD"}},
-                    alignment:{horizontal:"center",vertical:"center"}
-                };
-            });
-
-            for(let linha=1;linha<resumo.length;linha++){
-                for(let coluna=0;coluna<resumo[0].length;coluna++){
-                    const celula=XLSX.utils.encode_cell({r:linha,c:coluna});
-                    if(wsResumo[celula]) wsResumo[celula].s={
-                        fill:{patternType:"solid",fgColor:{rgb:(linha%2===1)?"B8CCE4":"DCE6F1"}},
-                        border:{bottom:{style:"thin",color:{rgb:"D9E2F3"}}}
-                    };
-                }
-            }
-            wsResumo["!rows"]=[{hpt:24}];
-            for(let linha=1;linha<resumo.length;linha++) wsResumo["!rows"].push({hpt:20});
-
-            XLSX.utils.book_append_sheet(
-                wb,
-                wsResumo,
-                "Resumo Dinâmico"
-            );
-        }
+        const resumo=criarResumoExcel(rows,configuracao.resumo);
+        if(resumo.length>1) abas.push({nome:'Resumo Dinâmico',dados:resumo});
     }
-
-    const nomeFinal=String(
-        nomeArquivo || "exportacao"
-    ).replace(/\.xlsx$/i,"")+".xlsx";
-
-    XLSX.writeFile(wb,nomeFinal);
+    const arquivos=[
+        {nome:'[Content_Types].xml',conteudo:excelContentTypesXml(abas.length)},
+        {nome:'_rels/.rels',conteudo:excelRootRelsXml()},
+        {nome:'xl/workbook.xml',conteudo:excelWorkbookXml(abas.map(a=>a.nome))},
+        {nome:'xl/_rels/workbook.xml.rels',conteudo:excelWorkbookRelsXml(abas.length)},
+        {nome:'xl/styles.xml',conteudo:excelStylesXml()},
+        {nome:'docProps/core.xml',conteudo:excelCoreXml()},
+        {nome:'docProps/app.xml',conteudo:excelAppXml(abas.length)}
+    ];
+    abas.forEach(function(aba,i){arquivos.push({nome:'xl/worksheets/sheet'+(i+1)+'.xml',conteudo:excelWorksheetXml(aba.dados)});});
+    const blob=excelCriarZip(arquivos);
+    const nomeFinal=String(nomeArquivo||'exportacao').replace(/\.xlsx$/i,'')+'.xlsx';
+    const url=URL.createObjectURL(blob), link=document.createElement('a');
+    link.href=url;link.download=nomeFinal;document.body.appendChild(link);link.click();link.remove();
+    setTimeout(function(){URL.revokeObjectURL(url);},1000);
 }
 
 function exportarParaExcel(){
