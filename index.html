@@ -1045,7 +1045,7 @@ button:disabled {
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx-js-style.js"></script>
 <script>
 const firebaseConfig = {
     apiKey: "AIzaSyB7nueKFNhlXRNg5aOH-JknVcmF5Eihawc",
@@ -6031,6 +6031,55 @@ function exportarTabelaExcel(headers,rows,nomeArquivo,nomeAba,configuracao){
                 )
             };
         });
+
+        // ======================================================
+        // PADRÃO VISUAL DO EXCEL
+        // Mesmo layout para Admin, Usuário Comum e Externo.
+        // ======================================================
+        const estiloCabecalho={
+            font:{bold:true,color:{rgb:"FFFFFF"}},
+            fill:{patternType:"solid",fgColor:{rgb:"4F81BD"}},
+            alignment:{horizontal:"center",vertical:"center",wrapText:true},
+            border:{
+                top:{style:"thin",color:{rgb:"FFFFFF"}},
+                bottom:{style:"thin",color:{rgb:"FFFFFF"}},
+                left:{style:"thin",color:{rgb:"FFFFFF"}},
+                right:{style:"thin",color:{rgb:"FFFFFF"}}
+            }
+        };
+
+        const estiloLinhaPar={
+            fill:{patternType:"solid",fgColor:{rgb:"B8CCE4"}},
+            alignment:{vertical:"center"},
+            border:{
+                bottom:{style:"thin",color:{rgb:"D9E2F3"}},
+                right:{style:"thin",color:{rgb:"D9E2F3"}}
+            }
+        };
+
+        const estiloLinhaImpar={
+            fill:{patternType:"solid",fgColor:{rgb:"DCE6F1"}},
+            alignment:{vertical:"center"},
+            border:{
+                bottom:{style:"thin",color:{rgb:"D9E2F3"}},
+                right:{style:"thin",color:{rgb:"D9E2F3"}}
+            }
+        };
+
+        headers.forEach(function(_,coluna){
+            const celula=XLSX.utils.encode_cell({r:0,c:coluna});
+            if(ws[celula]) ws[celula].s=estiloCabecalho;
+        });
+
+        for(let linha=1;linha<dados.length;linha++){
+            for(let coluna=0;coluna<headers.length;coluna++){
+                const celula=XLSX.utils.encode_cell({r:linha,c:coluna});
+                if(ws[celula]) ws[celula].s=(linha%2===1)?estiloLinhaPar:estiloLinhaImpar;
+            }
+        }
+
+        ws["!rows"]=[{hpt:24}];
+        for(let linha=1;linha<dados.length;linha++) ws["!rows"].push({hpt:20});
     }
 
     const wb=XLSX.utils.book_new();
@@ -6086,6 +6135,28 @@ function exportarTabelaExcel(headers,rows,nomeArquivo,nomeAba,configuracao){
                     )
                 };
             });
+
+            // Mesmo padrão visual da planilha principal.
+            resumo[0].forEach(function(_,coluna){
+                const celula=XLSX.utils.encode_cell({r:0,c:coluna});
+                if(wsResumo[celula]) wsResumo[celula].s={
+                    font:{bold:true,color:{rgb:"FFFFFF"}},
+                    fill:{patternType:"solid",fgColor:{rgb:"4F81BD"}},
+                    alignment:{horizontal:"center",vertical:"center"}
+                };
+            });
+
+            for(let linha=1;linha<resumo.length;linha++){
+                for(let coluna=0;coluna<resumo[0].length;coluna++){
+                    const celula=XLSX.utils.encode_cell({r:linha,c:coluna});
+                    if(wsResumo[celula]) wsResumo[celula].s={
+                        fill:{patternType:"solid",fgColor:{rgb:(linha%2===1)?"B8CCE4":"DCE6F1"}},
+                        border:{bottom:{style:"thin",color:{rgb:"D9E2F3"}}}
+                    };
+                }
+            }
+            wsResumo["!rows"]=[{hpt:24}];
+            for(let linha=1;linha<resumo.length;linha++) wsResumo["!rows"].push({hpt:20});
 
             XLSX.utils.book_append_sheet(
                 wb,
@@ -7219,59 +7290,9 @@ function ocultarHistoricoSolicitacoesComum(){
     alert("✅ Solicitações finalizadas ocultadas somente nesta tela.");
 }
 
-function exportarHistoricoSolicitacoesComumExcel(){
-    if(!firebaseAuth.currentUser){
-        alert("Faça login novamente.");
-        return;
-    }
 
-    const origem=obterSolicitacoesFinalizadasComumVisiveis();
 
-    if(!origem.length){
-        alert("Não existem solicitações finalizadas visíveis para exportar.");
-        return;
-    }
 
-    let csv="Status;Container;Código;Produto;Lote;Fornecedor;Quantidade;Peso KG;Nota Fiscal;Data da Solicitação;Data da Finalização;Observação\n";
-
-    origem.forEach(function(item){
-        const solicitado=item.dataHora ? new Date(item.dataHora).toLocaleString("pt-BR") : "";
-        const finalizado=item.processadoEm ? new Date(item.processadoEm).toLocaleString("pt-BR") : "";
-        const nf=item.nfFinalizacao || item.nf || item.notaFiscal || "";
-
-        function campoExcel(valor){
-            return String(valor ?? "").replace(/"/g,'""');
-        }
-
-        csv += '"'+campoExcel(item.status||"")+'";'+
-            '"'+campoExcel(item.container||"")+'";'+
-            '"'+campoExcel(item.codigo||"")+'";'+
-            '"'+campoExcel(item.produto||"")+'";'+
-            '"'+campoExcel(item.lote||"")+'";'+
-            '"'+campoExcel(item.fornecedor||"")+'";'+
-            '"'+campoExcel(item.quantidadeSolicitada ?? "")+'";'+
-            '"'+campoExcel(item.pesoSolicitado ?? "")+'";'+
-            '"'+campoExcel(nf)+'";'+
-            '"'+campoExcel(solicitado)+'";'+
-            '"'+campoExcel(finalizado)+'";'+
-            '"'+campoExcel(item.observacao||"")+'"\n';
-    });
-
-    baixarCsv(csv,"historico_solicitacoes_comum.csv");
-}
-
-function exportarHistoricoParaExcel(){
-    const idsOcultos = new Set(obterOcultosHistoricoUsuario());
-    const lista = historico.filter(function(item){
-        return !idsOcultos.has(String(item.id || item.dataHora || item.data || ""));
-    });
-    if(!lista.length){ alert("Não existem movimentações visíveis para exportar."); return; }
-    let csv="Data;Tipo;Container;Fornecedor;Nota Fiscal;Código;Produto;Lote;Quantidade;Peso KG\n";
-    lista.forEach(function(item){
-        csv += `"${formatarData(item.data || "")}";"${item.tipo || ""}";"${item.num || ""}";"${item.fornecedor || ""}";"${item.nf || ""}";"${item.codigo || ""}";"${item.prod || ""}";"${item.lote || ""}";"${item.qtd || ""}";"${item.peso || ""}"\n`;
-    });
-    baixarCsv(csv,"historico_movimentacoes.csv");
-}
 
 function baixarCsv(csv,nomeArquivo){
     const blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8;"});
@@ -7296,18 +7317,7 @@ function ocultarMovimentacoesUsuario(){
     alert("✅ Movimentações ocultadas somente desta tela.");
 }
 
-function exportarSolicitacoesAdminExcel(){
-    const ocultos = new Set(obterOcultosSolicitacoesUsuario());
-    const lista = solicitacoesMercadoriaAdminCache.filter(function(item){
-        return !ocultos.has(String(item.id || ""));
-    });
-    if(!lista.length){ alert("Não existem solicitações visíveis para exportar."); return; }
-    let csv="Status;Container;Código;Produto;Lote;Fornecedor;Solicitante;Tipo Usuário;Quantidade;Peso KG;Data/Hora;NF;Observação\n";
-    lista.forEach(function(item){
-        csv += `"${item.status || ""}";"${item.container || ""}";"${item.codigo || ""}";"${item.produto || ""}";"${item.lote || ""}";"${item.fornecedor || ""}";"${item.solicitanteNome || item.solicitante || ""}";"${item.tipoUsuario || item.tipo || ""}";"${item.quantidadeSolicitada || ""}";"${item.pesoSolicitado || ""}";"${item.dataHora || ""}";"${item.nf || item.notaFiscal || ""}";"${item.observacao || ""}"\n`;
-    });
-    baixarCsv(csv,"solicitacoes_mercadoria.csv");
-}
+
 
 function ocultarSolicitacoesAdmin(){
     if(!usuarioEhAdmin()) return;
@@ -7323,19 +7333,7 @@ function ocultarSolicitacoesAdmin(){
     alert("✅ Solicitações ocultadas somente neste painel.");
 }
 
-function exportarMinhasSolicitacoesExternoExcel(){
-    const ocultos = new Set(obterOcultosSolicitacoesUsuario());
-    const uid = firebaseAuth.currentUser ? firebaseAuth.currentUser.uid : "";
-    const origem = solicitacoesMercadoriaExternoCache.filter(function(item){
-        return String(item.solicitanteUid || "") === String(uid) && !ocultos.has(String(item.id || ""));
-    });
-    if(!origem.length){ alert("Não existem solicitações visíveis para exportar."); return; }
-    let csv="Status;Container;Código;Produto;Lote;Quantidade;Peso KG;Data/Hora;NF;Observação\n";
-    origem.forEach(function(item){
-        csv += `"${item.status || ""}";"${item.container || ""}";"${item.codigo || ""}";"${item.produto || ""}";"${item.lote || ""}";"${item.quantidadeSolicitada || ""}";"${item.pesoSolicitado || ""}";"${item.dataHora || ""}";"${item.nf || item.notaFiscal || ""}";"${item.observacao || ""}"\n`;
-    });
-    baixarCsv(csv,"minhas_solicitacoes.csv");
-}
+
 
 function ocultarMinhasSolicitacoesExterno(){
     if(!firebaseAuth.currentUser){ alert("Faça login novamente."); return; }
