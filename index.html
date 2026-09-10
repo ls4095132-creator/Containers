@@ -11135,3 +11135,170 @@ body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-quantidade
     }
 }
 </style>
+
+<style id="admin-mesmo-padrao-comum-final">
+/* =========================================================
+   ADMIN — EXATAMENTE O MESMO PADRÃO COMPACTO DO USUÁRIO COMUM
+   Última regra para vencer estilos antigos específicos do admin.
+   ========================================================= */
+body.usuario-admin .painel-entrada{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+    overflow:hidden !important;
+}
+
+body.usuario-admin .painel-entrada .linha-form{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+    gap:8px !important;
+    margin-bottom:6px !important;
+}
+
+body.usuario-admin .painel-entrada .campo{
+    min-width:0 !important;
+    width:100% !important;
+    box-sizing:border-box !important;
+}
+
+body.usuario-admin .painel-entrada input,
+body.usuario-admin .painel-entrada select{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    height:27px !important;
+    min-height:27px !important;
+    box-sizing:border-box !important;
+    padding:3px 6px !important;
+    margin:2px 0 3px !important;
+    font-size:12px !important;
+}
+
+/* PC / notebook */
+body.usuario-admin .painel-entrada .linha-identificacao{
+    grid-template-columns:minmax(90px,1fr) minmax(85px,.85fr) minmax(140px,1.4fr) minmax(120px,1.2fr) !important;
+}
+body.usuario-admin .painel-entrada .linha-produto{
+    grid-template-columns:minmax(100px,.9fr) minmax(180px,2fr) minmax(120px,1.2fr) !important;
+}
+body.usuario-admin .painel-entrada .linha-quantidade{
+    grid-template-columns:minmax(90px,.9fr) minmax(95px,1fr) minmax(80px,.8fr) minmax(110px,1.1fr) !important;
+    max-width:100% !important;
+}
+
+/* Notebook / janela menor */
+@media(max-width:1100px){
+    body.usuario-admin .layout-admin-operacional > .painel-entrada{
+        overflow:hidden !important;
+    }
+    body.usuario-admin .painel-entrada .linha-form{
+        min-width:0 !important;
+    }
+    body.usuario-admin .painel-entrada .linha-identificacao{
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+        min-width:0 !important;
+    }
+    body.usuario-admin .painel-entrada .linha-produto{
+        grid-template-columns:minmax(0,1fr) minmax(0,1.45fr) !important;
+        min-width:0 !important;
+    }
+    body.usuario-admin .painel-entrada .linha-produto .campo:nth-child(3){
+        grid-column:1 / -1 !important;
+    }
+    body.usuario-admin .painel-entrada .linha-quantidade{
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+        min-width:0 !important;
+    }
+}
+
+/* Celular — mesma organização do usuário comum */
+@media(max-width:700px){
+    body.usuario-admin .layout-admin-operacional > .painel-entrada{
+        width:100% !important;
+        max-width:100vw !important;
+        min-width:0 !important;
+        padding:10px !important;
+        margin:0 !important;
+        overflow:hidden !important;
+        box-sizing:border-box !important;
+    }
+    body.usuario-admin .painel-entrada h2{
+        font-size:15px !important;
+        margin:0 0 8px !important;
+        padding-bottom:6px !important;
+    }
+    body.usuario-admin .painel-entrada .linha-form{
+        display:grid !important;
+        width:100% !important;
+        min-width:0 !important;
+        gap:5px !important;
+        margin-bottom:5px !important;
+    }
+    body.usuario-admin .painel-entrada .linha-identificacao{
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    }
+    body.usuario-admin .painel-entrada .linha-produto{
+        grid-template-columns:minmax(0,1fr) minmax(0,1.45fr) !important;
+    }
+    body.usuario-admin .painel-entrada .linha-produto .campo:nth-child(3){
+        grid-column:1 / -1 !important;
+    }
+    body.usuario-admin .painel-entrada .linha-quantidade{
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    }
+    body.usuario-admin .painel-entrada .campo,
+    body.usuario-admin .painel-entrada input,
+    body.usuario-admin .painel-entrada select{
+        min-width:0 !important;
+        max-width:100% !important;
+        width:100% !important;
+    }
+    body.usuario-admin .painel-entrada label{
+        font-size:9.5px !important;
+        line-height:1.05 !important;
+        white-space:normal !important;
+    }
+    body.usuario-admin .painel-entrada input,
+    body.usuario-admin .painel-entrada select{
+        height:26px !important;
+        min-height:26px !important;
+        padding:2px 5px !important;
+        font-size:11px !important;
+        margin:1px 0 2px !important;
+    }
+    body.usuario-admin .painel-entrada .container-botoes{
+        display:flex !important;
+        flex-wrap:wrap !important;
+        gap:5px !important;
+        margin-top:6px !important;
+        padding-top:6px !important;
+    }
+    body.usuario-admin .painel-entrada .container-botoes button{
+        flex:1 1 auto !important;
+        min-width:0 !important;
+        padding:6px 8px !important;
+        min-height:29px !important;
+        font-size:11px !important;
+    }
+}
+
+@media(max-width:380px){
+    body.usuario-admin .layout-admin-operacional > .painel-entrada{
+        padding:8px !important;
+    }
+    body.usuario-admin .painel-entrada .linha-form{
+        gap:4px !important;
+    }
+    body.usuario-admin .painel-entrada input,
+    body.usuario-admin .painel-entrada select{
+        font-size:10.5px !important;
+        padding:2px 4px !important;
+    }
+    body.usuario-admin .painel-entrada label{
+        font-size:9px !important;
+    }
+}
+</style>
