@@ -7293,33 +7293,56 @@ function exportarTabelaExcel(headers,rows,nomeArquivo,nomeAba,configuracao){
 
 function exportarParaExcel(){
 
-    if(estoque.length===0){
-        alert("Não existem dados para exportar.");
-        return;
-    }
+    // Relatório completo dos 60 containers.
+    // Cada container sempre aparece na planilha; se estiver vazio,
+    // os demais campos ficam em branco.
+    const rows=[];
 
-    const rows=estoque.map(function(item){
-        return [
-            formatarData(item.data || ""),
-            "ESTOQUE",
-            item.num || "",
-            item.fornecedor || "",
-            item.nf || "",
-            item.codigo || "",
-            item.prod || "",
-            item.lote || "",
-            item.qtd || "",
-            item.peso || ""
-        ];
-    });
+    for(let numero=1; numero<=60; numero++){
+        const container=String(numero);
+        const itens=estoque.filter(function(item){
+            return String(item && item.num != null ? item.num : '').trim() === container;
+        });
+
+        if(itens.length){
+            itens.forEach(function(item){
+                rows.push([
+                    formatarData(item.data || ""),
+                    "ESTOQUE",
+                    String(numero).padStart(2,'0'),
+                    item.fornecedor || "",
+                    item.nf || "",
+                    item.codigo || "",
+                    item.prod || "",
+                    item.lote || "",
+                    item.qtd || "",
+                    item.peso || ""
+                ]);
+            });
+        }else{
+            // Container vazio: mantém o container no relatório e deixa os outros campos vazios.
+            rows.push([
+                "",
+                "",
+                String(numero).padStart(2,'0'),
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                ""
+            ]);
+        }
+    }
 
     exportarTabelaExcel(
         ["Data","Tipo","Container","Fornecedor","Nota Fiscal","Código","Produto","Lote","Quantidade","Peso KG"],
         rows,
-        "controle_estoque",
-        "Estoque",
+        "controle_saldo_60_containers",
+        "Saldo dos Containers",
         {
-            nomeTabela:"TabelaEstoque",
+            nomeTabela:"TabelaSaldoContainers",
             resumo:{
                 grupoIndex:6,
                 grupoTitulo:"Produto",
