@@ -1916,11 +1916,173 @@ body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-form{
 }
 </style>
 
+
+<style id="ajuste-final-logo-e-formulario-compacto">
+/* ======================================================
+   AJUSTE FINAL — LOGO + FORMULÁRIO COMPACTO EM TODOS OS LOCAIS
+   Mantém as funções e os layouts anteriores.
+   ====================================================== */
+.logo-login-container{
+    display:flex !important;
+    justify-content:center !important;
+    align-items:center !important;
+    margin:0 0 8px !important;
+    min-height:54px !important;
+}
+.logo-login{
+    display:block !important;
+    width:58px !important;
+    height:58px !important;
+    max-width:58px !important;
+    max-height:58px !important;
+    object-fit:contain !important;
+    border-radius:12px !important;
+}
+
+/* PC e notebook: campos compactos, sem largura fixa que provoque corte. */
+.painel-entrada{
+    width:100% !important;
+    max-width:100% !important;
+    box-sizing:border-box !important;
+    overflow:hidden !important;
+}
+.painel-entrada .linha-form{
+    width:100% !important;
+    max-width:100% !important;
+    box-sizing:border-box !important;
+    gap:6px !important;
+    margin-bottom:4px !important;
+}
+.painel-entrada .linha-form .campo{
+    min-width:0 !important;
+    width:100% !important;
+    max-width:100% !important;
+    box-sizing:border-box !important;
+}
+.painel-entrada label{
+    font-size:10.5px !important;
+    line-height:1.1 !important;
+    margin-bottom:1px !important;
+}
+.painel-entrada input,
+.painel-entrada select{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    height:26px !important;
+    min-height:26px !important;
+    box-sizing:border-box !important;
+    padding:3px 5px !important;
+    margin:1px 0 3px !important;
+    font-size:11px !important;
+}
+
+/* Desktop/notebook: quatro campos na 1ª linha, três na 2ª e quatro na 3ª. */
+@media(min-width:701px){
+    .painel-entrada .linha-identificacao{
+        grid-template-columns:minmax(80px,.8fr) minmax(80px,.8fr) minmax(130px,1.5fr) minmax(110px,1.1fr) !important;
+    }
+    .painel-entrada .linha-produto{
+        grid-template-columns:minmax(85px,.75fr) minmax(180px,1.8fr) minmax(100px,1fr) !important;
+    }
+    .painel-entrada .linha-quantidade{
+        grid-template-columns:minmax(75px,.8fr) minmax(90px,1fr) minmax(70px,.8fr) minmax(105px,1.15fr) !important;
+    }
+}
+
+/* Celular: mesmo desenho do formulário, apenas reduzido para caber na tela. */
+@media(max-width:700px){
+    .tela-login{padding:10px !important;}
+    .cartao-login{max-width:300px !important; padding:16px 14px !important;}
+    .logo-login{width:52px !important;height:52px !important;max-width:52px !important;max-height:52px !important;}
+    .logo-login-container{min-height:48px !important;margin-bottom:6px !important;}
+
+    .painel-entrada{
+        padding:9px 7px !important;
+        overflow:hidden !important;
+    }
+    .painel-entrada h2{
+        font-size:14px !important;
+        margin-bottom:6px !important;
+        padding-bottom:5px !important;
+    }
+    .painel-entrada .linha-form{
+        display:grid !important;
+        width:100% !important;
+        min-width:0 !important;
+        gap:4px !important;
+        margin-bottom:3px !important;
+    }
+    .painel-entrada .linha-identificacao{
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    }
+    .painel-entrada .linha-produto{
+        grid-template-columns:minmax(0,.72fr) minmax(0,1.28fr) !important;
+    }
+    .painel-entrada .linha-produto .campo:nth-child(3){
+        grid-column:1 / -1 !important;
+    }
+    .painel-entrada .linha-quantidade{
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    }
+    .painel-entrada .campo,
+    .painel-entrada .campo input,
+    .painel-entrada input,
+    .painel-entrada select{
+        min-width:0 !important;
+        max-width:100% !important;
+        width:100% !important;
+    }
+    .painel-entrada label{
+        font-size:9.5px !important;
+        white-space:normal !important;
+        overflow-wrap:anywhere !important;
+    }
+    .painel-entrada input,
+    .painel-entrada select{
+        height:24px !important;
+        min-height:24px !important;
+        padding:2px 4px !important;
+        font-size:10.5px !important;
+        margin:1px 0 2px !important;
+    }
+    .painel-entrada .container-botoes{
+        display:flex !important;
+        width:100% !important;
+        gap:4px !important;
+        margin-top:5px !important;
+        padding-top:6px !important;
+        box-sizing:border-box !important;
+    }
+    .painel-entrada .container-botoes button{
+        flex:1 1 0 !important;
+        width:0 !important;
+        min-width:0 !important;
+        max-width:100% !important;
+        padding:6px 3px !important;
+        font-size:9.5px !important;
+        white-space:normal !important;
+        line-height:1.1 !important;
+    }
+}
+
+@media(max-width:380px){
+    .painel-entrada{padding:8px 5px !important;}
+    .painel-entrada .linha-form{gap:3px !important;}
+    .painel-entrada label{font-size:9px !important;}
+    .painel-entrada input,.painel-entrada select{font-size:10px !important;height:23px !important;min-height:23px !important;}
+    .painel-entrada .container-botoes button{font-size:8.8px !important;padding:5px 2px !important;}
+}
+</style>
+
 </head>
 <body>
 <!-- TELA DE LOGIN -->
 <div class="tela-login" id="tela-login">
 <div class="cartao-login">
+<div class="logo-login-container">
+<img class="logo-login" src="./icon-192.png" alt="Logo Controle de Containers" onerror="this.style.display='none'">
+</div>
 <h1>📦 Controle de Containers</h1>
 <div class="subtitulo-login" id="subtitulo-login">
 Entre com seu usuário e senha
