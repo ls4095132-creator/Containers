@@ -2250,6 +2250,137 @@ body.auth-carregando #app-externo{
 }
 #tela-login{transition:opacity .08s ease;}
 </style>
+
+<style id="correcao-mobile-comum-registro-final">
+/* =========================================================
+   CORREÇÃO FINAL — REGISTRO DO USUÁRIO COMUM NO CELULAR
+   Remove qualquer largura mínima antiga que fazia o formulário
+   ultrapassar a tela. Mantém exatamente o padrão compacto.
+   ========================================================= */
+@media(max-width:700px){
+    html, body{
+        width:100% !important;
+        max-width:100% !important;
+        overflow-x:hidden !important;
+    }
+
+    body:not(.usuario-admin) .layout-admin-operacional{
+        display:grid !important;
+        grid-template-columns:minmax(0,1fr) !important;
+        width:100% !important;
+        max-width:100% !important;
+        min-width:0 !important;
+        gap:8px !important;
+        margin:0 0 12px !important;
+        padding:0 !important;
+        box-sizing:border-box !important;
+        overflow-x:hidden !important;
+    }
+
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada{
+        grid-column:1 !important;
+        width:100% !important;
+        max-width:100% !important;
+        min-width:0 !important;
+        box-sizing:border-box !important;
+        overflow:hidden !important;
+        padding:8px 6px !important;
+        margin:0 !important;
+    }
+
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-form,
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-identificacao,
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-produto,
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-quantidade{
+        width:100% !important;
+        max-width:100% !important;
+        min-width:0 !important;
+        box-sizing:border-box !important;
+        gap:4px !important;
+    }
+
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-identificacao{
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    }
+
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-identificacao .campo:nth-child(3),
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-identificacao .campo:nth-child(4){
+        min-width:0 !important;
+    }
+
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-produto{
+        grid-template-columns:minmax(0,1fr) minmax(0,1.45fr) !important;
+    }
+
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-produto .campo:nth-child(3){
+        grid-column:1 / -1 !important;
+    }
+
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-quantidade{
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    }
+
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .campo,
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .campo-produto,
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .campo-validade,
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada input,
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada select{
+        width:100% !important;
+        max-width:100% !important;
+        min-width:0 !important;
+        box-sizing:border-box !important;
+    }
+
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada input,
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada select{
+        height:24px !important;
+        min-height:24px !important;
+        font-size:10.5px !important;
+        padding:2px 4px !important;
+        margin:1px 0 2px !important;
+    }
+
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada label{
+        font-size:9px !important;
+        line-height:1.05 !important;
+        white-space:normal !important;
+    }
+
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .container-botoes{
+        width:100% !important;
+        max-width:100% !important;
+        min-width:0 !important;
+        display:flex !important;
+        flex-wrap:wrap !important;
+        gap:4px !important;
+        box-sizing:border-box !important;
+    }
+
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .container-botoes button{
+        flex:1 1 0 !important;
+        min-width:0 !important;
+        max-width:100% !important;
+        font-size:9.5px !important;
+        padding:5px 3px !important;
+        box-sizing:border-box !important;
+    }
+}
+
+@media(max-width:380px){
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada{
+        padding:7px 5px !important;
+    }
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-form{
+        gap:3px !important;
+    }
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada input,
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada select{
+        height:23px !important;
+        min-height:23px !important;
+        font-size:10px !important;
+    }
+}
+</style>
 </head>
 <body class="auth-carregando">
 <!-- TELA DE LOGIN -->
