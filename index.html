@@ -694,6 +694,26 @@ button:disabled {
     margin-top: 4px;
 }
 
+
+.trocar-usuario-login {
+    text-align: center;
+    margin-top: 12px;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--texto-fraco);
+}
+
+.trocar-usuario-login a {
+    color: var(--azul);
+    cursor: pointer;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.trocar-usuario-login a:hover {
+    text-decoration: underline;
+}
+
 .alternar-login {
     text-align: center;
     margin-top: 16px;
@@ -1373,9 +1393,9 @@ Entre com seu usuário e senha
 <button class="btn-login" id="btn-acao-login" onclick="tratarEnvioLogin()" type="button">
 Entrar
 </button>
-<button class="btn-login" id="btn-novo-acesso" onclick="novoAcessoLogin()" type="button" style="margin-top:8px;background:#3b465f;">
-🔄 Novo acesso
-</button>
+<div class="trocar-usuario-login" id="trocar-usuario-login">
+    Para acessar com outro usuário, <a href="javascript:void(0)" onclick="novoAcessoLogin()">clique aqui para trocar de usuário</a>.
+</div>
 <div class="alternar-login" id="alternar-login" style="display:none;">
 </div>
 </div>
