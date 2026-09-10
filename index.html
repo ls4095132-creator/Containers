@@ -1792,11 +1792,11 @@ Depois, o perfil e a filial podem ser configurados no Realtime Database.
 <div class="linha-form linha-produto">
 <div class="campo">
 <label>🔢 Código:</label>
-<input id="codigo" placeholder="Código" type="text"/>
+<input id="codigo" placeholder="Código" type="text" oninput="localizarProdutoPorCodigo()" autocomplete="off"/>
 </div>
 <div class="campo campo-produto" style="position:relative;">
 <label>📋 Produto:</label>
-<input autocomplete="off" id="prod" onblur="esconderSugestoesProduto()" onfocus="mostrarSugestoesProduto()" oninput="mostrarSugestoesProduto()" placeholder="Digite a primeira letra para pesquisar..." type="text"/>
+<input autocomplete="off" id="prod" onblur="preencherCodigoProduto(); esconderSugestoesProduto()" onfocus="mostrarSugestoesProduto()" oninput="mostrarSugestoesProduto()" placeholder="Digite a primeira letra para pesquisar..." type="text"/>
 <div class="sugestoes-produto" id="sugestoes-produto"></div>
 </div>
 <div class="campo">
@@ -4899,210 +4899,150 @@ produtosCadastrados.length;
 
 
 // ======================================================
-// PREENCHER CÓDIGO AUTOMATICAMENTE (FORMULÁRIO DE ENTRADA)
+// LOCALIZAÇÃO DE PRODUTO POR NOME OU CÓDIGO
 // ======================================================
 
+function normalizarTextoProduto(valor){
+    return String(valor || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim();
+}
+
+function encontrarProdutoPorNomeOuCodigo(valor){
+    const texto = normalizarTextoProduto(valor);
+    if(!texto) return null;
+
+    // Primeiro tenta correspondência exata pelo código ou pelo nome.
+    let encontrado = produtosCadastrados.find(function(item){
+        return normalizarTextoProduto(item.codigo) === texto ||
+               normalizarTextoProduto(item.nome) === texto;
+    });
+
+    // Depois permite localizar mesmo digitando apenas parte do código ou nome.
+    if(!encontrado){
+        encontrado = produtosCadastrados.find(function(item){
+            return normalizarTextoProduto(item.codigo).includes(texto) ||
+                   normalizarTextoProduto(item.nome).includes(texto);
+        });
+    }
+
+    return encontrado || null;
+}
+
+// Se o usuário digitar o nome OU o código no campo Produto,
+// o sistema identifica o produto e preenche o código automaticamente.
 function preencherCodigoProduto(){
+    const campoProd = document.getElementById("prod");
+    const campoCodigo = document.getElementById("codigo");
+    if(!campoProd || !campoCodigo) return;
 
-const campoProd =
-document.getElementById("prod");
-
-const campoCodigo =
-document.getElementById("codigo");
-
-if(!campoProd || !campoCodigo)return;
-
-const nome =
-campoProd.value.trim();
-
-const encontrado =
-produtosCadastrados.find(
-function(item){
-
-return item.nome.toLowerCase() ===
-nome.toLowerCase();
-
-}
-);
-
-if(encontrado){
-
-campoCodigo.value =
-encontrado.codigo || "";
-
+    const encontrado = encontrarProdutoPorNomeOuCodigo(campoProd.value);
+    if(encontrado){
+        campoProd.value = encontrado.nome || "";
+        campoCodigo.value = encontrado.codigo || "";
+    }
 }
 
-}
+// Se o usuário digitar diretamente o código, o nome do produto
+// aparece automaticamente no campo Produto.
+function localizarProdutoPorCodigo(){
+    const campoCodigo = document.getElementById("codigo");
+    const campoProd = document.getElementById("prod");
+    if(!campoCodigo || !campoProd) return;
 
+    const valor = campoCodigo.value.trim();
+    if(!valor) return;
+
+    const encontrado = produtosCadastrados.find(function(item){
+        return normalizarTextoProduto(item.codigo) === normalizarTextoProduto(valor);
+    }) || produtosCadastrados.find(function(item){
+        return normalizarTextoProduto(item.codigo).includes(normalizarTextoProduto(valor));
+    });
+
+    if(encontrado){
+        campoCodigo.value = encontrado.codigo || valor;
+        campoProd.value = encontrado.nome || "";
+        const caixa = document.getElementById("sugestoes-produto");
+        if(caixa) caixa.style.display = "none";
+    }
+}
 
 // ======================================================
-// SUGESTÕES DE PRODUTOS AO DIGITAR (FORMULÁRIO DE ENTRADA)
+// SUGESTÕES DE PRODUTOS AO DIGITAR (NOME OU CÓDIGO)
 // ======================================================
 
 function mostrarSugestoesProduto(){
+    const campo = document.getElementById("prod");
+    const caixa = document.getElementById("sugestoes-produto");
+    if(!campo || !caixa) return;
 
-const campo =
-document.getElementById("prod");
+    const texto = normalizarTextoProduto(campo.value);
+    let lista = produtosCadastrados.slice().sort(function(a,b){
+        return String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR");
+    });
 
-const caixa =
-document.getElementById("sugestoes-produto");
+    if(texto !== "") {
+        lista = lista.filter(function(item){
+            return normalizarTextoProduto(item.nome).includes(texto) ||
+                   normalizarTextoProduto(item.codigo).includes(texto);
+        });
+    }
 
-if(!campo || !caixa)return;
+    const totalEncontrado = lista.length;
+    lista = lista.slice(0,50);
+    caixa.innerHTML = "";
 
-const texto =
-campo.value.toLowerCase().trim();
+    if(lista.length === 0){
+        const vazio = document.createElement("div");
+        vazio.className = "sugestao-item";
+        vazio.style.color = "#94a3b8";
+        vazio.style.cursor = "default";
+        vazio.innerText = "Nenhum produto encontrado.";
+        caixa.appendChild(vazio);
+        caixa.style.display = "block";
+        return;
+    }
 
-let lista =
-produtosCadastrados
-.slice()
-.sort(function(a,b){
-return a.nome.localeCompare(b.nome,"pt-BR");
-});
+    lista.forEach(function(item){
+        const div = document.createElement("div");
+        div.className = "sugestao-item";
+        div.innerText = (item.codigo ? "[" + item.codigo + "] " : "") + (item.nome || "");
+        div.onmousedown = function(){
+            selecionarProdutoSugestao(item.nome, item.codigo);
+        };
+        caixa.appendChild(div);
+    });
 
-if(texto !== ""){
+    if(totalEncontrado > 50){
+        const aviso = document.createElement("div");
+        aviso.className = "sugestao-item";
+        aviso.style.color = "#94a3b8";
+        aviso.style.cursor = "default";
+        aviso.innerText = "+ " + (totalEncontrado - 50) + " produto(s). Continue digitando para refinar.";
+        caixa.appendChild(aviso);
+    }
 
-lista =
-lista.filter(function(item){
-
-return item.nome.toLowerCase().includes(texto);
-
-});
-
+    caixa.style.display = "block";
 }
-
-
-// Limita a exibição a 50 sugestões por vez para manter a
-// lista rápida mesmo com centenas/milhares de produtos.
-
-const totalEncontrado =
-lista.length;
-
-lista =
-lista.slice(0,50);
-
-
-caixa.innerHTML="";
-
-
-if(lista.length===0){
-
-const vazio =
-document.createElement("div");
-
-vazio.className=
-"sugestao-item";
-
-vazio.style.color=
-"#94a3b8";
-
-vazio.style.cursor=
-"default";
-
-vazio.innerText=
-"Nenhum produto encontrado.";
-
-caixa.appendChild(vazio);
-
-caixa.style.display=
-"block";
-
-return;
-
-}
-
-
-lista.forEach(function(item){
-
-const div =
-document.createElement("div");
-
-div.className=
-"sugestao-item";
-
-div.innerText=
-(item.codigo ? "["+item.codigo+"] " : "")+
-item.nome;
-
-div.onmousedown=
-function(){
-
-selecionarProdutoSugestao(item.nome,item.codigo);
-
-};
-
-caixa.appendChild(div);
-
-});
-
-
-if(totalEncontrado > 50){
-
-const aviso =
-document.createElement("div");
-
-aviso.className=
-"sugestao-item";
-
-aviso.style.color=
-"#94a3b8";
-
-aviso.style.cursor=
-"default";
-
-aviso.innerText=
-"+ "+(totalEncontrado-50)+" produto(s). Continue digitando para refinar.";
-
-caixa.appendChild(aviso);
-
-}
-
-
-caixa.style.display=
-"block";
-
-}
-
 
 function esconderSugestoesProduto(){
-
-setTimeout(function(){
-
-const caixa =
-document.getElementById("sugestoes-produto");
-
-if(caixa){
-
-caixa.style.display=
-"none";
-
+    setTimeout(function(){
+        const caixa = document.getElementById("sugestoes-produto");
+        if(caixa) caixa.style.display = "none";
+    },150);
 }
-
-},150);
-
-}
-
 
 function selecionarProdutoSugestao(nome,codigo){
+    const campoProd = document.getElementById("prod");
+    const campoCodigo = document.getElementById("codigo");
+    if(campoProd) campoProd.value = nome || "";
+    if(campoCodigo) campoCodigo.value = codigo || "";
 
-document.getElementById("prod").value=
-nome;
-
-document.getElementById("codigo").value=
-codigo || "";
-
-const caixa =
-document.getElementById("sugestoes-produto");
-
-if(caixa){
-
-caixa.style.display=
-"none";
-
+    const caixa = document.getElementById("sugestoes-produto");
+    if(caixa) caixa.style.display = "none";
 }
-
-}
-
-
 // ======================================================
 // PRODUTOS CADASTRADOS (LISTA NA SEÇÃO DE CADASTRO)
 // ======================================================
