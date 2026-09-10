@@ -694,26 +694,6 @@ button:disabled {
     margin-top: 4px;
 }
 
-
-.trocar-usuario-login {
-    text-align: center;
-    margin-top: 12px;
-    font-size: 11.5px;
-    line-height: 1.5;
-    color: var(--texto-fraco);
-}
-
-.trocar-usuario-login a {
-    color: var(--azul);
-    cursor: pointer;
-    text-decoration: none;
-    font-weight: 600;
-}
-
-.trocar-usuario-login a:hover {
-    text-decoration: underline;
-}
-
 .alternar-login {
     text-align: center;
     margin-top: 16px;
@@ -1053,6 +1033,57 @@ button:disabled {
 }
 .toast-notificacao-web strong{display:block;color:#56d2ff;margin-bottom:4px;font-size:13px;}
 .toast-notificacao-web div{font-size:12px;line-height:1.45;color:#dbe6f5;}
+
+/* ======================================================
+   AVISOS VERDES DE OPERAÇÃO EM TEMPO REAL
+   ====================================================== */
+.toast-operacao-verde{
+    position:fixed;
+    right:18px;
+    bottom:18px;
+    z-index:99999;
+    width:min(380px,calc(100vw - 36px));
+    background:#0b3d2e;
+    border:1px solid #16c784;
+    border-left:5px solid #16c784;
+    color:#ecfff7;
+    padding:14px 16px;
+    border-radius:10px;
+    box-shadow:0 10px 30px rgba(0,0,0,.35);
+    font-size:14px;
+    animation:entradaAvisoVerde .22s ease-out;
+}
+.toast-operacao-verde strong{display:block;color:#42e69a;margin-bottom:4px;font-size:14px;}
+.toast-operacao-verde div{font-size:12px;line-height:1.45;color:#d8fff0;}
+@keyframes entradaAvisoVerde{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* ======================================================
+   AVISO VERMELHO — MERCADORIA RECUSADA
+   ====================================================== */
+.toast-operacao-vermelho{
+    position:fixed;
+    right:18px;
+    bottom:18px;
+    z-index:99999;
+    width:min(380px,calc(100vw - 36px));
+    background:#45121b;
+    border:1px solid #ff4d67;
+    border-left:5px solid #ff4d67;
+    color:#ffe8ec;
+    padding:14px 16px;
+    border-radius:10px;
+    box-shadow:0 10px 30px rgba(0,0,0,.35);
+    font-size:14px;
+    animation:entradaAvisoVermelho .22s ease-out;
+}
+.toast-operacao-vermelho strong{display:block;color:#ff6b81;margin-bottom:4px;font-size:14px;}
+.toast-operacao-vermelho div{font-size:12px;line-height:1.45;color:#ffe0e5;}
+@keyframes entradaAvisoVermelho{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:600px){
+    .toast-operacao-verde,
+    .toast-operacao-vermelho{right:10px;bottom:10px;width:calc(100vw - 20px);}
+}
+
 @keyframes entradaNotificacaoWeb{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:700px){
     .btn-notificacao-web{padding:6px 9px;font-size:11px;}
@@ -1393,9 +1424,6 @@ Entre com seu usuário e senha
 <button class="btn-login" id="btn-acao-login" onclick="tratarEnvioLogin()" type="button">
 Entrar
 </button>
-<div class="trocar-usuario-login" id="trocar-usuario-login">
-    Para acessar com outro usuário, <a href="javascript:void(0)" onclick="novoAcessoLogin()">clique aqui para trocar de usuário</a>.
-</div>
 <div class="alternar-login" id="alternar-login" style="display:none;">
 </div>
 </div>
@@ -2100,6 +2128,36 @@ function toggleSolicitacoes(){
 
 }
     
+let notificacaoEstoqueInicializada = false;
+let notificacaoSolicitacoesInicializada = false;
+let notificacaoAlteracoesInicializada = false;
+
+function mostrarAvisoOperacaoVerde(titulo, corpo){
+    try{
+        const anterior=document.getElementById('toast-operacao-verde');
+        if(anterior) anterior.remove();
+        const box=document.createElement('div');
+        box.id='toast-operacao-verde';
+        box.className='toast-operacao-verde';
+        box.innerHTML='<strong>✅ '+escaparHtmlSolicitacao(titulo||'Operação registrada')+'</strong><div>'+escaparHtmlSolicitacao(corpo||'')+'</div>';
+        document.body.appendChild(box);
+        setTimeout(function(){ if(box && box.parentNode) box.remove(); },6000);
+    }catch(e){ console.warn('Aviso de operação:',e); }
+}
+
+function mostrarAvisoOperacaoVermelho(titulo, corpo){
+    try{
+        const anterior=document.getElementById('toast-operacao-vermelho');
+        if(anterior) anterior.remove();
+        const box=document.createElement('div');
+        box.id='toast-operacao-vermelho';
+        box.className='toast-operacao-vermelho';
+        box.innerHTML='<strong>❌ '+escaparHtmlSolicitacao(titulo||'Mercadoria recusada')+'</strong><div>'+escaparHtmlSolicitacao(corpo||'')+'</div>';
+        document.body.appendChild(box);
+        setTimeout(function(){ if(box && box.parentNode) box.remove(); },7000);
+    }catch(e){ console.warn('Aviso de recusa:',e); }
+}
+
 async function iniciarSincronizacaoFirebase(){
     const usuarioFirebase=firebaseAuth.currentUser;
     if(firebaseListenersAtivos || !usuarioFirebase) return;
@@ -2181,8 +2239,33 @@ async function iniciarSincronizacaoFirebase(){
         };
 
         registrar(estoqueRef,"value",function(snapshot){
-            estoque=normalizarListaFirebase(snapshot.val());
+            const anteriorEstoque = Array.isArray(estoque) ? estoque.slice() : [];
+            const novoEstoque = normalizarListaFirebase(snapshot.val());
+            const mapaAnterior = {};
+            anteriorEstoque.forEach(function(item){
+                if(item && item.id != null) mapaAnterior[String(item.id)] = item;
+            });
+
+            estoque = novoEstoque;
             garantirIdsEstoque();
+
+            // O primeiro carregamento apenas sincroniza. A partir daí,
+            // uma nova entrada real no estoque gera o aviso verde para
+            // qualquer um dos três tipos de usuário.
+            if(notificacaoEstoqueInicializada){
+                novoEstoque.forEach(function(item){
+                    if(!item || item.id == null) return;
+                    if(!mapaAnterior[String(item.id)]){
+                        mostrarAvisoOperacaoVerde(
+                            "Mercadoria registrada",
+                            (item.prod || "Mercadoria") + " • Container " + (item.num || "—")
+                        );
+                    }
+                });
+            }else{
+                notificacaoEstoqueInicializada = true;
+            }
+
             mostrarEstoque();
             atualizarContador();
         },function(e){console.error("Firebase estoque:",e);});
@@ -2201,7 +2284,51 @@ async function iniciarSincronizacaoFirebase(){
         },function(e){console.error("Firebase produtos:",e);});
 
         registrar(alteracoesRef,"value",function(snapshot){
+            const anteriorAlteracoes = Array.isArray(solicitacoesAlteracoesCache) ? solicitacoesAlteracoesCache.slice() : [];
+            const mapaAnteriorAlteracoes = {};
+            anteriorAlteracoes.forEach(function(item){
+                if(item && item.id != null) mapaAnteriorAlteracoes[String(item.id)] = item;
+            });
+
             solicitacoesAlteracoesCache=normalizarListaFirebase(snapshot.val());
+
+            if(notificacaoAlteracoesInicializada){
+                const uidAtual = firebaseAuth.currentUser ? String(firebaseAuth.currentUser.uid || "") : "";
+
+                solicitacoesAlteracoesCache.forEach(function(item){
+                    if(!item || item.id == null) return;
+
+                    const anterior = mapaAnteriorAlteracoes[String(item.id)] || null;
+                    const statusNovo = String(item.status || "pendente").trim().toLowerCase();
+                    const statusAnterior = anterior ? String(anterior.status || "pendente").trim().toLowerCase() : "";
+                    const tipo = String(item.tipo || "").trim().toUpperCase();
+                    const dados = item.dados || {};
+                    const itemMercadoria = dados.item || dados.novoItem || {};
+                    const ehSolicitante = uidAtual && String(item.operadorUid || "") === uidAtual;
+
+                    // Nova entrada detectada.
+                    if(!anterior && tipo === "ENTRADA"){
+                        mostrarAvisoOperacaoVerde(
+                            "Mercadoria registrada",
+                            (itemMercadoria.prod || "Mercadoria") + " • Container " + (itemMercadoria.num || "—")
+                        );
+                    }
+
+                    // O administrador recusou uma entrada/alteração solicitada.
+                    if(anterior &&
+                       ehSolicitante &&
+                       statusAnterior !== statusNovo &&
+                       statusNovo === "recusada"){
+                        mostrarAvisoOperacaoVermelho(
+                            "Mercadoria recusada",
+                            (itemMercadoria.prod || "Mercadoria") + " • Container " + (itemMercadoria.num || "—")
+                        );
+                    }
+                });
+            }else{
+                notificacaoAlteracoesInicializada = true;
+            }
+
             if(typeof renderizarSolicitacoesAlteracoesAdmin==="function" && souAdmin) renderizarSolicitacoesAlteracoesAdmin();
             atualizarIndicadorAdmin();
         },function(e){console.error("Firebase solicitações de alteração:",e);});
@@ -2225,7 +2352,28 @@ async function iniciarSincronizacaoFirebase(){
 
     registrar(solicitacoesMercadoriaRef,"value",function(snapshot){
 
+        const anteriorSolicitacoes = Array.isArray(solicitacoesMercadoriaAdminCache)
+            ? solicitacoesMercadoriaAdminCache.slice() : [];
+        const mapaAnterior = {};
+        anteriorSolicitacoes.forEach(function(item){
+            if(item && item.id != null) mapaAnterior[String(item.id)] = item;
+        });
+
         solicitacoesMercadoriaAdminCache=normalizarListaFirebase(snapshot.val());
+
+        if(notificacaoSolicitacoesInicializada){
+            solicitacoesMercadoriaAdminCache.forEach(function(item){
+                if(!item || item.id == null) return;
+                if(!mapaAnterior[String(item.id)]){
+                    mostrarAvisoOperacaoVerde(
+                        "Solicitação registrada",
+                        (item.produto || "Mercadoria") + " • Container " + (item.container || "—")
+                    );
+                }
+            });
+        }else{
+            notificacaoSolicitacoesInicializada = true;
+        }
 
         if(typeof renderizarSolicitacoesMercadoriaAdmin==="function"){
             renderizarSolicitacoesMercadoriaAdmin();
@@ -2245,8 +2393,26 @@ async function iniciarSincronizacaoFirebase(){
         const anterior=Array.isArray(solicitacoesMercadoriaComumCache)
             ? solicitacoesMercadoriaComumCache.slice()
             : [];
+        const mapaAnterior={};
+        anterior.forEach(function(item){
+            if(item && item.id != null) mapaAnterior[String(item.id)] = item;
+        });
 
         solicitacoesMercadoriaComumCache=normalizarListaFirebase(snapshot.val());
+
+        if(notificacaoSolicitacoesInicializada){
+            solicitacoesMercadoriaComumCache.forEach(function(item){
+                if(!item || item.id == null) return;
+                if(!mapaAnterior[String(item.id)]){
+                    mostrarAvisoOperacaoVerde(
+                        "Solicitação registrada",
+                        (item.produto || "Mercadoria") + " • Container " + (item.container || "—")
+                    );
+                }
+            });
+        }else{
+            notificacaoSolicitacoesInicializada = true;
+        }
 
         console.log(
             "📦 Solicitações disponíveis para usuário comum:",
@@ -2254,10 +2420,6 @@ async function iniciarSincronizacaoFirebase(){
         );
 
         const uidAtual=firebaseAuth.currentUser ? String(firebaseAuth.currentUser.uid||"") : "";
-        const mapaAnterior={};
-        anterior.forEach(function(item){
-            if(item && item.id != null) mapaAnterior[String(item.id)]=item;
-        });
 
         solicitacoesMercadoriaComumCache.forEach(function(item){
             if(!item || item.id == null) return;
@@ -2267,14 +2429,6 @@ async function iniciarSincronizacaoFirebase(){
             const statusNovo=String(item.status||"pendente").trim().toLowerCase();
             const statusAnterior=anteriorItem ? String(anteriorItem.status||"pendente").trim().toLowerCase() : "";
 
-            // Notificação local em tempo real para usuário comum quando uma nova
-            // solicitação de outro usuário entra no sistema.
-            if(anterior.length > 0 && !anteriorItem && solicitanteUid !== uidAtual){
-                mostrarToastNotificacaoWeb(
-                    "📦 Nova solicitação de mercadoria",
-                    (item.produto||"Mercadoria")+" • Container "+(item.container||"—")
-                );
-            }
 
             // Notificação local quando a própria solicitação for finalizada.
             if(anteriorItem &&
@@ -4993,7 +5147,7 @@ campoPeso.value = total > 0 ? total.toFixed(2) : "";
 }
 
 
-function adicionarItem(){
+async function adicionarItem(){
 
 const data = document.getElementById("data").value;
 const num = document.getElementById("num").value;
@@ -5070,7 +5224,7 @@ if(editIndex !== "") {
         registrarMovimentacao("ENTRADA", item, "Nova mercadoria recebida pelo administrador.");
         alert("✅ Mercadoria registrada com sucesso!");
     }else{
-        solicitarAlteracaoAdmin("ENTRADA", {item:item}, "O operador solicitou uma nova entrada no container.");
+        await solicitarAlteracaoAdmin("ENTRADA", {item:item}, "O operador solicitou uma nova entrada no container.");
         alert("📨 Nova entrada enviada ao administrador. Ela aparecerá no painel para validação.");
     }
 }
@@ -6862,45 +7016,6 @@ async function solicitarPermissaoOneSignalNoLogin(){
     }
 }
 
-// ======================================================
-// LOGIN: LEMBRAR SOMENTE O USUÁRIO
-// ======================================================
-// Somente o identificador digitado é lembrado no navegador.
-// A senha NUNCA é armazenada.
-const CHAVE_USUARIO_LOGIN = "containers_usuario_login";
-
-function lembrarUsuarioLogin(usuario){
-    try{
-        if(usuario){
-            localStorage.setItem(CHAVE_USUARIO_LOGIN, String(usuario).trim());
-        }
-    }catch(e){
-        console.warn("Não foi possível lembrar o usuário neste navegador:",e);
-    }
-}
-
-function carregarUsuarioLogin(){
-    try{
-        const salvo=(localStorage.getItem(CHAVE_USUARIO_LOGIN)||"").trim();
-        const campo=document.getElementById("login-usuario");
-        if(campo && salvo) campo.value=salvo;
-    }catch(e){
-        console.warn("Não foi possível recuperar o usuário salvo:",e);
-    }
-}
-
-function novoAcessoLogin(){
-    // Remove somente o usuário lembrado para permitir outro acesso.
-    // A sessão Firebase não é encerrada aqui porque o botão só atua na tela de login.
-    try{ localStorage.removeItem(CHAVE_USUARIO_LOGIN); }catch(e){}
-    const campoUsuario=document.getElementById("login-usuario");
-    const campoSenha=document.getElementById("login-senha");
-    if(campoUsuario) campoUsuario.value="";
-    if(campoSenha) campoSenha.value="";
-    esconderErroLogin();
-    if(campoUsuario) campoUsuario.focus();
-}
-
 async function tratarEnvioLogin(){
     if(loginEmProcessamento)return;
     esconderErroLogin();
@@ -6920,9 +7035,6 @@ async function tratarEnvioLogin(){
         await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
         const cred=await comTimeoutFirebase(firebaseAuth.signInWithEmailAndPassword(email,senha),15000,"Tempo esgotado ao autenticar no Firebase.");
         console.log("✅ Firebase Authentication: usuário autenticado",cred.user.uid);
-        // Lembra somente o usuário após um login bem-sucedido.
-        // A senha nunca é salva.
-        lembrarUsuarioLogin(usuarioDigitado);
         await verificarAutenticacao(cred.user);
     }catch(erro){
         console.error("Erro no login Firebase:",erro);
@@ -8482,6 +8594,11 @@ async function enviarSolicitacaoMercadoria(){
             )
             .set(pedido);
 
+        mostrarAvisoOperacaoVerde(
+            "Solicitação registrada",
+            (pedido.produto || "Mercadoria") + " • Container " + (pedido.container || "—")
+        );
+
         console.log("📦 Solicitação salva. Chamando Worker...");
 
         if(typeof chamarWorkerNotificacao === "function"){
@@ -9044,14 +9161,6 @@ async function iniciarAutenticacao(){
 }
 iniciarAutenticacao();
 
-// Ao abrir/reabrir a página, preenche somente o usuário anteriormente usado.
-// A senha permanece sempre vazia.
-if(document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", carregarUsuarioLogin);
-}else{
-    carregarUsuarioLogin();
-}
-
 // Permite enviar o formulário de login pressionando Enter.
 
 document.addEventListener("keydown",function(evento){
@@ -9090,7 +9199,6 @@ async function cancelarSolicitacaoMercadoriaAdmin(id){
 // Compatibilidade: garante que os handlers usados pelos botões HTML
 // estejam disponíveis no escopo global do navegador.
 window.tratarEnvioLogin = tratarEnvioLogin;
-window.novoAcessoLogin = novoAcessoLogin;
 window.sairDoSistema = sairDoSistema;
 window.atualizarStatusSolicitacaoMercadoriaAdmin = atualizarStatusSolicitacaoMercadoriaAdmin;
 window.cancelarSolicitacaoMercadoriaAdmin = cancelarSolicitacaoMercadoriaAdmin;
@@ -9720,3 +9828,111 @@ async function chamarWorkerNotificacao(tipo, dados) {
 </script>
 </body>
 </html>
+
+<style id="ajuste-admin-igual-usuario-comum-final">
+/* ======================================================
+   ADMIN — FORMULÁRIO DE ENTRADA COM O MESMO LAYOUT DO USUÁRIO COMUM
+   Mantém os painéis administrativos, mas o formulário de entrada
+   ocupa a largura completa e usa exatamente as mesmas proporções.
+   ====================================================== */
+body.usuario-admin .layout-admin-operacional{
+    display:block;
+    margin-bottom:18px;
+}
+body.usuario-admin .layout-admin-operacional > #painel-admin-usuarios{
+    width:100%;
+    float:none;
+    margin:0 0 20px 0;
+    box-sizing:border-box;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada{
+    width:100%;
+    float:none;
+    margin:0;
+    min-width:0;
+    min-height:0;
+    height:auto;
+    box-sizing:border-box;
+    background:var(--bg-painel);
+    border:1px solid var(--borda);
+    border-radius:12px;
+    padding:25px;
+    box-shadow:0 4px 14px rgba(0,0,0,.35);
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada h2{
+    margin-top:0;
+    margin-bottom:14px;
+    padding:0 0 8px;
+    border:none;
+    border-bottom:1px solid var(--borda);
+    border-radius:0;
+    background:transparent;
+    font-size:inherit;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-form{
+    gap:10px;
+    margin-bottom:7px;
+}
+/* Mesmas proporções do painel do usuário comum */
+body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-identificacao{
+    grid-template-columns:125px 105px 260px 220px;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-produto{
+    grid-template-columns:125px 430px 260px;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-quantidade{
+    grid-template-columns:100px 115px 130px 160px;
+    max-width:100%;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada label{
+    font-size:11.5px;
+    margin-bottom:1px;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada input{
+    height:27px;
+    min-height:27px;
+    padding:3px 7px;
+    margin:2px 0 4px;
+    font-size:12px;
+    box-sizing:border-box;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada .container-botoes{
+    margin-top:10px;
+    padding-top:12px;
+    border-top:1px solid var(--borda);
+    gap:10px;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada .container-botoes button{
+    padding:9px 16px;
+    font-size:13px;
+}
+@media(max-width:1100px){
+    body.usuario-admin .layout-admin-operacional > .painel-entrada{
+        overflow-x:auto;
+    }
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-identificacao,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-produto{
+        min-width:760px;
+    }
+}
+@media(max-width:700px){
+    body.usuario-admin .layout-admin-operacional > #painel-admin-usuarios,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada{
+        width:100%;
+    }
+    body.usuario-admin .layout-admin-operacional > .painel-entrada{
+        overflow-x:visible;
+        padding:14px 12px;
+    }
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-form,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-identificacao,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-produto{
+        grid-template-columns:1fr;
+        min-width:0;
+    }
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-quantidade{
+        grid-template-columns:1fr 1fr;
+        max-width:none;
+    }
+}
+</style>
