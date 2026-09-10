@@ -720,6 +720,22 @@ button:disabled {
     color: var(--texto-fraco);
 }
 
+
+.btn-atualizar-sistema {
+    padding: 8px 12px;
+    border: 1px solid var(--borda-forte);
+    border-radius: 7px;
+    background: var(--bg-input);
+    color: var(--texto);
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.btn-atualizar-sistema:hover {
+    filter: brightness(1.08);
+}
+
 .btn-sair {
     background: var(--bg-painel-2);
     color: var(--texto);
@@ -1046,7 +1062,7 @@ const firebaseAuth = firebase.auth();
 const firebaseDB = firebase.database();
 const firebaseFunctions = firebase.functions();
 // A sessão não fica persistida entre recarregamentos/aberturas.
-// A função configurarAutenticacaoSemPersistencia() confirma isso antes do login.
+// A função configurarAutenticacaoSessao() confirma isso antes do login.
 console.log("🔥 Firebase conectado!");
 </script>
 <style id="ajuste-layout-admin-final">
@@ -1330,6 +1346,7 @@ Entrar
 <div class="barra-usuario">
 <span id="texto-usuario-externo"></span>
 <button class="btn-notificacao-web" id="btn-notificacoes-externo" onclick="ativarNotificacoesWeb()" type="button">🔔 Ativar</button>
+<button class="btn-atualizar-sistema" onclick="atualizarSistemaSemDeslogar()" type="button">🔄 Atualizar</button>
 <button class="btn-sair" onclick="sairDoSistema()" type="button">
             🚪 Sair
         </button>
@@ -1450,6 +1467,7 @@ Entrar
 <div class="barra-usuario">
 <span id="texto-usuario-logado"></span>
 <button class="btn-notificacao-web" id="btn-notificacoes-app" onclick="ativarNotificacoesWeb()" type="button">🔔 Ativar</button>
+<button class="btn-atualizar-sistema" onclick="atualizarSistemaSemDeslogar()" type="button">🔄 Atualizar</button>
 <button class="btn-historico" id="btn-abrir-painel-admin" onclick="toggleAdminUsuarios()" style="display:none;" type="button">
 👑 Usuários Cadastrados
 </button>
@@ -6699,7 +6717,7 @@ async function tratarEnvioLogin(){
     if(botao){botao.disabled=true;botao.innerText="Entrando...";}
     try{
         const email=emailNormalizado(usuarioParaEmail(usuarioDigitado));
-        await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.NONE);
+        await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
         const cred=await comTimeoutFirebase(firebaseAuth.signInWithEmailAndPassword(email,senha),15000,"Tempo esgotado ao autenticar no Firebase.");
         console.log("✅ Firebase Authentication: usuário autenticado",cred.user.uid);
         await verificarAutenticacao(cred.user);
@@ -6802,6 +6820,27 @@ if(usuarioObjeto && usuarioObjeto.tipo === "externo"){
         if(botao){botao.disabled=false;botao.innerText="Entrar";}
     }
 }
+
+
+async function atualizarSistemaSemDeslogar(){
+    try{
+        // A autenticação usa Persistence.SESSION, portanto atualizar a página
+        // não encerra a sessão desta aba.
+        const usuarioAntes = firebaseAuth.currentUser;
+        if(!usuarioAntes){
+            window.location.reload();
+            return;
+        }
+        // Atualiza a página sem executar sairDoSistema(). O Firebase restaura
+        // automaticamente o usuário da sessão da aba após o reload.
+        window.location.reload();
+    }catch(erro){
+        console.error("Erro ao atualizar o sistema:",erro);
+        alert("Não foi possível atualizar o sistema.");
+    }
+}
+
+window.atualizarSistemaSemDeslogar = atualizarSistemaSemDeslogar;
 
 async function sairDoSistema(){
     try{
@@ -8843,23 +8882,20 @@ window.atualizarIndicadorAdmin = atualizarIndicadorAdmin;
 // ======================================================
 // INICIALIZAÇÃO DA AUTENTICAÇÃO
 // ======================================================
-// O Firebase Authentication usa persistência NONE.
-// Isso impede que uma sessão antiga do navegador seja restaurada.
-// A configuração é concluída antes de registrar o listener de autenticação.
-async function configurarAutenticacaoSemPersistencia(){
+// O Firebase Authentication usa persistência SESSION.
+// A sessão fica vinculada à aba atual: permanece ao atualizar a página,
+// mas é encerrada quando a sessão da aba é finalizada.
+// O botão Atualizar nunca chama sairDoSistema().
+async function configurarAutenticacaoSessao(){
     try{
-        await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.NONE);
-        // Se uma versão anterior deixou uma sessão persistida, encerra-a.
-        if(firebaseAuth.currentUser){
-            await firebaseAuth.signOut();
-        }
+        await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
     }catch(erro){
-        console.error("Erro ao configurar autenticação sem persistência:",erro);
+        console.error("Erro ao configurar autenticação de sessão:",erro);
     }
 }
 
 async function iniciarAutenticacao(){
-    try{await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.NONE);}catch(e){console.error("Erro ao configurar autenticação sem persistência:",e);}
+    try{await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION);}catch(e){console.error("Erro ao configurar autenticação de sessão:",e);}
     firebaseAuth.onAuthStateChanged(function(user){
         if(!user){
             document.body.classList.remove("usuario-admin");
