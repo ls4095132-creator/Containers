@@ -5965,19 +5965,45 @@ function atualizarTelaUsuarioLogado(){
 async function verificarAutenticacao(userInformado){
     const user=userInformado||firebaseAuth.currentUser;
     if(!user)return false;
-    try{
-        const perfil=await comTimeoutFirebase(obterPerfilFirebase(user.uid),10000,"Tempo esgotado ao carregar seu perfil no Firebase.");
-        const perfilFinal=perfil||await comTimeoutFirebase(garantirPerfilFirebase(user),10000,"Tempo esgotado ao criar seu perfil no Firebase.");
-        return concluirLoginFirebase(user,perfilFinal);
-    }catch(erro){
-        console.error("Erro ao carregar perfil Firebase:",erro);
-        await firebaseAuth.signOut().catch(function(){});
-        usuarioLogadoAtual=null;
-        const botao=document.getElementById("btn-acao-login");
-        if(botao){botao.disabled=false;botao.innerText="Entrar";}
-        mostrarErroLogin("Não foi possível carregar seu perfil no Firebase. Verifique Realtime Database → Regras.");
-        return false;
+
+    let ultimoErro=null;
+
+    // Ao recarregar a página, o Firebase pode levar alguns instantes para
+    // disponibilizar novamente o Realtime Database. Nunca desloga o usuário
+    // por uma falha temporária durante essa restauração.
+    for(let tentativa=1; tentativa<=3; tentativa++){
+        try{
+            const perfil=await comTimeoutFirebase(
+                obterPerfilFirebase(user.uid),
+                15000,
+                "Tempo esgotado ao carregar seu perfil no Firebase."
+            );
+
+            const perfilFinal=perfil || await comTimeoutFirebase(
+                garantirPerfilFirebase(user),
+                15000,
+                "Tempo esgotado ao criar seu perfil no Firebase."
+            );
+
+            return await concluirLoginFirebase(user,perfilFinal);
+        }catch(erro){
+            ultimoErro=erro;
+            console.warn("⚠️ Falha ao restaurar sessão (tentativa "+tentativa+"): ",erro);
+            if(tentativa<3){
+                await new Promise(function(resolve){setTimeout(resolve,1000*tentativa);});
+            }
+        }
     }
+
+    console.error("Erro ao carregar perfil Firebase após tentativas:",ultimoErro);
+    // IMPORTANTE: não chamar signOut() aqui. O usuário continua autenticado
+    // no Firebase para que um novo ciclo de sincronização possa recuperar o
+    // perfil sem obrigar um novo login.
+    usuarioLogadoAtual=null;
+    const botao=document.getElementById("btn-acao-login");
+    if(botao){botao.disabled=false;botao.innerText="Entrar";}
+    mostrarErroLogin("Não foi possível carregar seu perfil agora. Sua sessão continua ativa. Tente atualizar novamente em alguns segundos.");
+    return false;
 }
 
 async function concluirLoginFirebase(user,perfil){
@@ -8181,35 +8207,51 @@ window.atualizarIndicadorAdmin = atualizarIndicadorAdmin;
 // ======================================================
 // INICIALIZAÇÃO DA AUTENTICAÇÃO
 // ======================================================
-// O Firebase Authentication usa persistência SESSION.
-// O login permanece durante atualizações da página, mas a sessão da aba é encerrada ao fechá-la.
-// A configuração é concluída antes de registrar o listener de autenticação.
-async function configurarAutenticacaoSessao(){
-    try{
-        await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
-        // A persistência SESSION mantém o login durante atualizações da página,
-        // mas a sessão é encerrada quando a aba/janela é fechada.
-    }catch(erro){
-        console.error("Erro ao configurar autenticação sem persistência:",erro);
+// Persistence.SESSION: mantém o login durante F5/recarregamento da página
+// e encerra a sessão quando a aba/janela é fechada.
+let autenticacaoPronta=null;
+
+function configurarAutenticacaoSessao(){
+    if(!autenticacaoPronta){
+        autenticacaoPronta=firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION)
+            .catch(function(erro){
+                console.error("Erro ao configurar persistência SESSION:",erro);
+                throw erro;
+            });
     }
+    return autenticacaoPronta;
 }
 
 async function iniciarAutenticacao(){
-    try{await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION);}catch(e){console.error("Erro ao configurar autenticação sem persistência:",e);}
+    try{
+        await configurarAutenticacaoSessao();
+    }catch(e){
+        console.error("Não foi possível configurar a sessão do Firebase:",e);
+    }
+
     firebaseAuth.onAuthStateChanged(async function(user){
         if(!user){
             document.body.classList.remove("usuario-admin");
-            usuarioLogadoAtual=null;perfisUsuariosCache={};desligarListenersFirebase();
-            const app=document.getElementById("app-principal"),login=document.getElementById("tela-login");
-            if(app){app.classList.remove("app-visivel");app.style.display="none";}
+            usuarioLogadoAtual=null;
+            perfisUsuariosCache={};
+            desligarListenersFirebase();
+
+            const app=document.getElementById("app-principal");
+            const login=document.getElementById("tela-login");
             const externo=document.getElementById("app-externo");
+
+            if(app){app.classList.remove("app-visivel");app.style.display="none";}
             if(externo){externo.style.display="none";}
             if(login){login.classList.remove("login-oculta");login.style.display="flex";}
             return;
         }
 
-        // Ao atualizar a página, o Firebase restaura a sessão da aba.
-        // Reentra automaticamente no aplicativo sem exigir novo login.
+        // Se a página foi apenas atualizada, o Firebase restaura a sessão
+        // SESSION e entramos novamente no aplicativo sem pedir senha.
+        await configurarAutenticacaoSessao().catch(function(e){
+            console.error("Persistência SESSION:",e);
+        });
+
         try{
             await verificarAutenticacao(user);
         }catch(e){
@@ -8217,6 +8259,7 @@ async function iniciarAutenticacao(){
         }
     });
 }
+
 iniciarAutenticacao();
 
 // Permite enviar o formulário de login pressionando Enter.
