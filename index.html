@@ -1402,6 +1402,66 @@ window.OneSignalDeferred.push(async function(OneSignal) {
     console.log("✅ OneSignal inicializado corretamente.");
 });
 </script>
+
+<style id="ajuste-layout-admin-esquerda-direita">
+/* ======================================================
+   LAYOUT ADMIN — ESQUERDA (USUÁRIOS/SOLICITAÇÕES) +
+   DIREITA (ENTRADA DE MERCADORIA)
+   Mantém os campos e todas as alterações existentes.
+   ====================================================== */
+.layout-admin-operacional{
+    display:grid !important;
+    grid-template-columns:minmax(0, 0.78fr) minmax(760px, 1.22fr) !important;
+    gap:14px !important;
+    align-items:start !important;
+    width:100% !important;
+    margin-bottom:18px !important;
+}
+
+.layout-admin-operacional > #painel-admin-usuarios{
+    grid-column:1 !important;
+    grid-row:1 !important;
+    width:auto !important;
+    max-width:none !important;
+    float:none !important;
+    margin:0 !important;
+}
+
+.layout-admin-operacional > .painel-entrada{
+    grid-column:2 !important;
+    grid-row:1 !important;
+    width:auto !important;
+    max-width:none !important;
+    float:none !important;
+    margin:0 !important;
+    align-self:start !important;
+}
+
+/* O formulário do Admin usa exatamente as mesmas dimensões
+   compactas já definidas para o formulário do usuário comum. */
+.layout-admin-operacional > .painel-entrada .linha-identificacao{
+    grid-template-columns:125px 105px 260px 220px !important;
+}
+.layout-admin-operacional > .painel-entrada .linha-produto{
+    grid-template-columns:125px 430px 260px !important;
+}
+.layout-admin-operacional > .painel-entrada .linha-quantidade{
+    grid-template-columns:100px 115px 130px 160px !important;
+    max-width:520px !important;
+}
+
+@media(max-width:1100px){
+    .layout-admin-operacional{
+        grid-template-columns:1fr !important;
+    }
+    .layout-admin-operacional > #painel-admin-usuarios,
+    .layout-admin-operacional > .painel-entrada{
+        grid-column:1 !important;
+        grid-row:auto !important;
+        width:100% !important;
+    }
+}
+</style>
 </head>
 <body>
 <!-- TELA DE LOGIN -->
