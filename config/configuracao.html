@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Configuração do Sistema</title>
+<link rel="stylesheet" href="./configuracao.css">
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body>
+<div class="pagina">
+  <div class="cabecalho">
+    <h1>⚙️ Configuração do Sistema</h1>
+    <button onclick="voltarSistema()">⬅️ Voltar ao sistema</button>
+  </div>
+
+  <div id="mensagem" class="mensagem"></div>
+
+  <section class="card">
+    <h2>🖥️ Sistema</h2>
+    <label>Nome do sistema</label>
+    <input id="nomeSistema" type="text" placeholder="Controle de Containers">
+    <label>Quantidade de containers</label>
+    <input id="quantidadeContainers" type="number" min="1" max="999">
+  </section>
+
+  <section class="card">
+    <h2>🔐 Acesso digital</h2>
+    <p>O acesso digital dos usuários será controlado pelo Firebase.</p>
+    <label>Modo de acesso</label>
+    <select id="modoAcesso">
+      <option value="normal">Normal</option>
+      <option value="restrito">Restrito</option>
+    </select>
+    <label class="check"><input id="acessoDigital" type="checkbox"> Acesso digital ativado</label>
+  </section>
+
+  <section class="card">
+    <h2>🔔 Notificações</h2>
+    <label class="check"><input id="notificacoesGerais" type="checkbox"> Notificações gerais</label>
+    <label class="check"><input id="avisosEntrada" type="checkbox"> Avisos de entrada de mercadoria</label>
+    <label class="check"><input id="avisosRecusa" type="checkbox"> Avisos de mercadoria recusada</label>
+  </section>
+
+  <section class="card">
+    <h2>💾 Salvar</h2>
+    <button class="salvar" onclick="salvarConfiguracoes()">💾 Salvar configurações</button>
+  </section>
+</div>
+<script src="./configuracao.js"></script>
+</body>
+</html>

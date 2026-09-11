@@ -1,0 +1,16 @@
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f1f5f9;color:#1f2937}
+.pagina{width:min(900px,94%);margin:25px auto}
+.cabecalho{background:#1976d2;color:#fff;padding:18px 20px;border-radius:10px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.cabecalho h1{margin:0;font-size:22px}
+button{border:0;border-radius:7px;padding:10px 14px;cursor:pointer;font-weight:bold}
+.cabecalho button{background:#fff;color:#1976d2}
+.card{background:#fff;margin-top:15px;padding:20px;border-radius:10px;box-shadow:0 2px 8px #00000018}
+.card h2{margin-top:0}
+label{display:block;font-weight:bold;margin:12px 0 6px}
+input[type=text],input[type=number],select{width:100%;padding:10px;border:1px solid #bbb;border-radius:6px;font-size:15px}
+.check{display:flex;align-items:center;gap:8px;font-weight:normal}
+.check input{width:18px;height:18px}
+.salvar{background:#198754;color:#fff;font-size:16px;width:100%}
+.mensagem{display:none;margin-top:15px;padding:12px;border-radius:7px;background:#d1e7dd;color:#0f5132;font-weight:bold}
+@media(max-width:600px){.cabecalho{flex-direction:column;align-items:stretch}.cabecalho h1{font-size:19px}.pagina{width:96%}}
