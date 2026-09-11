@@ -2381,6 +2381,20 @@ body.auth-carregando #app-externo{
     }
 }
 </style>
+<style id="configuracao-admin-link">
+.btn-configuracao-admin{
+    background:var(--bg-painel-2);
+    color:var(--texto);
+    border:1px solid var(--borda-forte);
+}
+.btn-configuracao-admin:hover{
+    border-color:var(--azul-forte);
+    color:var(--azul);
+}
+@media(max-width:700px){
+    .btn-configuracao-admin{padding:6px 9px;font-size:11px;}
+}
+</style>
 </head>
 <body class="auth-carregando">
 <!-- TELA DE LOGIN -->
@@ -2564,6 +2578,9 @@ Entrar
 <button class="btn-atualizar-sistema" onclick="atualizarSistemaSemDeslogar()" type="button">🔄 Atualizar</button>
 <button class="btn-historico" id="btn-abrir-painel-admin" onclick="toggleAdminUsuarios()" style="display:none;" type="button">
 👑 Usuários Cadastrados
+</button>
+<button class="btn-historico btn-configuracao-admin" id="btn-abrir-configuracao" onclick="abrirConfiguracaoSistema()" style="display:none;" type="button">
+⚙️ Configuração
 </button>
 <button class="btn-sair" onclick="sairDoSistema()" type="button">🚪 Sair</button>
 </div>
@@ -7865,6 +7882,14 @@ async function garantirPerfilFirebase(user){
     return perfil;
 }
 
+function abrirConfiguracaoSistema(){
+    if(!usuarioEhAdmin()){
+        alert("❌ Apenas o administrador pode acessar as configurações.");
+        return;
+    }
+    window.location.href="./config/configuracao.html";
+}
+
 function atualizarTelaUsuarioLogado(){
     const usuario=usuarioLogadoAtual;
     const texto=document.getElementById("texto-usuario-logado");
@@ -7875,9 +7900,16 @@ function atualizarTelaUsuarioLogado(){
             (usuario && usuario.filial ? " — " + usuario.filial : "");
     }
 
+    const ehAdmin=!!(usuario && usuario.tipo === "admin");
+
     const botaoAdmin=document.getElementById("btn-abrir-painel-admin");
     if(botaoAdmin){
-        botaoAdmin.style.display=usuario && usuario.tipo === "admin" ? "inline-block" : "none";
+        botaoAdmin.style.display=ehAdmin ? "inline-block" : "none";
+    }
+
+    const botaoConfiguracao=document.getElementById("btn-abrir-configuracao");
+    if(botaoConfiguracao){
+        botaoConfiguracao.style.display=ehAdmin ? "inline-block" : "none";
     }
 }
 
