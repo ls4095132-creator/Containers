@@ -2405,6 +2405,17 @@ body.auth-carregando #app-externo{
     }
 }
 </style>
+<style id="painel-admin-inicial-solicitacoes">
+.painel-solicitacoes-admin-inicial{grid-column:1;min-width:0;box-sizing:border-box;max-height:760px;overflow:hidden;}
+.cabecalho-solicitacoes-admin-inicial{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--borda);}
+.subpainel-admin-inicial{background:var(--bg-painel-2);border:1px solid var(--borda);border-radius:9px;padding:10px;margin-bottom:10px;}
+.subcabecalho-admin-inicial{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;font-size:12px;}
+.subcabecalho-admin-inicial span{font-size:10.5px;color:var(--texto-fraco);}
+#conteudo-painel-solicitacoes-admin-inicial{max-height:660px;overflow-y:auto;padding-right:3px;}
+#lista-solicitacoes-acesso-admin,#lista-alteracoes-admin,#lista-solicitacoes{max-height:250px;overflow-y:auto;}
+@media(max-width:1100px){.painel-solicitacoes-admin-inicial{grid-column:1!important;max-height:none;}#conteudo-painel-solicitacoes-admin-inicial{max-height:none;} }
+@media(max-width:700px){.cabecalho-solicitacoes-admin-inicial{align-items:flex-start;flex-direction:column;}#lista-solicitacoes-acesso-admin,#lista-alteracoes-admin,#lista-solicitacoes{max-height:320px;}}
+</style>
 <style id="configuracao-admin-link">
 .btn-configuracao-admin{
     background:var(--bg-painel-2);
@@ -2418,6 +2429,12 @@ body.auth-carregando #app-externo{
 @media(max-width:700px){
     .btn-configuracao-admin{padding:6px 9px;font-size:11px;}
 }
+</style>
+<style id="ajuste-grid-admin-painel-novo">
+body.usuario-admin .layout-admin-operacional{display:grid!important;grid-template-columns:minmax(320px,0.9fr) minmax(520px,1.1fr)!important;gap:14px!important;align-items:stretch!important;}
+body.usuario-admin .layout-admin-operacional > .painel-solicitacoes-admin-inicial{grid-column:1!important;}
+body.usuario-admin .layout-admin-operacional > .painel-entrada{grid-column:2!important;}
+@media(max-width:1100px){body.usuario-admin .layout-admin-operacional{grid-template-columns:1fr!important;}body.usuario-admin .layout-admin-operacional > .painel-solicitacoes-admin-inicial,body.usuario-admin .layout-admin-operacional > .painel-entrada{grid-column:1!important;}}
 </style>
 </head>
 <body class="auth-carregando">
@@ -2609,6 +2626,35 @@ Entrar
 <button class="btn-notificacao-web" id="btn-notificacoes-comum" onclick="ativarNotificacoesWeb()" type="button">🔔 Ativar notificações</button>
 </div>
 </div>
+</div>
+<!-- PAINEL ADMINISTRATIVO — SOLICITAÇÕES E MOVIMENTAÇÕES -->
+<div class="painel painel-solicitacoes-admin-inicial" id="painel-solicitacoes-admin-inicial" style="display:none;">
+  <div class="cabecalho-solicitacoes-admin-inicial">
+    <div>
+      <h2 style="margin:0;">👑 Movimentações e Solicitações</h2>
+      <div style="font-size:11px;color:var(--texto-fraco);margin-top:4px;">Acompanhe novos acessos, entradas/alterações e solicitações de mercadoria.</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+      <span id="contador-pendencias-admin-inicial" style="font-size:11px;color:var(--texto-fraco);"></span>
+      <button class="btn-vis" id="btn-toggle-painel-solicitacoes-admin" onclick="togglePainelSolicitacoesAdminInicial()" type="button">🙈 Minimizar</button>
+    </div>
+  </div>
+  <div id="conteudo-painel-solicitacoes-admin-inicial">
+    <div class="subpainel-admin-inicial">
+      <div class="subcabecalho-admin-inicial"><strong>🆕 Novos acessos de usuários</strong><span id="contador-solicitacoes-acesso-admin"></span></div>
+      <div id="lista-solicitacoes-acesso-admin"><div class="vazio">📭 Nenhum novo acesso pendente.</div></div>
+    </div>
+
+    <div class="subpainel-admin-inicial">
+      <div class="subcabecalho-admin-inicial"><strong>🔄 Movimentações e alterações</strong><span id="contador-alteracoes-admin"></span></div>
+      <div id="lista-alteracoes-admin"><div class="vazio">📭 Nenhuma movimentação ou alteração pendente.</div></div>
+    </div>
+
+    <div class="subpainel-admin-inicial">
+      <div class="subcabecalho-admin-inicial"><strong>📨 Novas solicitações de mercadoria</strong><span id="contador-solicitacoes-mercadoria-admin"></span></div>
+      <div id="lista-solicitacoes"></div>
+    </div>
+  </div>
 </div>
 <!-- FORMULÁRIO -->
 <div class="painel painel-entrada">
@@ -3386,6 +3432,15 @@ async function iniciarSincronizacaoFirebase(){
                         );
                     }
 
+                    // Novas movimentações/alterações devem avisar o administrador em tempo real.
+                    if(!anterior && tipo !== "ENTRADA") {
+                        mostrarAvisoOperacaoVerde("Nova movimentação/alteração", (item.descricao || textoTipoAlteracao(tipo)));
+                    }
+                    // Mudanças de status feitas por outro dispositivo também são notificadas ao admin.
+                    if(anterior && !ehSolicitante && statusAnterior !== statusNovo && (statusNovo === "aprovada" || statusNovo === "recusada")){
+                        mostrarAvisoOperacaoVerde(statusNovo === "aprovada" ? "Solicitação aprovada" : "Solicitação recusada", textoTipoAlteracao(tipo)+" • "+(item.operador||"Usuário"));
+                    }
+
                     // O administrador recusou uma entrada/alteração solicitada.
                     if(anterior &&
                        ehSolicitante &&
@@ -3408,15 +3463,19 @@ async function iniciarSincronizacaoFirebase(){
         if(souAdmin){
 
     registrar(acessoRef,"value",function(snapshot){
-
+        const anterior=Array.isArray(solicitacoesAcessoCache) ? solicitacoesAcessoCache.slice() : [];
+        const mapaAnterior={};
+        anterior.forEach(function(item){if(item&&item.id!=null) mapaAnterior[String(item.id)]=item;});
         solicitacoesAcessoCache=normalizarListaFirebase(snapshot.val());
 
-        if(typeof renderizarSolicitacoesAcessoAdmin==="function"){
-            renderizarSolicitacoesAcessoAdmin();
+        if(notificacaoSolicitacoesInicializada){
+            solicitacoesAcessoCache.forEach(function(item){
+                if(!item||item.id==null||mapaAnterior[String(item.id)]) return;
+                if(String(item.status||"pendente").toLowerCase()==="pendente") mostrarAvisoOperacaoVerde("Novo acesso solicitado",(item.nomeCompleto||item.email||"Novo usuário")+" • "+(item.filial||"Sem filial"));
+            });
         }
-
+        if(typeof renderizarSolicitacoesAcessoAdmin==="function") renderizarSolicitacoesAcessoAdmin();
         atualizarIndicadorAdmin();
-
     },function(e){
         console.error("Firebase solicitações de acesso:",e);
     });
@@ -3438,9 +3497,18 @@ async function iniciarSincronizacaoFirebase(){
                 if(!item || item.id == null) return;
                 if(!mapaAnterior[String(item.id)]){
                     mostrarAvisoOperacaoVerde(
-                        "Solicitação registrada",
+                        "Nova solicitação de mercadoria",
                         (item.produto || "Mercadoria") + " • Container " + (item.container || "—")
                     );
+                }else{
+                    const anteriorItem=mapaAnterior[String(item.id)];
+                    const statusNovo=String(item.status||"").toLowerCase();
+                    const statusAntigo=String(anteriorItem.status||"").toLowerCase();
+                    const uidAtual=firebaseAuth.currentUser ? String(firebaseAuth.currentUser.uid||"") : "";
+                    const foiAdminAtual=uidAtual && String(item.processadoPorUid||"")===uidAtual;
+                    if(!foiAdminAtual && statusNovo!==statusAntigo && (statusNovo==="atendido" || statusNovo==="cancelado")){
+                        mostrarAvisoOperacaoVerde(statusNovo==="atendido" ? "Solicitação finalizada" : "Solicitação recusada/cancelada", (item.produto||"Mercadoria")+" • Container "+(item.container||"—"));
+                    }
                 }
             });
         }else{
@@ -8211,7 +8279,20 @@ if(usuarioObjeto && usuarioObjeto.tipo === "externo"){
         app.style.display="block";
     }
     atualizarTelaUsuarioLogado();
-    if(usuarioObjeto && usuarioObjeto.tipo !== "admin"){
+    const painelAdminInicial=document.getElementById("painel-solicitacoes-admin-inicial");
+    if(painelAdminInicial){
+        painelAdminInicial.style.display=(usuarioObjeto && usuarioObjeto.tipo === "admin") ? "block" : "none";
+    }
+    if(usuarioObjeto && usuarioObjeto.tipo === "admin"){
+        setTimeout(function(){
+            try{
+                renderizarSolicitacoesAcessoAdmin();
+                renderizarSolicitacoesAlteracoesAdmin();
+                renderizarSolicitacoesMercadoriaAdmin();
+                atualizarIndicadorAdmin();
+            }catch(e){console.warn("Renderização inicial do painel admin:",e);}
+        },100);
+    }else if(usuarioObjeto && usuarioObjeto.tipo !== "admin"){
         renderizarSolicitacoesRecebidasComum();
         renderizarHistoricoSolicitacoesComum();
     }
@@ -10199,6 +10280,17 @@ function escaparHtmlExterno(valor){
 // CORREÇÃO — PAINEL DE USUÁRIOS / INDICADOR ADMIN
 // ======================================================
 
+function togglePainelSolicitacoesAdminInicial(){
+    if(!usuarioEhAdmin()) return;
+    const conteudo=document.getElementById("conteudo-painel-solicitacoes-admin-inicial");
+    const botao=document.getElementById("btn-toggle-painel-solicitacoes-admin");
+    if(!conteudo) return;
+    const oculto=conteudo.style.display === "none";
+    conteudo.style.display=oculto ? "" : "none";
+    if(botao) botao.innerText=oculto ? "🙈 Minimizar" : "👁️ Mostrar solicitações";
+}
+window.togglePainelSolicitacoesAdminInicial=togglePainelSolicitacoesAdminInicial;
+
 function toggleAdminUsuarios(){
     if(!usuarioEhAdmin()){
         return;
@@ -10248,42 +10340,21 @@ function toggleAdminUsuarios(){
 }
 
 function atualizarIndicadorAdmin(){
-    const botao = document.getElementById("btn-abrir-painel-admin");
+    if(!usuarioEhAdmin()) return;
 
-    // Não gera erro em telas de usuário comum/externo.
-    if(!botao || !usuarioEhAdmin()){
-        return;
-    }
+    const alteracoes=Array.isArray(solicitacoesAlteracoesCache)
+        ? solicitacoesAlteracoesCache.filter(function(item){return String(item.status||"").toLowerCase()==="pendente";}).length : 0;
+    const mercadorias=Array.isArray(solicitacoesMercadoriaAdminCache)
+        ? solicitacoesMercadoriaAdminCache.filter(function(item){return String(item.status||"").toLowerCase()==="pendente";}).length : 0;
+    const acessos=Array.isArray(solicitacoesAcessoCache)
+        ? solicitacoesAcessoCache.filter(function(item){return String(item.status||"").toLowerCase()==="pendente";}).length : 0;
+    const total=alteracoes+mercadorias+acessos;
 
-    const alteracoes =
-        Array.isArray(solicitacoesAlteracoesCache)
-            ? solicitacoesAlteracoesCache.filter(function(item){
-                return String(item.status || "").toLowerCase() === "pendente";
-            }).length
-            : 0;
+    const contador=document.getElementById("contador-pendencias-admin-inicial");
+    if(contador) contador.innerText=total ? "🔔 "+total+" pendente(s)" : "✅ Nenhuma pendência";
 
-    const mercadorias =
-        Array.isArray(solicitacoesMercadoriaAdminCache)
-            ? solicitacoesMercadoriaAdminCache.filter(function(item){
-                return String(item.status || "").toLowerCase() === "pendente";
-            }).length
-            : 0;
-
-    const total = alteracoes + mercadorias;
-    const painel = document.getElementById("painel-admin-usuarios");
-
-    const aberto =
-        painel &&
-        painel.style.display !== "none" &&
-        painel.style.display !== "";
-
-    if(total > 0){
-        botao.innerText = "👑 Usuários / 🔔 " + total + " pendente(s)";
-    }else if(aberto){
-        botao.innerText = "🙈 Ocultar Usuários";
-    }else{
-        botao.innerText = "👑 Usuários Cadastrados";
-    }
+    const painel=document.getElementById("painel-solicitacoes-admin-inicial");
+    if(painel) painel.style.display="block";
 }
 
 // Disponibiliza os handlers usados pelo HTML no escopo global.
@@ -10376,11 +10447,12 @@ tratarEnvioLogin();
 
 
 setInterval(function(){
-    if(usuarioEhAdmin() && document.getElementById("painel-admin-usuarios")?.style.display !== "none"){
+    if(usuarioEhAdmin()){
         renderizarSolicitacoesAcessoAdmin();
         renderizarSolicitacoesAlteracoesAdmin();
+        renderizarSolicitacoesMercadoriaAdmin();
+        atualizarIndicadorAdmin();
     }
-    atualizarIndicadorAdmin();
 }, 2000);
 
 // ======================================================
