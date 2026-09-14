@@ -2420,28 +2420,44 @@ Entre com seu usuário e senha
 <button class="btn-login" id="btn-acao-login" onclick="tratarEnvioLogin()" type="button">
 Entrar
 </button>
-<div class="alternar-login" id="alternar-login" style="display:none;">
+<div class="alternar-login" id="alternar-login" style="display:block;">
+    <a onclick="abrirSolicitacaoNovoAcesso()">Solicitar novo acesso</a>
 </div>
 </div>
-<!-- PAINEL DE SOLICITAÇÃO DE ACESSO AO ADMINISTRADOR -->
+<!-- SOLICITAÇÃO DE NOVO ACESSO -->
 <div id="painel-recuperar-senha" style="display:none;">
-<div class="erro-login" id="erro-recuperar"></div>
-<div style="background:var(--azul-fraco);border:1px solid var(--azul-forte);color:var(--texto);padding:10px;border-radius:8px;font-size:11.5px;margin-bottom:12px;">
-🔐 Seu acesso será analisado pelo administrador. Você não poderá alterar a própria senha por esta tela.
-</div>
-<div class="campo-login">
-<label>👤 Usuário:</label>
-<input autocomplete="off" id="recuperar-usuario" placeholder="Digite seu usuário" type="text"/>
-</div>
-<div class="campo-login">
-<label>📝 Mensagem para o administrador (opcional):</label>
-<textarea id="recuperar-mensagem" placeholder="Ex.: Esqueci minha senha e preciso recuperar meu acesso." rows="3"></textarea>
-</div>
-<button class="btn-login" onclick="solicitarAcessoAdmin()" type="button">
-📨 Solicitar acesso ao administrador
-</button>
-<div class="alternar-login" style="display:block;">
-<a onclick="esconderRecuperarSenha()">← Voltar para o login</a>
+    <div class="erro-login" id="erro-recuperar"></div>
+    <div style="background:var(--azul-fraco);border:1px solid var(--azul-forte);color:var(--texto);padding:10px;border-radius:8px;font-size:11.5px;margin-bottom:12px;">
+        🔐 Informe seus dados. A solicitação será enviada ao administrador pelo Firebase.
+    </div>
+    <div class="campo-login">
+        <label>👤 Nome:</label>
+        <input autocomplete="off" id="recuperar-nome" placeholder="Nome" type="text"/>
+    </div>
+    <div class="campo-login">
+        <label>👤 Sobrenome:</label>
+        <input autocomplete="off" id="recuperar-sobrenome" placeholder="Sobrenome" type="text"/>
+    </div>
+    <div class="campo-login">
+        <label>🏢 Filial:</label>
+        <select id="recuperar-filial">
+            <option value="">Selecione a filial</option>
+            <option value="ST. AFONSO">ST. AFONSO</option>
+            <option value="LAGOA">LAGOA</option>
+            <option value="MINISTRO">MINISTRO</option>
+            <option value="MATRIZ">MATRIZ</option>
+        </select>
+    </div>
+    <div class="campo-login">
+        <label>📧 E-mail:</label>
+        <input autocomplete="off" id="recuperar-usuario" placeholder="E-mail para o novo acesso" type="email"/>
+    </div>
+    <button class="btn-login" onclick="enviarSolicitacaoNovoAcesso()" type="button">
+        📨 Solicitar acesso
+    </button>
+    <div class="alternar-login" style="display:block;">
+        <a onclick="esconderRecuperarSenha()">← Voltar para o login</a>
+    </div>
 </div>
 </div>
 </div>
@@ -2475,7 +2491,7 @@ Entrar
 </div>
 <!-- CONTADOR -->
 <div class="contador" id="contador-externo">
-        Containers ocupados: 0 / 60
+        Containers ocupados: 0 / <span id="contador-max-containers">60</span>
     </div>
 <!-- CONTROLES DE VISUALIZAÇÃO DOS CONTAINERS EXTERNOS -->
 <div class="painel-visualizacao" id="painel-visualizacao-externo">
@@ -2508,53 +2524,7 @@ Entrar
             📨 Solicitar Mercadoria
         </button>
 </div>
-<!-- Solicitação do usuário externo: agora fica em uma janela pequena -->
-<div aria-hidden="true" class="modal-solicitacao-externo" id="modal-solicitacao-externo" style="display:none;">
-<div aria-labelledby="titulo-modal-solicitacao" aria-modal="true" class="modal-solicitacao-caixa" role="dialog">
-<div class="modal-solicitacao-cabecalho">
-<div>
-<h2 id="titulo-modal-solicitacao">📨 Nova Solicitação de Mercadoria</h2>
-<div class="texto-apoio-solicitacao">Selecione o container e a mercadoria disponível. Os dados são preenchidos pelo estoque.</div>
-</div>
-<button aria-label="Fechar" class="modal-fechar" onclick="fecharModalSolicitacaoMercadoria()" type="button">✕</button>
-</div>
-<div class="modal-solicitacao-corpo">
-<div class="linha-form modal-grid-solicitacao">
-<div class="campo">
-<label>📦 Container:</label>
-<select id="solicitacao-container">
-<option value="">Selecione o container</option>
-</select>
-</div>
-<div class="campo">
-<label>📋 Mercadoria:</label>
-<select id="solicitacao-produto">
-<option value="">Selecione a mercadoria</option>
-</select>
-</div>
-<div class="campo">
-<label>🔢 Quantidade:</label>
-<input id="solicitacao-qtd" min="1" placeholder="Quantidade" type="number"/>
-</div>
-<div class="campo">
-<label>⚖️ Peso solicitado (KG):</label>
-<input id="solicitacao-peso" min="0" placeholder="Peso em KG" step="0.01" type="number"/>
-</div>
-</div>
-<div class="resumo-container-solicitacao" id="resumo-container-solicitacao">
-<span>📦 Selecione um container para visualizar os dados.</span>
-</div>
-<div class="campo">
-<label>💬 Observação:</label>
-<textarea id="solicitacao-observacao" placeholder="Informe alguma observação sobre a solicitação..." rows="3"></textarea>
-</div>
-</div>
-<div class="modal-solicitacao-rodape">
-<button class="btn-cancelar" onclick="limparSolicitacaoMercadoria(); fecharModalSolicitacaoMercadoria();" type="button">🧹 Cancelar</button>
-<button class="btn-salvar" onclick="enviarSolicitacaoMercadoria()" type="button">📨 Enviar Solicitação</button>
-</div>
-</div>
-</div>
+<!-- Modal global de solicitação de mercadoria -->
 <!-- Minhas solicitações permanece acima dos containers -->
 <div class="painel painel-minhas-solicitacoes-externo">
 <div class="cabecalho-minhas-solicitacoes">
@@ -2576,9 +2546,6 @@ Entrar
 <span id="texto-usuario-logado"></span>
 <button class="btn-notificacao-web" id="btn-notificacoes-app" onclick="ativarNotificacoesWeb()" type="button">🔔 Ativar</button>
 <button class="btn-atualizar-sistema" onclick="atualizarSistemaSemDeslogar()" type="button">🔄 Atualizar</button>
-<button class="btn-historico" id="btn-abrir-painel-admin" onclick="toggleAdminUsuarios()" style="display:none;" type="button">
-👑 Usuários Cadastrados
-</button>
 <button class="btn-historico btn-configuracao-admin" id="btn-abrir-configuracao" onclick="abrirConfiguracaoSistema()" style="display:none;" type="button">
 ⚙️ Configuração
 </button>
@@ -2586,62 +2553,7 @@ Entrar
 </div>
 <h1>📦 Controle de Containers</h1>
 <div class="layout-admin-operacional" id="layout-admin-operacional">
-<!-- PAINEL ADMIN: USUÁRIOS CADASTRADOS -->
-<div class="painel" id="painel-admin-usuarios" style="display:none;">
-<h2>👑 Usuários Cadastrados</h2>
-<div style="margin:12px 0;padding:12px;border:1px solid var(--borda);border-radius:8px;background:rgba(59,130,246,.08);">
-<strong>🔐 Cadastro de usuários pelo Firebase</strong>
-<div style="margin-top:6px;font-size:12px;line-height:1.6;color:var(--texto-fraco);">
-Os novos usuários devem ser cadastrados diretamente no Firebase Authentication.
-Depois, o perfil e a filial podem ser configurados no Realtime Database.
-</div>
-</div>
-
-<div id="painel-aprovacoes-alteracoes" style="background:rgba(245,158,11,.10);border:1px solid #f59e0b;padding:12px;border-radius:8px;margin-bottom:18px;">
-<h2 style="margin-top:0;color:#fbbf24;">🔔 Alterações aguardando aprovação <span id="contador-alteracoes-admin" style="font-size:12px;color:var(--texto-fraco);"></span></h2>
-<div id="lista-alteracoes-admin"></div>
-<div style="margin-top:8px;font-size:11px;color:var(--texto-fraco);">As alterações feitas por usuários comuns não entram no estoque até serem aprovadas aqui.</div>
-</div>
-<!-- SOLICITAÇÕES RECEBIDAS -->
-<div class="painel">
-<h2>📦 Solicitações Recebidas</h2>
-<div class="container-botoes">
-<button class="btn-historico" id="btn-toggle-solicitacoes" onclick="toggleSolicitacoes()" type="button">
-            👁️ Mostrar Solicitações
-        </button>
-<button class="btn-produto" onclick="exportarSolicitacoesAdminExcel()" type="button">
-            📊 Exportar Excel
-        </button>
-<button class="btn-apagar-historico" onclick="ocultarSolicitacoesAdmin()" type="button">
-            🗑️ Apagar Solicitações
-        </button>
-        <button class="btn-historico" onclick="limparPendenciasAntigasAdmin()" type="button">
-            🧹 Limpar Pendências Antigas
-        </button>
-<button class="btn-historico" id="btn-solicitacoes-finalizadas-admin" onclick="toggleSolicitacoesFinalizadasAdmin()" type="button">
-            📋 Ver Solicitações Finalizadas
-        </button>
-</div>
-<div id="conteudo-solicitacoes" style="display:none;margin-top:15px;">
-<div id="lista-solicitacoes">
-<!-- As solicitações serão carregadas aqui pelo Firebase -->
-</div>
-</div>
-<div id="conteudo-solicitacoes-finalizadas-admin" style="display:none;margin-top:15px;">
-<div id="lista-solicitacoes-finalizadas-admin">
-<!-- Solicitações finalizadas -->
-</div>
-</div>
-</div>
-<!-- FIM SOLICITAÇÕES RECEBIDAS -->
-<div class="cabecalho-usuarios-admin" style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px;margin-bottom:8px;">
-<strong style="color:var(--azul);">👥 Usuários existentes</strong>
-<button class="btn-vis" id="btn-toggle-usuarios-existentes" onclick="toggleUsuariosExistentes()" type="button">🙈 Ocultar Usuários Existentes</button>
-</div>
-<div id="lista-usuarios-cadastrados" style="margin-top:20px;">
-</div>
-
-</div>
+<!-- PAINEL DE USUÁRIOS REMOVIDO DA TELA INICIAL: agora fica em Configuração -->
 <!-- SOLICITAÇÕES RECEBIDAS — USUÁRIO COMUM (SOMENTE VISUALIZAÇÃO) -->
 <div class="painel painel-solicitacoes-comum" id="painel-solicitacoes-comum" style="display:none;">
 <div class="cabecalho-solicitacoes-comum">
@@ -2674,8 +2586,8 @@ Depois, o perfil e a filial podem ser configurados no Realtime Database.
 <input id="data" type="date"/>
 </div>
 <div class="campo">
-<label>📦 Nº Container (1-60):</label>
-<input id="num" max="60" min="1" placeholder="Ex: 01" type="number"/>
+<label>📦 Nº Container (1-999):</label>
+<input id="num" max="999" min="1" placeholder="Ex: 01" type="number"/>
 </div>
 <div class="campo">
 <label>🏢 Fornecedor:</label>
@@ -2746,9 +2658,9 @@ Depois, o perfil e a filial podem ser configurados no Realtime Database.
 <input class="input-busca" id="campo-busca" oninput="filtrarEstoque()" placeholder="Produto, lote, container, NF ou fornecedor..." type="text"/>
 </div>
 <!-- STATUS E CONTAINERS -->
-<h2>Status dos 60 Containers</h2>
+<h2>Status dos Containers</h2>
 <div class="contador" id="contador">
-Containers ocupados: 0 / 60
+Containers ocupados: 0 / <span class="contador-max-inline">60</span>
 </div>
 <!-- CONTROLES DE VISUALIZAÇÃO DOS CONTAINERS -->
 <div class="painel-visualizacao" id="painel-visualizacao-admin">
@@ -2764,6 +2676,9 @@ Containers ocupados: 0 / 60
 <option value="cheios">🟢 Cheios</option>
 <option value="vazios">⚪ Vazios</option>
 </select>
+<button class="btn-vis btn-registrar-mercadoria" id="btn-registrar-mercadoria" onclick="abrirModalSolicitacaoMercadoria()" type="button">
+📦 Registrar Mercadoria
+</button>
 </div>
 <div class="resumo-visualizacao" id="resumo-visualizacao-admin"></div>
 </div>
@@ -2803,6 +2718,54 @@ Containers ocupados: 0 / 60
 <!-- HISTÓRICO DE SOLICITAÇÕES DO USUÁRIO COMUM -->
 
 </div>
+<!-- Solicitação do usuário externo: agora fica em uma janela pequena -->
+<div aria-hidden="true" class="modal-solicitacao-externo" id="modal-solicitacao-externo" style="display:none;">
+<div aria-labelledby="titulo-modal-solicitacao" aria-modal="true" class="modal-solicitacao-caixa" role="dialog">
+<div class="modal-solicitacao-cabecalho">
+<div>
+<h2 id="titulo-modal-solicitacao">📨 Nova Solicitação de Mercadoria</h2>
+<div class="texto-apoio-solicitacao">Selecione o container e a mercadoria disponível. Os dados são preenchidos pelo estoque.</div>
+</div>
+<button aria-label="Fechar" class="modal-fechar" onclick="fecharModalSolicitacaoMercadoria()" type="button">✕</button>
+</div>
+<div class="modal-solicitacao-corpo">
+<div class="linha-form modal-grid-solicitacao">
+<div class="campo">
+<label>📦 Container:</label>
+<select id="solicitacao-container">
+<option value="">Selecione o container</option>
+</select>
+</div>
+<div class="campo">
+<label>📋 Mercadoria:</label>
+<select id="solicitacao-produto">
+<option value="">Selecione a mercadoria</option>
+</select>
+</div>
+<div class="campo">
+<label>🔢 Quantidade:</label>
+<input id="solicitacao-qtd" min="1" placeholder="Quantidade" type="number"/>
+</div>
+<div class="campo">
+<label>⚖️ Peso solicitado (KG):</label>
+<input id="solicitacao-peso" min="0" placeholder="Peso em KG" step="0.01" type="number"/>
+</div>
+</div>
+<div class="resumo-container-solicitacao" id="resumo-container-solicitacao">
+<span>📦 Selecione um container para visualizar os dados.</span>
+</div>
+<div class="campo">
+<label>💬 Observação:</label>
+<textarea id="solicitacao-observacao" placeholder="Informe alguma observação sobre a solicitação..." rows="3"></textarea>
+</div>
+</div>
+<div class="modal-solicitacao-rodape">
+<button class="btn-cancelar" onclick="limparSolicitacaoMercadoria(); fecharModalSolicitacaoMercadoria();" type="button">🧹 Cancelar</button>
+<button class="btn-salvar" onclick="enviarSolicitacaoMercadoria()" type="button">📨 Enviar Solicitação</button>
+</div>
+</div>
+</div>
+
 <!-- fim de #app-principal -->
 <script>
 
@@ -2813,6 +2776,45 @@ Containers ocupados: 0 / 60
 // O navegador mantém apenas dados transitórios em memória JavaScript.
 // Toda persistência do sistema fica no Firebase.
 
+let quantidadeContainersSistema = 60;
+let configuracoesSistemaAplicacao = {
+    quantidadeContainers: 60,
+    notificacoesGerais: true,
+    avisosEntrada: true,
+    avisosRecusa: true,
+    avisosSolicitacoes: true,
+    tema: "escuro"
+};
+
+async function carregarConfiguracoesSistemaAplicacao(){
+    try{
+        const snap = await firebaseDB.ref("configuracoes/sistema").once("value");
+        const c = snap.exists() ? (snap.val() || {}) : {};
+        const n = Number(c.quantidadeContainers);
+        quantidadeContainersSistema = Number.isFinite(n) ? Math.max(1, Math.min(999, Math.floor(n))) : 60;
+        configuracoesSistemaAplicacao = Object.assign({
+            quantidadeContainers: quantidadeContainersSistema,
+            notificacoesGerais: true,
+            avisosEntrada: true,
+            avisosRecusa: true,
+            avisosSolicitacoes: true,
+            tema: "escuro"
+        }, c, {quantidadeContainers: quantidadeContainersSistema});
+        aplicarTemaSistema(configuracoesSistemaAplicacao.tema);
+        return configuracoesSistemaAplicacao;
+    }catch(e){
+        console.warn("Não foi possível carregar as configurações do sistema:",e);
+        quantidadeContainersSistema = 60;
+        aplicarTemaSistema("escuro");
+        return configuracoesSistemaAplicacao;
+    }
+}
+
+function aplicarTemaSistema(tema){
+    const t = String(tema || "escuro").toLowerCase() === "claro" ? "claro" : "escuro";
+    document.body.classList.toggle("tema-claro", t === "claro");
+    document.documentElement.setAttribute("data-tema", t);
+}
 let estoque = [];
 let historico = [];
 let produtosCadastrados = [];
@@ -5574,8 +5576,8 @@ document.getElementById("data").value =
 // VISUALIZAÇÃO DOS CONTAINERS — QUADRO / LISTA / FILTROS
 // ======================================================
 const configuracaoVisualizacaoContainers = {
-    admin: { modo: localStorage.getItem('modoVisualizacaoAdmin') || 'quadro', status: 'todos', selecionados: new Set(Array.from({length:60},(_,i)=>i+1)) },
-    externo: { modo: localStorage.getItem('modoVisualizacaoExterno') || 'quadro', status: 'todos', selecionados: new Set(Array.from({length:60},(_,i)=>i+1)) }
+    admin: { modo: localStorage.getItem('modoVisualizacaoAdmin') || 'quadro', status: 'todos', selecionados: new Set(Array.from({length:quantidadeContainersSistema},(_,i)=>i+1)) },
+    externo: { modo: localStorage.getItem('modoVisualizacaoExterno') || 'quadro', status: 'todos', selecionados: new Set(Array.from({length:quantidadeContainersSistema},(_,i)=>i+1)) }
 };
 
 function obterGradeVisualizacao(tipo){
@@ -5588,7 +5590,7 @@ function construirCheckboxesContainers(tipo){
     const area=document.getElementById('checkbox-containers-'+tipo);
     if(!area || area.dataset.pronto==='1') return;
     area.innerHTML='';
-    for(let i=1;i<=60;i++){
+    for(let i=1;i<=quantidadeContainersSistema;i++){
         const label=document.createElement('label');
         label.className='chk-container';
         const cb=document.createElement('input');
@@ -5617,7 +5619,7 @@ function alterarVisualizacaoContainers(tipo,modo){
 }
 function selecionarTodosContainers(tipo,marcar){
     const cfg=configuracaoVisualizacaoContainers[tipo];
-    cfg.selecionados=marcar ? new Set(Array.from({length:60},(_,i)=>i+1)) : new Set();
+    cfg.selecionados=marcar ? new Set(Array.from({length:quantidadeContainersSistema},(_,i)=>i+1)) : new Set();
     const area=document.getElementById('checkbox-containers-'+tipo);
     if(area) area.querySelectorAll('input[type="checkbox"]').forEach(cb=>cb.checked=marcar);
     aplicarFiltrosContainers(tipo);
@@ -5634,7 +5636,7 @@ function aplicarFiltrosContainers(tipo){
     const grade=obterGradeVisualizacao(tipo);
     if(grade) grade.classList.toggle('modo-lista',cfg.modo==='lista');
     let exibidos=0;
-    for(let i=1;i<=60;i++){
+    for(let i=1;i<=quantidadeContainersSistema;i++){
         const el=obterContainerVisualizacao(tipo,i);
         if(!el) continue;
         const selecionado=cfg.selecionados.has(i);
@@ -5644,7 +5646,7 @@ function aplicarFiltrosContainers(tipo){
         if(selecionado && passaStatus) exibidos++;
     }
     const resumo=document.getElementById('resumo-visualizacao-'+tipo);
-    if(resumo) resumo.textContent=exibidos+' container(s) exibido(s) de 60';
+    if(resumo) resumo.textContent=exibidos+' container(s) exibido(s) de '+quantidadeContainersSistema;
 }
 function inicializarVisualizacaoContainers(tipo){
     construirCheckboxesContainers(tipo);
@@ -5665,7 +5667,7 @@ document.getElementById("grade");
 
 grade.innerHTML="";
 
-for(let i=1;i<=60;i++){
+for(let i=1;i<=quantidadeContainersSistema;i++){
 
 const numero =
 String(i).padStart(2,"0");
@@ -6104,7 +6106,7 @@ const editIndex = document.getElementById("edit-index").value;
 
 if(!data){ alert("Informe a data."); return; }
 if(!num){ alert("Informe o container."); return; }
-if(num < 1 || num > 60){ alert("O container deve estar entre 1 e 60."); return; }
+if(num < 1 || num > quantidadeContainersSistema){ alert("O container deve estar entre 1 e 60."); return; }
 if(!fornecedor){ alert("Informe o fornecedor."); return; }
 if(!nf){ alert("Informe a Nota Fiscal."); return; }
 if(!prod){ alert("Informe o produto."); return; }
@@ -6233,7 +6235,7 @@ function mostrarEstoque(){
     // Verifica se a primeira área existe na tela. Se não existir, não executa o código.
     if (!document.getElementById("dados-1")) return;
 
-    for (let i = 1; i <= 60; i++){
+    for (let i = 1; i <= quantidadeContainersSistema; i++){
         const area = document.getElementById("dados-" + i);
         const container = document.getElementById("c-" + i);
         
@@ -6342,7 +6344,7 @@ area.appendChild(div);
 );
 
 
-for(let i=1;i<=60;i++){
+for(let i=1;i<=quantidadeContainersSistema;i++){
 
 const area =
 document.getElementById(
@@ -6519,7 +6521,7 @@ if(!campo)return;
 const texto = campo.value.toLowerCase().trim();
 const cfg=configuracaoVisualizacaoContainers.admin;
 
-for(let i=1;i<=60;i++){
+for(let i=1;i<=quantidadeContainersSistema;i++){
     const container=document.getElementById("c-"+i);
     if(!container)continue;
     const conteudo=container.innerText.toLowerCase();
@@ -6555,7 +6557,7 @@ document.getElementById(
 ).innerText=
 "Containers ocupados: "+
 ocupados+
-" / 60";
+" / "+quantidadeContainersSistema;
 
 }
 
@@ -7310,12 +7312,12 @@ function exportarTabelaExcel(headers,rows,nomeArquivo,nomeAba,configuracao){
 
 function exportarParaExcel(){
 
-    // Relatório completo dos 60 containers.
+    // Relatório completo de todos os containers configurados.
     // Cada container sempre aparece na planilha; se estiver vazio,
     // os demais campos ficam em branco.
     const rows=[];
 
-    for(let numero=1; numero<=60; numero++){
+    for(let numero=1; numero<=quantidadeContainersSistema; numero++){
         const container=String(numero);
         const itens=estoque.filter(function(item){
             return String(item && item.num != null ? item.num : '').trim() === container;
@@ -7356,7 +7358,7 @@ function exportarParaExcel(){
     exportarTabelaExcel(
         ["Data","Tipo","Container","Fornecedor","Nota Fiscal","Código","Produto","Lote","Quantidade","Peso KG"],
         rows,
-        "controle_saldo_60_containers",
+        "controle_saldo_"+quantidadeContainersSistema+"_containers",
         "Saldo dos Containers",
         {
             nomeTabela:"TabelaSaldoContainers",
@@ -7679,6 +7681,7 @@ function exportarMinhasSolicitacoesExternoExcel(){
 // ======================================================
 
 async function iniciarAplicativo(){
+    await carregarConfiguracoesSistemaAplicacao();
     criarContainers();
     preencherDataHora();
     garantirIdsEstoque();
@@ -8033,6 +8036,7 @@ async function tratarEnvioLogin(){
 
 async function entrarNoApp(usuarioObjeto){
     usuarioLogadoAtual=usuarioObjeto;
+    await carregarConfiguracoesSistemaAplicacao();
 
     // O layout de duas colunas é exclusivo do administrador.
     // Usuário comum continua com a tela completa/original.
@@ -8641,7 +8645,7 @@ function iniciarTelaUsuarioExterno(){
 
 
 // ======================================================
-// CRIAR OS 60 CONTAINERS DA TELA EXTERNA
+// CRIAR OS CONTAINERS CONFIGURADOS DA TELA EXTERNA
 // ======================================================
 
 function criarContainersExternos(){
@@ -8653,7 +8657,7 @@ function criarContainersExternos(){
 
     grade.innerHTML = "";
 
-    for(let i = 1; i <= 60; i++){
+    for(let i = 1; i <= quantidadeContainersSistema; i++){
 
         const numero =
             String(i).padStart(2,"0");
@@ -8756,7 +8760,7 @@ function carregarEstoqueExterno(){
 
 function renderizarEstoqueExterno(){
 
-    for(let i = 1; i <= 60; i++){
+    for(let i = 1; i <= quantidadeContainersSistema; i++){
 
         const area =
             document.getElementById(
@@ -8886,7 +8890,7 @@ function renderizarEstoqueExterno(){
     );
 
 
-    for(let i = 1; i <= 60; i++){
+    for(let i = 1; i <= quantidadeContainersSistema; i++){
 
         const area =
             document.getElementById(
@@ -8947,7 +8951,7 @@ function atualizarContadorExterno(){
         contador.innerText =
             "Containers ocupados: " +
             ocupados +
-            " / 60";
+            " / "+quantidadeContainersSistema;
 
     }
 
@@ -8965,7 +8969,7 @@ if(!campo)return;
 const texto=campo.value.toLowerCase().trim();
 const cfg=configuracaoVisualizacaoContainers.externo;
 
-for(let i=1;i<=60;i++){
+for(let i=1;i<=quantidadeContainersSistema;i++){
     const container=document.getElementById("externo-c-"+i);
     if(!container)continue;
     const conteudo=container.innerText.toLowerCase();
@@ -9019,7 +9023,7 @@ function preencherContainersSolicitacaoExterno(){
                     .filter(
                         function(num){
                             return num >= 1 &&
-                                   num <= 60;
+                                   num <= quantidadeContainersSistema;
                         }
                     )
 
@@ -10253,6 +10257,7 @@ async function inicializarNotificacoesWeb(){
             const d=payload && payload.data ? payload.data : {};
             const titulo=n.title || d.title || "Controle de Containers";
             const corpo=n.body || d.body || "Nova atualização recebida.";
+            if(typeof notificacaoPermitidaPorConfiguracao==="function" && !notificacaoPermitidaPorConfiguracao(payload)) return;
             mostrarToastNotificacao(titulo,corpo);
             if(Notification.permission === "granted") new Notification(titulo,{body:corpo,icon:"./icon-192.png",badge:"./icon-192.png"});
         });
@@ -10271,6 +10276,10 @@ function atualizarBotoesNotificacao(){
 
 async function ativarNotificacoesWeb(){
     try{
+        if(window.configuracoesSistemaAplicacao && window.configuracoesSistemaAplicacao.notificacoesGerais===false){
+            alert("🔕 As notificações estão desativadas em Configuração → Notificações.");
+            return;
+        }
         if(!window.isSecureContext){ alert("🔒 As notificações precisam de HTTPS."); return; }
         if(!firebaseAuth.currentUser){ alert("Faça login antes de ativar as notificações."); return; }
         await inicializarNotificacoesWeb();
@@ -10465,6 +10474,7 @@ async function configurarNotificacoesWeb(){
         firebaseMessagingWeb.onMessage(function(payload){
             const titulo=(payload && payload.notification && payload.notification.title) || (payload && payload.data && payload.data.title) || "Controle de Containers";
             const corpo=(payload && payload.notification && payload.notification.body) || (payload && payload.data && payload.data.body) || "Você recebeu uma nova notificação.";
+            if(typeof notificacaoPermitidaPorConfiguracao==="function" && !notificacaoPermitidaPorConfiguracao(payload)) return;
             mostrarToastNotificacaoWeb(titulo,corpo);
             if(typeof Notification!=="undefined" && Notification.permission==="granted" && document.hidden){
                 try{
@@ -10488,6 +10498,10 @@ async function configurarNotificacoesWeb(){
 
 async function ativarNotificacoesWeb(){
     try{
+        if(window.configuracoesSistemaAplicacao && window.configuracoesSistemaAplicacao.notificacoesGerais===false){
+            alert("🔕 As notificações estão desativadas em Configuração → Notificações.");
+            return;
+        }
         if(!window.isSecureContext){
             alert("❌ Este site não está em uma conexão segura (HTTPS). Abra o endereço do GitHub Pages começando com https://.");
             return;
@@ -10827,6 +10841,225 @@ async function chamarWorkerNotificacao(tipo, dados) {
     }
 }
 </script>
+
+<style id="configuracao-integracao-final">
+/* ===== Integração das configurações Firebase ===== */
+body.tema-claro{
+    --bg:#f4f7fb;
+    --bg-painel:#ffffff;
+    --bg-painel-2:#eef3f9;
+    --bg-input:#ffffff;
+    --borda:#d7e0ec;
+    --borda-forte:#aebed2;
+    --texto:#1f2937;
+    --texto-fraco:#64748b;
+    --azul:#087ea4;
+    --azul-forte:#0b8fb8;
+    --azul-fraco:rgba(11,143,184,.10);
+}
+body.tema-claro .tela-login{
+    background:radial-gradient(circle at 20% 10%,rgba(11,143,184,.08),transparent 45%),var(--bg);
+}
+body.tema-claro .cartao-login{box-shadow:0 12px 30px rgba(15,23,42,.15);}
+body.tema-claro .toast-notificacao-web{background:#fff;color:#1f2937;}
+body.tema-claro .toast-notificacao-web div{color:#334155;}
+
+/* Sem painel de usuários na tela inicial: o formulário ocupa a largura toda. */
+#layout-admin-operacional{
+    display:block !important;
+}
+#layout-admin-operacional > .painel-entrada{
+    width:100% !important;
+    float:none !important;
+    grid-column:1 !important;
+}
+/* O cadastro/entrada passa a ser aberto pelo botão ao lado dos filtros. */
+#layout-admin-operacional > .painel-entrada{
+    display:none !important;
+}
+.btn-registrar-mercadoria{
+    display:none;
+    white-space:nowrap;
+    background:#10b981 !important;
+    color:#fff !important;
+    border-color:#10b981 !important;
+}
+#app-principal .btn-registrar-mercadoria{display:inline-block;}
+@media(max-width:700px){
+    #app-principal .btn-registrar-mercadoria{width:100%;}
+}
+/* A área de visualização acompanha o número configurado. */
+.contador-max-inline{font-weight:700;}
+</style>
+
+
+<script id="configuracao-integracao-final-js">
+// ======================================================
+// CONFIGURAÇÕES FIREBASE — CONTROLE DINÂMICO DO SISTEMA
+// ======================================================
+window.quantidadeContainersSistema = quantidadeContainersSistema;
+window.configuracoesSistemaAplicacao = configuracoesSistemaAplicacao;
+
+function atualizarContadoresQuantidadeContainers(){
+    document.querySelectorAll("#contador-max-containers,.contador-max-inline").forEach(function(el){
+        el.textContent=String(quantidadeContainersSistema);
+    });
+    const num=document.getElementById("num");
+    if(num) num.max=String(quantidadeContainersSistema);
+    const rotulo=document.querySelector('#num')?.previousElementSibling;
+    if(rotulo && /Nº Container/i.test(rotulo.textContent)){
+        rotulo.textContent="📦 Nº Container (1-"+quantidadeContainersSistema+"):";
+    }
+    const status=document.querySelectorAll("h2");
+    status.forEach(function(h){
+        if(/Status dos Containers/i.test(h.textContent)) h.textContent="Status dos "+quantidadeContainersSistema+" Containers";
+    });
+}
+
+const _aplicarTemaOriginal = aplicarTemaSistema;
+aplicarTemaSistema = function(tema){
+    _aplicarTemaOriginal(tema);
+    window.configuracoesSistemaAplicacao = window.configuracoesSistemaAplicacao || {};
+    window.configuracoesSistemaAplicacao.tema = (String(tema||"escuro").toLowerCase()==="claro" ? "claro" : "escuro");
+};
+
+const _carregarConfigOriginal = carregarConfiguracoesSistemaAplicacao;
+carregarConfiguracoesSistemaAplicacao = async function(){
+    const r=await _carregarConfigOriginal();
+    window.quantidadeContainersSistema=quantidadeContainersSistema;
+    window.configuracoesSistemaAplicacao=configuracoesSistemaAplicacao;
+    atualizarContadoresQuantidadeContainers();
+    return r;
+};
+
+// Notificações: as opções salvas no Firebase passam a governar a exibição/ativação.
+function notificacaoPermitidaPorConfiguracao(payload){
+    const cfg=window.configuracoesSistemaAplicacao||{};
+    if(cfg.notificacoesGerais===false) return false;
+    const d=(payload&&payload.data)||{};
+    const tipo=String(d.tipo||d.evento||d.categoria||"").toLowerCase();
+    if((tipo.includes("entrada")||tipo.includes("registro")) && cfg.avisosEntrada===false) return false;
+    if((tipo.includes("recusa")||tipo.includes("recus")) && cfg.avisosRecusa===false) return false;
+    if((tipo.includes("solicit")) && cfg.avisosSolicitacoes===false) return false;
+    return true;
+}
+
+const _toastNotificacaoWebOriginal = window.mostrarToastNotificacaoWeb;
+if(typeof _toastNotificacaoWebOriginal==="function"){
+    window.mostrarToastNotificacaoWeb=function(titulo,corpo,payload){
+        if(!notificacaoPermitidaPorConfiguracao(payload)) return;
+        return _toastNotificacaoWebOriginal(titulo,corpo,payload);
+    };
+}
+const _toastNotificacaoOriginal = window.mostrarToastNotificacao;
+if(typeof _toastNotificacaoOriginal==="function"){
+    window.mostrarToastNotificacao=function(titulo,corpo,payload){
+        if(!notificacaoPermitidaPorConfiguracao(payload)) return;
+        return _toastNotificacaoOriginal(titulo,corpo,payload);
+    };
+}
+
+// Botão de registro abre exatamente o mesmo modal usado pela tela externa.
+window.abrirModalSolicitacaoMercadoria=abrirModalSolicitacaoMercadoria;
+window.fecharModalSolicitacaoMercadoria=fecharModalSolicitacaoMercadoria;
+
+// Solicitação de novo acesso, sem precisar estar autenticado.
+function abrirSolicitacaoNovoAcesso(){
+    const login=document.getElementById("bloco-login-normal");
+    const painel=document.getElementById("painel-recuperar-senha");
+    const erro=document.getElementById("erro-login");
+    if(login) login.style.display="none";
+    if(painel) painel.style.display="block";
+    if(erro){erro.style.display="none";erro.textContent="";}
+    const sub=document.getElementById("subtitulo-login");
+    if(sub) sub.textContent="Solicitar novo acesso";
+}
+function esconderRecuperarSenha(){
+    const login=document.getElementById("bloco-login-normal");
+    const painel=document.getElementById("painel-recuperar-senha");
+    if(painel) painel.style.display="none";
+    if(login) login.style.display="block";
+    const sub=document.getElementById("subtitulo-login");
+    if(sub) sub.textContent="Entre com seu usuário e senha";
+    const ids=["recuperar-nome","recuperar-sobrenome","recuperar-filial","recuperar-usuario"];
+    ids.forEach(function(id){const e=document.getElementById(id);if(e)e.value="";});
+}
+async function enviarSolicitacaoNovoAcesso(){
+    const nome=(document.getElementById("recuperar-nome")?.value||"").trim();
+    const sobrenome=(document.getElementById("recuperar-sobrenome")?.value||"").trim();
+    const filial=(document.getElementById("recuperar-filial")?.value||"").trim().toUpperCase();
+    const email=(document.getElementById("recuperar-usuario")?.value||"").trim().toLowerCase();
+    const erro=document.getElementById("erro-recuperar");
+    function falha(msg){if(erro){erro.textContent=msg;erro.style.display="block";}}
+    if(!nome||!sobrenome){falha("Informe nome e sobrenome.");return;}
+    if(!filial){falha("Selecione a filial.");return;}
+    if(!email||!email.includes("@")){falha("Informe um e-mail válido.");return;}
+    try{
+        // push() evita que uma solicitação nova sobrescreva outra no Firebase.
+        const ref=firebaseDB.ref("solicitacoesAcesso").push();
+        await ref.set({
+            id:ref.key,
+            nome:nome,
+            sobrenome:sobrenome,
+            nomeCompleto:(nome+" "+sobrenome).trim(),
+            filial:filial,
+            email:email,
+            usuario:email,
+            mensagem:"Solicitação de novo acesso",
+            data:new Date().toISOString(),
+            status:"pendente"
+        });
+        alert("✅ Solicitação de novo acesso enviada ao administrador.");
+        esconderRecuperarSenha();
+    }catch(e){
+        console.error("Erro na solicitação de acesso:",e);
+        falha("Não foi possível enviar a solicitação. Verifique as regras do Firebase.");
+    }
+}
+window.abrirSolicitacaoNovoAcesso=abrirSolicitacaoNovoAcesso;
+window.enviarSolicitacaoNovoAcesso=enviarSolicitacaoNovoAcesso;
+window.solicitarAcessoAdmin=enviarSolicitacaoNovoAcesso;
+
+// Atualiza o contador quando a configuração mudar em outra aba/telefone.
+function ouvirConfiguracoesSistemaTempoReal(){
+    try{
+        firebaseDB.ref("configuracoes/sistema").on("value",async function(snap){
+            if(!snap.exists()) return;
+            const c=snap.val()||{};
+            const novo=Math.max(1,Math.min(999,Math.floor(Number(c.quantidadeContainers)||60)));
+            const mudou=novo!==quantidadeContainersSistema;
+            quantidadeContainersSistema=novo;
+            configuracoesSistemaAplicacao=Object.assign({},configuracoesSistemaAplicacao,c,{quantidadeContainers:novo});
+            window.quantidadeContainersSistema=novo;
+            window.configuracoesSistemaAplicacao=configuracoesSistemaAplicacao;
+            if(typeof configuracaoVisualizacaoContainers!=="undefined"){
+                ["admin","externo"].forEach(function(tipo){
+                    if(configuracaoVisualizacaoContainers[tipo]){
+                        configuracaoVisualizacaoContainers[tipo].selecionados = new Set(Array.from({length:novo},function(_,i){return i+1;}));
+                    }
+                });
+            }
+            aplicarTemaSistema(configuracoesSistemaAplicacao.tema);
+            atualizarContadoresQuantidadeContainers();
+            if(mudou){
+                // Reconstrói somente as grades; os dados continuam no Firebase.
+                if(typeof criarContainers==="function") criarContainers();
+                if(typeof criarContainersExternos==="function") criarContainersExternos();
+                if(typeof mostrarEstoque==="function") mostrarEstoque();
+                if(typeof renderizarEstoqueExterno==="function") renderizarEstoqueExterno();
+                if(typeof inicializarVisualizacaoContainers==="function" && usuarioEhAdmin()) inicializarVisualizacaoContainers("admin");
+            }
+        });
+    }catch(e){console.warn("Listener de configurações:",e);}
+}
+document.addEventListener("DOMContentLoaded",function(){
+    setTimeout(function(){
+        if(typeof firebaseDB!=="undefined") ouvirConfiguracoesSistemaTempoReal();
+        atualizarContadoresQuantidadeContainers();
+    },800);
+});
+</script>
+
 </body>
 </html>
 
@@ -11357,3 +11590,224 @@ body.usuario-admin .painel-entrada .linha-quantidade{
     }
 }
 </style>
+
+<style id="configuracao-integracao-final">
+/* ===== Integração das configurações Firebase ===== */
+body.tema-claro{
+    --bg:#f4f7fb;
+    --bg-painel:#ffffff;
+    --bg-painel-2:#eef3f9;
+    --bg-input:#ffffff;
+    --borda:#d7e0ec;
+    --borda-forte:#aebed2;
+    --texto:#1f2937;
+    --texto-fraco:#64748b;
+    --azul:#087ea4;
+    --azul-forte:#0b8fb8;
+    --azul-fraco:rgba(11,143,184,.10);
+}
+body.tema-claro .tela-login{
+    background:radial-gradient(circle at 20% 10%,rgba(11,143,184,.08),transparent 45%),var(--bg);
+}
+body.tema-claro .cartao-login{box-shadow:0 12px 30px rgba(15,23,42,.15);}
+body.tema-claro .toast-notificacao-web{background:#fff;color:#1f2937;}
+body.tema-claro .toast-notificacao-web div{color:#334155;}
+
+/* Sem painel de usuários na tela inicial: o formulário ocupa a largura toda. */
+#layout-admin-operacional{
+    display:block !important;
+}
+#layout-admin-operacional > .painel-entrada{
+    width:100% !important;
+    float:none !important;
+    grid-column:1 !important;
+}
+/* O cadastro/entrada passa a ser aberto pelo botão ao lado dos filtros. */
+#layout-admin-operacional > .painel-entrada{
+    display:none !important;
+}
+.btn-registrar-mercadoria{
+    display:none;
+    white-space:nowrap;
+    background:#10b981 !important;
+    color:#fff !important;
+    border-color:#10b981 !important;
+}
+#app-principal .btn-registrar-mercadoria{display:inline-block;}
+@media(max-width:700px){
+    #app-principal .btn-registrar-mercadoria{width:100%;}
+}
+/* A área de visualização acompanha o número configurado. */
+.contador-max-inline{font-weight:700;}
+</style>
+
+
+<script id="configuracao-integracao-final-js">
+// ======================================================
+// CONFIGURAÇÕES FIREBASE — CONTROLE DINÂMICO DO SISTEMA
+// ======================================================
+window.quantidadeContainersSistema = quantidadeContainersSistema;
+window.configuracoesSistemaAplicacao = configuracoesSistemaAplicacao;
+
+function atualizarContadoresQuantidadeContainers(){
+    document.querySelectorAll("#contador-max-containers,.contador-max-inline").forEach(function(el){
+        el.textContent=String(quantidadeContainersSistema);
+    });
+    const num=document.getElementById("num");
+    if(num) num.max=String(quantidadeContainersSistema);
+    const rotulo=document.querySelector('#num')?.previousElementSibling;
+    if(rotulo && /Nº Container/i.test(rotulo.textContent)){
+        rotulo.textContent="📦 Nº Container (1-"+quantidadeContainersSistema+"):";
+    }
+    const status=document.querySelectorAll("h2");
+    status.forEach(function(h){
+        if(/Status dos Containers/i.test(h.textContent)) h.textContent="Status dos "+quantidadeContainersSistema+" Containers";
+    });
+}
+
+const _aplicarTemaOriginal = aplicarTemaSistema;
+aplicarTemaSistema = function(tema){
+    _aplicarTemaOriginal(tema);
+    window.configuracoesSistemaAplicacao = window.configuracoesSistemaAplicacao || {};
+    window.configuracoesSistemaAplicacao.tema = (String(tema||"escuro").toLowerCase()==="claro" ? "claro" : "escuro");
+};
+
+const _carregarConfigOriginal = carregarConfiguracoesSistemaAplicacao;
+carregarConfiguracoesSistemaAplicacao = async function(){
+    const r=await _carregarConfigOriginal();
+    window.quantidadeContainersSistema=quantidadeContainersSistema;
+    window.configuracoesSistemaAplicacao=configuracoesSistemaAplicacao;
+    atualizarContadoresQuantidadeContainers();
+    return r;
+};
+
+// Notificações: as opções salvas no Firebase passam a governar a exibição/ativação.
+function notificacaoPermitidaPorConfiguracao(payload){
+    const cfg=window.configuracoesSistemaAplicacao||{};
+    if(cfg.notificacoesGerais===false) return false;
+    const d=(payload&&payload.data)||{};
+    const tipo=String(d.tipo||d.evento||d.categoria||"").toLowerCase();
+    if((tipo.includes("entrada")||tipo.includes("registro")) && cfg.avisosEntrada===false) return false;
+    if((tipo.includes("recusa")||tipo.includes("recus")) && cfg.avisosRecusa===false) return false;
+    if((tipo.includes("solicit")) && cfg.avisosSolicitacoes===false) return false;
+    return true;
+}
+
+const _toastNotificacaoWebOriginal = window.mostrarToastNotificacaoWeb;
+if(typeof _toastNotificacaoWebOriginal==="function"){
+    window.mostrarToastNotificacaoWeb=function(titulo,corpo,payload){
+        if(!notificacaoPermitidaPorConfiguracao(payload)) return;
+        return _toastNotificacaoWebOriginal(titulo,corpo,payload);
+    };
+}
+const _toastNotificacaoOriginal = window.mostrarToastNotificacao;
+if(typeof _toastNotificacaoOriginal==="function"){
+    window.mostrarToastNotificacao=function(titulo,corpo,payload){
+        if(!notificacaoPermitidaPorConfiguracao(payload)) return;
+        return _toastNotificacaoOriginal(titulo,corpo,payload);
+    };
+}
+
+// Botão de registro abre exatamente o mesmo modal usado pela tela externa.
+window.abrirModalSolicitacaoMercadoria=abrirModalSolicitacaoMercadoria;
+window.fecharModalSolicitacaoMercadoria=fecharModalSolicitacaoMercadoria;
+
+// Solicitação de novo acesso, sem precisar estar autenticado.
+function abrirSolicitacaoNovoAcesso(){
+    const login=document.getElementById("bloco-login-normal");
+    const painel=document.getElementById("painel-recuperar-senha");
+    const erro=document.getElementById("erro-login");
+    if(login) login.style.display="none";
+    if(painel) painel.style.display="block";
+    if(erro){erro.style.display="none";erro.textContent="";}
+    const sub=document.getElementById("subtitulo-login");
+    if(sub) sub.textContent="Solicitar novo acesso";
+}
+function esconderRecuperarSenha(){
+    const login=document.getElementById("bloco-login-normal");
+    const painel=document.getElementById("painel-recuperar-senha");
+    if(painel) painel.style.display="none";
+    if(login) login.style.display="block";
+    const sub=document.getElementById("subtitulo-login");
+    if(sub) sub.textContent="Entre com seu usuário e senha";
+    const ids=["recuperar-nome","recuperar-sobrenome","recuperar-filial","recuperar-usuario"];
+    ids.forEach(function(id){const e=document.getElementById(id);if(e)e.value="";});
+}
+async function enviarSolicitacaoNovoAcesso(){
+    const nome=(document.getElementById("recuperar-nome")?.value||"").trim();
+    const sobrenome=(document.getElementById("recuperar-sobrenome")?.value||"").trim();
+    const filial=(document.getElementById("recuperar-filial")?.value||"").trim().toUpperCase();
+    const email=(document.getElementById("recuperar-usuario")?.value||"").trim().toLowerCase();
+    const erro=document.getElementById("erro-recuperar");
+    function falha(msg){if(erro){erro.textContent=msg;erro.style.display="block";}}
+    if(!nome||!sobrenome){falha("Informe nome e sobrenome.");return;}
+    if(!filial){falha("Selecione a filial.");return;}
+    if(!email||!email.includes("@")){falha("Informe um e-mail válido.");return;}
+    try{
+        // push() evita que uma solicitação nova sobrescreva outra no Firebase.
+        const ref=firebaseDB.ref("solicitacoesAcesso").push();
+        await ref.set({
+            id:ref.key,
+            nome:nome,
+            sobrenome:sobrenome,
+            nomeCompleto:(nome+" "+sobrenome).trim(),
+            filial:filial,
+            email:email,
+            usuario:email,
+            mensagem:"Solicitação de novo acesso",
+            data:new Date().toISOString(),
+            status:"pendente"
+        });
+        alert("✅ Solicitação de novo acesso enviada ao administrador.");
+        esconderRecuperarSenha();
+    }catch(e){
+        console.error("Erro na solicitação de acesso:",e);
+        falha("Não foi possível enviar a solicitação. Verifique as regras do Firebase.");
+    }
+}
+window.abrirSolicitacaoNovoAcesso=abrirSolicitacaoNovoAcesso;
+window.enviarSolicitacaoNovoAcesso=enviarSolicitacaoNovoAcesso;
+window.solicitarAcessoAdmin=enviarSolicitacaoNovoAcesso;
+
+// Atualiza o contador quando a configuração mudar em outra aba/telefone.
+function ouvirConfiguracoesSistemaTempoReal(){
+    try{
+        firebaseDB.ref("configuracoes/sistema").on("value",async function(snap){
+            if(!snap.exists()) return;
+            const c=snap.val()||{};
+            const novo=Math.max(1,Math.min(999,Math.floor(Number(c.quantidadeContainers)||60)));
+            const mudou=novo!==quantidadeContainersSistema;
+            quantidadeContainersSistema=novo;
+            configuracoesSistemaAplicacao=Object.assign({},configuracoesSistemaAplicacao,c,{quantidadeContainers:novo});
+            window.quantidadeContainersSistema=novo;
+            window.configuracoesSistemaAplicacao=configuracoesSistemaAplicacao;
+            if(typeof configuracaoVisualizacaoContainers!=="undefined"){
+                ["admin","externo"].forEach(function(tipo){
+                    if(configuracaoVisualizacaoContainers[tipo]){
+                        configuracaoVisualizacaoContainers[tipo].selecionados = new Set(Array.from({length:novo},function(_,i){return i+1;}));
+                    }
+                });
+            }
+            aplicarTemaSistema(configuracoesSistemaAplicacao.tema);
+            atualizarContadoresQuantidadeContainers();
+            if(mudou){
+                // Reconstrói somente as grades; os dados continuam no Firebase.
+                if(typeof criarContainers==="function") criarContainers();
+                if(typeof criarContainersExternos==="function") criarContainersExternos();
+                if(typeof mostrarEstoque==="function") mostrarEstoque();
+                if(typeof renderizarEstoqueExterno==="function") renderizarEstoqueExterno();
+                if(typeof inicializarVisualizacaoContainers==="function" && usuarioEhAdmin()) inicializarVisualizacaoContainers("admin");
+            }
+        });
+    }catch(e){console.warn("Listener de configurações:",e);}
+}
+document.addEventListener("DOMContentLoaded",function(){
+    setTimeout(function(){
+        if(typeof firebaseDB!=="undefined") ouvirConfiguracoesSistemaTempoReal();
+        atualizarContadoresQuantidadeContainers();
+    },800);
+});
+</script>
+
+</body>
+</html>
