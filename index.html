@@ -1426,7 +1426,6 @@ window.OneSignalDeferred.push(async function(OneSignal) {
     console.log("✅ OneSignal inicializado corretamente.");
 });
 </script>
-
 <style id="ajuste-layout-admin-esquerda-direita">
 /* ======================================================
    LAYOUT ADMIN — ESQUERDA (USUÁRIOS/SOLICITAÇÕES) +
@@ -1486,7 +1485,6 @@ window.OneSignalDeferred.push(async function(OneSignal) {
     }
 }
 </style>
-
 <style id="ajuste-layout-admin-igual-comum">
 /* ======================================================
    ADMIN — MESMO PADRÃO VISUAL DO USUÁRIO COMUM
@@ -1527,7 +1525,6 @@ body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-form{
     }
 }
 </style>
-
 <style id="ajuste-responsivo-mobile-final">
 /* ======================================================
    RESPONSIVIDADE FINAL — PC / NOTEBOOK / CELULAR
@@ -1830,7 +1827,6 @@ body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-form{
     .painel-entrada select{font-size: 12px !important;}
 }
 </style>
-
 <style id="ajuste-mobile-registro-supercompacto">
 /* ======================================================
    CELULAR — REGISTRO DE MERCADORIA SUPER COMPACTO
@@ -1939,8 +1935,6 @@ body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-form{
     .painel-entrada .container-botoes button{font-size:9.5px !important; padding:7px 4px !important;}
 }
 </style>
-
-
 <style id="ajuste-final-logo-e-formulario-compacto">
 /* ======================================================
    AJUSTE FINAL — LOGO + FORMULÁRIO COMPACTO EM TODOS OS LOCAIS
@@ -2098,8 +2092,6 @@ body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-form{
     .painel-entrada .container-botoes button{font-size:8.8px !important;padding:5px 2px !important;}
 }
 </style>
-
-
 <style id="correcao-padrao-compacto-comum-admin-externo">
 /* PADRÃO FINAL DO REGISTRO — IGUAL PARA COMUM, ADMIN E EXTERNO */
 .painel-entrada {
@@ -2260,7 +2252,6 @@ body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-form{
     .painel-entrada .container-botoes button { font-size:9.5px !important; padding:5px 4px !important; }
 }
 </style>
-
 <style id="ajuste-login-sem-flicker">
 /* Evita que a tela de login apareça durante a restauração da sessão Firebase. */
 body.auth-carregando #tela-login{
@@ -2274,7 +2265,6 @@ body.auth-carregando #app-externo{
 }
 #tela-login{transition:opacity .08s ease;}
 </style>
-
 <style id="correcao-mobile-comum-registro-final">
 /* =========================================================
    CORREÇÃO FINAL — REGISTRO DO USUÁRIO COMUM NO CELULAR
@@ -2442,7 +2432,7 @@ body.usuario-admin .layout-admin-operacional > .painel-entrada{grid-column:2!imp
 <div class="tela-login" id="tela-login">
 <div class="cartao-login">
 <div class="logo-login-container">
-<img class="logo-login" src="./icon-192.png" alt="Logo Controle de Containers" onerror="this.style.display='none'">
+<img alt="Logo Controle de Containers" class="logo-login" onerror="this.style.display='none'" src="./icon-192.png"/>
 </div>
 <h1>📦 Controle de Containers</h1>
 <div class="subtitulo-login" id="subtitulo-login">
@@ -2461,53 +2451,53 @@ Entre com seu usuário e senha
 <button class="btn-login" id="btn-acao-login" onclick="tratarEnvioLogin()" type="button">
 Entrar
 </button>
-<div class="controle-tema-login" aria-label="Tema da tela de login">
-    <span>🎨 Tema:</span>
-    <button type="button" id="btn-tema-login-claro" onclick="definirTemaAntesDoLogin('claro')">☀️ Claro</button>
-    <button type="button" id="btn-tema-login-escuro" onclick="definirTemaAntesDoLogin('escuro')">🌙 Escuro</button>
+<div aria-label="Tema da tela de login" class="controle-tema-login">
+<span>🎨 Tema:</span>
+<button id="btn-tema-login-claro" onclick="definirTemaAntesDoLogin('claro')" type="button">☀️ Claro</button>
+<button id="btn-tema-login-escuro" onclick="definirTemaAntesDoLogin('escuro')" type="button">🌙 Escuro</button>
 </div>
 <div class="alternar-login" id="alternar-login" style="display:block;">
-    <a onclick="abrirSolicitacaoNovoAcesso()">Solicitar novo acesso</a>
+<a onclick="abrirSolicitacaoNovoAcesso()">Solicitar novo acesso</a>
 </div>
 </div>
 <!-- SOLICITAÇÃO DE NOVO ACESSO -->
 <div id="painel-recuperar-senha" style="display:none;">
-    <div class="erro-login" id="erro-recuperar"></div>
-    <div style="background:var(--azul-fraco);border:1px solid var(--azul-forte);color:var(--texto);padding:10px;border-radius:8px;font-size:11.5px;margin-bottom:12px;">
+<div class="erro-login" id="erro-recuperar"></div>
+<div style="background:var(--azul-fraco);border:1px solid var(--azul-forte);color:var(--texto);padding:10px;border-radius:8px;font-size:11.5px;margin-bottom:12px;">
         🔐 Informe seus dados. A solicitação será enviada ao administrador pelo Firebase.
     </div>
-    <div class="campo-login">
-        <label>👤 Nome:</label>
-        <input autocomplete="off" id="recuperar-nome" placeholder="Nome" type="text"/>
-    </div>
-    <div class="campo-login">
-        <label>👤 Sobrenome:</label>
-        <input autocomplete="off" id="recuperar-sobrenome" placeholder="Sobrenome" type="text"/>
-    </div>
-    <div class="campo-login">
-        <label>🏢 Filial:</label>
-        <select id="recuperar-filial">
-            <option value="">Selecione a filial</option>
-            <option value="ST. AFONSO">ST. AFONSO</option>
-            <option value="LAGOA">LAGOA</option>
-            <option value="MINISTRO">MINISTRO</option>
-            <option value="MATRIZ">MATRIZ</option>
-        </select>
-    </div>
-    <div class="campo-login">
-        <label>📧 E-mail:</label>
-        <input autocomplete="off" id="recuperar-usuario" placeholder="E-mail para o novo acesso" type="email"/>
-    </div>
-    <button class="btn-login" onclick="enviarSolicitacaoNovoAcesso()" type="button">
+<div class="campo-login">
+<label>👤 Nome:</label>
+<input autocomplete="off" id="recuperar-nome" placeholder="Nome" type="text"/>
+</div>
+<div class="campo-login">
+<label>👤 Sobrenome:</label>
+<input autocomplete="off" id="recuperar-sobrenome" placeholder="Sobrenome" type="text"/>
+</div>
+<div class="campo-login">
+<label>🏢 Filial:</label>
+<select id="recuperar-filial">
+<option value="">Selecione a filial</option>
+<option value="ST. AFONSO">ST. AFONSO</option>
+<option value="LAGOA">LAGOA</option>
+<option value="MINISTRO">MINISTRO</option>
+<option value="MATRIZ">MATRIZ</option>
+</select>
+</div>
+<div class="campo-login">
+<label>📧 E-mail:</label>
+<input autocomplete="off" id="recuperar-usuario" placeholder="E-mail para o novo acesso" type="email"/>
+</div>
+<button class="btn-login" onclick="enviarSolicitacaoNovoAcesso()" type="button">
         📨 Solicitar acesso
     </button>
-    <div class="alternar-login" style="display:block;">
-        <a onclick="esconderRecuperarSenha()">← Voltar para o login</a>
-    </div>
+<div class="alternar-login" style="display:block;">
+<a onclick="esconderRecuperarSenha()">← Voltar para o login</a>
 </div>
 </div>
 </div>
 </div>
+
 <!-- APLICATIVO -->
 <!-- ======================================================
      TELA EXCLUSIVA — USUÁRIO EXTERNO
@@ -2520,9 +2510,9 @@ Entrar
 <button class="btn-sair" onclick="sairDoSistema()" type="button">
             🚪 Sair
         </button>
-<div id="controle-tema-usuario-externo" style="display:none;" class="controle-tema-usuario">
-<button type="button" onclick="definirTemaUsuario('claro')">☀️ Claro</button>
-<button type="button" onclick="definirTemaUsuario('escuro')">🌙 Escuro</button>
+<div class="controle-tema-usuario" id="controle-tema-usuario-externo" style="display:none;">
+<button onclick="definirTemaUsuario('claro')" type="button">☀️ Claro</button>
+<button onclick="definirTemaUsuario('escuro')" type="button">🌙 Escuro</button>
 </div>
 </div>
 <h1>📦 Consulta de Saldo dos Containers</h1>
@@ -2542,7 +2532,7 @@ Entrar
 <!-- CONTADOR -->
 <div class="contador" id="contador-externo">
         Containers ocupados: 0 / <span id="contador-max-containers">60</span>
-    </div>
+</div>
 <!-- CONTROLES DE VISUALIZAÇÃO DOS CONTAINERS EXTERNOS -->
 <div class="painel-visualizacao" id="painel-visualizacao-externo">
 <div class="visualizacao-linha">
@@ -2600,9 +2590,9 @@ Entrar
 ⚙️ Configuração
 </button>
 <button class="btn-sair" onclick="sairDoSistema()" type="button">🚪 Sair</button>
-<div id="controle-tema-usuario" style="display:none;" class="controle-tema-usuario">
-<button type="button" onclick="definirTemaUsuario('claro')">☀️ Claro</button>
-<button type="button" onclick="definirTemaUsuario('escuro')">🌙 Escuro</button>
+<div class="controle-tema-usuario" id="controle-tema-usuario" style="display:none;">
+<button onclick="definirTemaUsuario('claro')" type="button">☀️ Claro</button>
+<button onclick="definirTemaUsuario('escuro')" type="button">🌙 Escuro</button>
 </div>
 </div>
 <h1>📦 Controle de Containers</h1>
@@ -2629,32 +2619,30 @@ Entrar
 </div>
 <!-- PAINEL ADMINISTRATIVO — SOLICITAÇÕES E MOVIMENTAÇÕES -->
 <div class="painel painel-solicitacoes-admin-inicial" id="painel-solicitacoes-admin-inicial" style="display:none;">
-  <div class="cabecalho-solicitacoes-admin-inicial">
-    <div>
-      <h2 style="margin:0;">👑 Movimentações e Solicitações</h2>
-      <div style="font-size:11px;color:var(--texto-fraco);margin-top:4px;">Acompanhe novos acessos, entradas/alterações e solicitações de mercadoria.</div>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
-      <span id="contador-pendencias-admin-inicial" style="font-size:11px;color:var(--texto-fraco);"></span>
-      <button class="btn-vis" id="btn-toggle-painel-solicitacoes-admin" onclick="togglePainelSolicitacoesAdminInicial()" type="button">🙈 Minimizar</button>
-    </div>
-  </div>
-  <div id="conteudo-painel-solicitacoes-admin-inicial">
-    <div class="subpainel-admin-inicial">
-      <div class="subcabecalho-admin-inicial"><strong>🆕 Novos acessos de usuários</strong><span id="contador-solicitacoes-acesso-admin"></span></div>
-      <div id="lista-solicitacoes-acesso-admin"><div class="vazio">📭 Nenhum novo acesso pendente.</div></div>
-    </div>
-
-    <div class="subpainel-admin-inicial">
-      <div class="subcabecalho-admin-inicial"><strong>🔄 Movimentações e alterações</strong><span id="contador-alteracoes-admin"></span></div>
-      <div id="lista-alteracoes-admin"><div class="vazio">📭 Nenhuma movimentação ou alteração pendente.</div></div>
-    </div>
-
-    <div class="subpainel-admin-inicial">
-      <div class="subcabecalho-admin-inicial"><strong>📨 Novas solicitações de mercadoria</strong><span id="contador-solicitacoes-mercadoria-admin"></span></div>
-      <div id="lista-solicitacoes"></div>
-    </div>
-  </div>
+<div class="cabecalho-solicitacoes-admin-inicial">
+<div>
+<h2 style="margin:0;">👑 Movimentações e Solicitações</h2>
+<div style="font-size:11px;color:var(--texto-fraco);margin-top:4px;">Acompanhe novos acessos, entradas/alterações e solicitações de mercadoria.</div>
+</div>
+<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+<span id="contador-pendencias-admin-inicial" style="font-size:11px;color:var(--texto-fraco);"></span>
+<button class="btn-vis" id="btn-toggle-painel-solicitacoes-admin" onclick="togglePainelSolicitacoesAdminInicial()" type="button">🙈 Minimizar</button>
+</div>
+</div>
+<div id="conteudo-painel-solicitacoes-admin-inicial">
+<div class="subpainel-admin-inicial">
+<div class="subcabecalho-admin-inicial"><strong>🆕 Novos acessos de usuários</strong><span id="contador-solicitacoes-acesso-admin"></span></div>
+<div id="lista-solicitacoes-acesso-admin"><div class="vazio">📭 Nenhum novo acesso pendente.</div></div>
+</div>
+<div class="subpainel-admin-inicial">
+<div class="subcabecalho-admin-inicial"><strong>🔄 Movimentações e alterações</strong><span id="contador-alteracoes-admin"></span></div>
+<div id="lista-alteracoes-admin"><div class="vazio">📭 Nenhuma movimentação ou alteração pendente.</div></div>
+</div>
+<div class="subpainel-admin-inicial">
+<div class="subcabecalho-admin-inicial"><strong>📨 Novas solicitações de mercadoria</strong><span id="contador-solicitacoes-mercadoria-admin"></span></div>
+<div id="lista-solicitacoes"></div>
+</div>
+</div>
 </div>
 <!-- FORMULÁRIO -->
 <div class="painel painel-entrada">
@@ -2685,7 +2673,7 @@ Entrar
 <div class="linha-form linha-produto">
 <div class="campo">
 <label>🔢 Código:</label>
-<input id="codigo" placeholder="Código" type="text" oninput="localizarProdutoPorCodigo()" autocomplete="off"/>
+<input autocomplete="off" id="codigo" oninput="localizarProdutoPorCodigo()" placeholder="Código" type="text"/>
 </div>
 <div class="campo campo-produto" style="position:relative;">
 <label>📋 Produto:</label>
@@ -2694,7 +2682,7 @@ Entrar
 </div>
 <div class="campo">
 <label>🏷️ Lote:</label>
-<input id="lote" maxlength="25" placeholder="Número do lote" type="text" inputmode="numeric"/>
+<input id="lote" inputmode="numeric" maxlength="25" placeholder="Número do lote" type="text"/>
 </div>
 </div>
 <!-- Linha 3: quantidade + KG por volume + peso total -->
@@ -2798,7 +2786,6 @@ Containers ocupados: 0 / <span class="contador-max-inline">60</span>
 </div>
 </div>
 <!-- HISTÓRICO DE SOLICITAÇÕES DO USUÁRIO COMUM -->
-
 </div>
 <!-- ======================================================
      MODAL — REGISTRAR NOVA MERCADORIA (ADMIN / COMUM)
@@ -2814,17 +2801,17 @@ Containers ocupados: 0 / <span class="contador-max-inline">60</span>
 </div>
 <div class="modal-solicitacao-corpo">
 <div class="linha-form modal-grid-solicitacao">
-<div class="campo"><label>📅 Data de Entrada:</label><input id="reg-data" type="date"></div>
-<div class="campo"><label>📦 Container:</label><input id="reg-num" type="number" min="1" max="999" placeholder="Nº do container"></div>
-<div class="campo"><label>🧾 Nº de Nota:</label><input id="reg-nf" type="text" placeholder="Número da NF-e"></div>
-<div class="campo"><label>🏢 Nome do Fornecedor:</label><input id="reg-fornecedor" type="text" placeholder="Nome do fornecedor"></div>
-<div class="campo"><label>🔢 Código do Produto:</label><input id="reg-codigo" type="text" placeholder="Digite o código" autocomplete="off" oninput="localizarProdutoRegistroPorCodigo()"></div>
-<div class="campo campo-produto" style="position:relative;"><label>📋 Mercadoria:</label><input id="reg-prod" type="text" placeholder="Digite nome ou código" autocomplete="off" oninput="mostrarSugestoesRegistroProduto()" onblur="preencherCodigoRegistroProduto(); esconderSugestoesRegistroProduto()"><div class="sugestoes-produto" id="sugestoes-registro-produto"></div></div>
-<div class="campo"><label>🏷️ Lote:</label><input id="reg-lote" type="text" maxlength="25" placeholder="Número do lote"></div>
-<div class="campo"><label>📅 Validade:</label><input id="reg-validade" type="date"></div>
-<div class="campo"><label>🔢 Quantidade:</label><input id="reg-qtd" type="number" min="1" step="1" placeholder="Volumes" oninput="calcularPesoRegistro()"></div>
-<div class="campo"><label>⚖️ Peso Unitário (KG):</label><input id="reg-kg" type="number" min="0.01" step="0.01" placeholder="KG por volume" oninput="calcularPesoRegistro()"></div>
-<div class="campo"><label>🧮 Peso Total (KG):</label><input id="reg-peso" type="number" readonly placeholder="Calculado automaticamente"></div>
+<div class="campo"><label>📅 Data de Entrada:</label><input id="reg-data" type="date"/></div>
+<div class="campo"><label>📦 Container:</label><input id="reg-num" max="999" min="1" placeholder="Nº do container" type="number"/></div>
+<div class="campo"><label>🧾 Nº de Nota:</label><input id="reg-nf" placeholder="Número da NF-e" type="text"/></div>
+<div class="campo"><label>🏢 Nome do Fornecedor:</label><input id="reg-fornecedor" placeholder="Nome do fornecedor" type="text"/></div>
+<div class="campo"><label>🔢 Código do Produto:</label><input autocomplete="off" id="reg-codigo" oninput="localizarProdutoRegistroPorCodigo()" placeholder="Digite o código" type="text"/></div>
+<div class="campo campo-produto" style="position:relative;"><label>📋 Mercadoria:</label><input autocomplete="off" id="reg-prod" onblur="preencherCodigoRegistroProduto(); esconderSugestoesRegistroProduto()" oninput="mostrarSugestoesRegistroProduto()" placeholder="Digite nome ou código" type="text"/><div class="sugestoes-produto" id="sugestoes-registro-produto"></div></div>
+<div class="campo"><label>🏷️ Lote:</label><input id="reg-lote" maxlength="25" placeholder="Número do lote" type="text"/></div>
+<div class="campo"><label>📅 Validade:</label><input id="reg-validade" type="date"/></div>
+<div class="campo"><label>🔢 Quantidade:</label><input id="reg-qtd" min="1" oninput="calcularPesoRegistro()" placeholder="Volumes" step="1" type="number"/></div>
+<div class="campo"><label>⚖️ Peso Unitário (KG):</label><input id="reg-kg" min="0.01" oninput="calcularPesoRegistro()" placeholder="KG por volume" step="0.01" type="number"/></div>
+<div class="campo"><label>🧮 Peso Total (KG):</label><input id="reg-peso" placeholder="Calculado automaticamente" readonly="" type="number"/></div>
 </div>
 <div class="resumo-container-solicitacao" id="resumo-registro-mercadoria"><span>📦 A mercadoria será contabilizada no container após aprovação.</span></div>
 </div>
@@ -2834,7 +2821,6 @@ Containers ocupados: 0 / <span class="contador-max-inline">60</span>
 </div>
 </div>
 </div>
-
 <!-- Solicitação do usuário externo: agora fica em uma janela pequena -->
 <div aria-hidden="true" class="modal-solicitacao-externo" id="modal-solicitacao-externo" style="display:none;">
 <div aria-labelledby="titulo-modal-solicitacao" aria-modal="true" class="modal-solicitacao-caixa" role="dialog">
@@ -2861,12 +2847,12 @@ Containers ocupados: 0 / <span class="contador-max-inline">60</span>
 </div>
 <div class="campo">
 <label>🔢 Quantidade:</label>
-<input id="solicitacao-qtd" min="1" placeholder="Quantidade" type="number"/>
-</div>
+<input id="solicitacao-qtd" min="1" placeholder="Quantidade" type="number">
+</input></div>
 <div class="campo">
 <label>⚖️ Peso solicitado (KG):</label>
-<input id="solicitacao-peso" min="0" placeholder="Peso em KG" step="0.01" type="number"/>
-</div>
+<input id="solicitacao-peso" min="0" placeholder="Peso em KG" step="0.01" type="number">
+</input></div>
 </div>
 <div class="resumo-container-solicitacao" id="resumo-container-solicitacao">
 <span>📦 Selecione um container para visualizar os dados.</span>
@@ -2882,7 +2868,6 @@ Containers ocupados: 0 / <span class="contador-max-inline">60</span>
 </div>
 </div>
 </div>
-
 <!-- fim de #app-principal -->
 <script>
 
@@ -11107,7 +11092,6 @@ async function chamarWorkerNotificacao(tipo, dados) {
     }
 }
 </script>
-
 <style id="configuracao-integracao-final">
 /* ===== Integração das configurações Firebase ===== */
 body.tema-claro{
@@ -11163,8 +11147,6 @@ body.tema-claro .toast-notificacao-web div{color:#334155;}
 /* A área de visualização acompanha o número configurado. */
 .contador-max-inline{font-weight:700;}
 </style>
-
-
 <script id="configuracao-integracao-final-js">
 // ======================================================
 // CONFIGURAÇÕES FIREBASE — CONTROLE DINÂMICO DO SISTEMA
@@ -11330,10 +11312,8 @@ document.addEventListener("DOMContentLoaded",function(){
     },800);
 });
 </script>
-
 </body>
 </html>
-
 <style id="ajuste-admin-igual-usuario-comum-final">
 /* ======================================================
    ADMIN — FORMULÁRIO DE ENTRADA COM O MESMO LAYOUT DO USUÁRIO COMUM
@@ -11441,7 +11421,6 @@ body.usuario-admin .layout-admin-operacional > .painel-entrada .container-botoes
     }
 }
 </style>
-
 <style id="ajuste-admin-painel-igual-solicitacoes">
 /* ======================================================
    ADMIN — PAINÉIS COM O MESMO TAMANHO
@@ -11493,8 +11472,6 @@ body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-quantidade
     }
 }
 </style>
-
-
 <style id="padrao-registro-compacto-todos-usuarios">
 /* =========================================================
    PADRÃO ÚNICO — ENTRADA DE MERCADORIA PARA TODOS OS USUÁRIOS
@@ -11694,7 +11671,6 @@ body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-quantidade
     }
 }
 </style>
-
 <style id="admin-mesmo-padrao-comum-final">
 /* =========================================================
    ADMIN — EXATAMENTE O MESMO PADRÃO COMPACTO DO USUÁRIO COMUM
@@ -11861,7 +11837,6 @@ body.usuario-admin .painel-entrada .linha-quantidade{
     }
 }
 </style>
-
 <style id="configuracao-integracao-final">
 /* ===== Integração das configurações Firebase ===== */
 body.tema-claro{
@@ -11913,159 +11888,6 @@ body.tema-claro .toast-notificacao-web div{color:#334155;}
 </style>
 
 
-<script id="configuracao-integracao-final-js">
-// ======================================================
-// CONFIGURAÇÕES FIREBASE — CONTROLE DINÂMICO DO SISTEMA
-// ======================================================
-window.quantidadeContainersSistema = quantidadeContainersSistema;
-window.configuracoesSistemaAplicacao = configuracoesSistemaAplicacao;
-
-function atualizarContadoresQuantidadeContainers(){
-    document.querySelectorAll("#contador-max-containers,.contador-max-inline").forEach(function(el){
-        el.textContent=String(quantidadeContainersSistema);
-    });
-    const num=document.getElementById("num");
-    if(num) num.max=String(quantidadeContainersSistema);
-    const rotulo=document.querySelector('#num')?.previousElementSibling;
-    if(rotulo && /Nº Container/i.test(rotulo.textContent)){
-        rotulo.textContent="📦 Nº Container (1-"+quantidadeContainersSistema+"):";
-    }
-    const status=document.querySelectorAll("h2");
-    status.forEach(function(h){
-        if(/Status dos Containers/i.test(h.textContent)) h.textContent="Status dos "+quantidadeContainersSistema+" Containers";
-    });
-}
-
-
-// Notificações: as opções salvas no Firebase passam a governar a exibição/ativação.
-function notificacaoPermitidaPorConfiguracao(payload){
-    const cfg=window.configuracoesSistemaAplicacao||{};
-    if(cfg.notificacoesGerais===false) return false;
-    const d=(payload&&payload.data)||{};
-    const tipo=String(d.tipo||d.evento||d.categoria||"").toLowerCase();
-    if((tipo.includes("entrada")||tipo.includes("registro")) && cfg.avisosEntrada===false) return false;
-    if((tipo.includes("recusa")||tipo.includes("recus")) && cfg.avisosRecusa===false) return false;
-    if((tipo.includes("solicit")) && cfg.avisosSolicitacoes===false) return false;
-    return true;
-}
-
-const _toastNotificacaoWebOriginal = window.mostrarToastNotificacaoWeb;
-if(typeof _toastNotificacaoWebOriginal==="function"){
-    window.mostrarToastNotificacaoWeb=function(titulo,corpo,payload){
-        if(!notificacaoPermitidaPorConfiguracao(payload)) return;
-        return _toastNotificacaoWebOriginal(titulo,corpo,payload);
-    };
-}
-const _toastNotificacaoOriginal = window.mostrarToastNotificacao;
-if(typeof _toastNotificacaoOriginal==="function"){
-    window.mostrarToastNotificacao=function(titulo,corpo,payload){
-        if(!notificacaoPermitidaPorConfiguracao(payload)) return;
-        return _toastNotificacaoOriginal(titulo,corpo,payload);
-    };
-}
-
-// Botão de registro abre exatamente o mesmo modal usado pela tela externa.
-window.abrirModalSolicitacaoMercadoria=abrirModalSolicitacaoMercadoria;
-window.fecharModalSolicitacaoMercadoria=fecharModalSolicitacaoMercadoria;
-
-// Solicitação de novo acesso, sem precisar estar autenticado.
-function abrirSolicitacaoNovoAcesso(){
-    const login=document.getElementById("bloco-login-normal");
-    const painel=document.getElementById("painel-recuperar-senha");
-    const erro=document.getElementById("erro-login");
-    if(login) login.style.display="none";
-    if(painel) painel.style.display="block";
-    if(erro){erro.style.display="none";erro.textContent="";}
-    const sub=document.getElementById("subtitulo-login");
-    if(sub) sub.textContent="Solicitar novo acesso";
-}
-function esconderRecuperarSenha(){
-    const login=document.getElementById("bloco-login-normal");
-    const painel=document.getElementById("painel-recuperar-senha");
-    if(painel) painel.style.display="none";
-    if(login) login.style.display="block";
-    const sub=document.getElementById("subtitulo-login");
-    if(sub) sub.textContent="Entre com seu usuário e senha";
-    const ids=["recuperar-nome","recuperar-sobrenome","recuperar-filial","recuperar-usuario"];
-    ids.forEach(function(id){const e=document.getElementById(id);if(e)e.value="";});
-}
-async function enviarSolicitacaoNovoAcesso(){
-    const nome=(document.getElementById("recuperar-nome")?.value||"").trim();
-    const sobrenome=(document.getElementById("recuperar-sobrenome")?.value||"").trim();
-    const filial=(document.getElementById("recuperar-filial")?.value||"").trim().toUpperCase();
-    const email=(document.getElementById("recuperar-usuario")?.value||"").trim().toLowerCase();
-    const erro=document.getElementById("erro-recuperar");
-    function falha(msg){if(erro){erro.textContent=msg;erro.style.display="block";}}
-    if(!nome||!sobrenome){falha("Informe nome e sobrenome.");return;}
-    if(!filial){falha("Selecione a filial.");return;}
-    if(!email||!email.includes("@")){falha("Informe um e-mail válido.");return;}
-    try{
-        // push() evita que uma solicitação nova sobrescreva outra no Firebase.
-        const ref=firebaseDB.ref("solicitacoesAcesso").push();
-        await ref.set({
-            id:ref.key,
-            nome:nome,
-            sobrenome:sobrenome,
-            nomeCompleto:(nome+" "+sobrenome).trim(),
-            filial:filial,
-            email:email,
-            usuario:email,
-            mensagem:"Solicitação de novo acesso",
-            data:new Date().toISOString(),
-            status:"pendente"
-        });
-        alert("✅ Solicitação de novo acesso enviada ao administrador.");
-        esconderRecuperarSenha();
-    }catch(e){
-        console.error("Erro na solicitação de acesso:",e);
-        falha("Não foi possível enviar a solicitação. Verifique as regras do Firebase.");
-    }
-}
-window.abrirSolicitacaoNovoAcesso=abrirSolicitacaoNovoAcesso;
-window.enviarSolicitacaoNovoAcesso=enviarSolicitacaoNovoAcesso;
-window.solicitarAcessoAdmin=enviarSolicitacaoNovoAcesso;
-
-// Atualiza o contador quando a configuração mudar em outra aba/telefone.
-function ouvirConfiguracoesSistemaTempoReal(){
-    try{
-        firebaseDB.ref("configuracoes/sistema").on("value",async function(snap){
-            if(!snap.exists()) return;
-            const c=snap.val()||{};
-            const novo=Math.max(1,Math.min(999,Math.floor(Number(c.quantidadeContainers)||60)));
-            const mudou=novo!==quantidadeContainersSistema;
-            quantidadeContainersSistema=novo;
-            configuracoesSistemaAplicacao=Object.assign({},configuracoesSistemaAplicacao,c,{quantidadeContainers:novo});
-            window.quantidadeContainersSistema=novo;
-            window.configuracoesSistemaAplicacao=configuracoesSistemaAplicacao;
-            if(typeof configuracaoVisualizacaoContainers!=="undefined"){
-                ["admin","externo"].forEach(function(tipo){
-                    if(configuracaoVisualizacaoContainers[tipo]){
-                        configuracaoVisualizacaoContainers[tipo].selecionados = new Set(Array.from({length:novo},function(_,i){return i+1;}));
-                    }
-                });
-            }
-            atualizarContadoresQuantidadeContainers();
-            if(mudou){
-                // Reconstrói somente as grades; os dados continuam no Firebase.
-                if(typeof criarContainers==="function") criarContainers();
-                if(typeof criarContainersExternos==="function") criarContainersExternos();
-                if(typeof mostrarEstoque==="function") mostrarEstoque();
-                if(typeof renderizarEstoqueExterno==="function") renderizarEstoqueExterno();
-                if(typeof inicializarVisualizacaoContainers==="function" && usuarioEhAdmin()) inicializarVisualizacaoContainers("admin");
-            }
-        });
-    }catch(e){console.warn("Listener de configurações:",e);}
-}
-document.addEventListener("DOMContentLoaded",function(){
-    setTimeout(function(){
-        if(typeof firebaseDB!=="undefined") ouvirConfiguracoesSistemaTempoReal();
-        atualizarContadoresQuantidadeContainers();
-    },800);
-});
-</script>
-
-</body>
-</html>
 
 <script id="tema-login-inicializacao">
 (function(){
