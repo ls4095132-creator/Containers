@@ -8071,7 +8071,8 @@ function abrirConfiguracaoSistema(){
         alert("❌ Apenas o administrador pode acessar as configurações.");
         return;
     }
-    window.location.href="./config/configuracao.html";
+    const temaAtual = (document.documentElement.getAttribute("data-tema") || (document.body.classList.contains("tema-claro") ? "claro" : "escuro"));
+    window.location.href="./config/configuracao.html?tema=" + encodeURIComponent(temaAtual);
 }
 
 function atualizarTelaUsuarioLogado(){
@@ -11935,21 +11936,6 @@ function atualizarContadoresQuantidadeContainers(){
     });
 }
 
-const _aplicarTemaOriginal = aplicarTemaSistema;
-aplicarTemaSistema = function(tema){
-    _aplicarTemaOriginal(tema);
-    window.configuracoesSistemaAplicacao = window.configuracoesSistemaAplicacao || {};
-    window.configuracoesSistemaAplicacao.tema = (String(tema||"escuro").toLowerCase()==="claro" ? "claro" : "escuro");
-};
-
-const _carregarConfigOriginal = carregarConfiguracoesSistemaAplicacao;
-carregarConfiguracoesSistemaAplicacao = async function(){
-    const r=await _carregarConfigOriginal();
-    window.quantidadeContainersSistema=quantidadeContainersSistema;
-    window.configuracoesSistemaAplicacao=configuracoesSistemaAplicacao;
-    atualizarContadoresQuantidadeContainers();
-    return r;
-};
 
 // Notificações: as opções salvas no Firebase passam a governar a exibição/ativação.
 function notificacaoPermitidaPorConfiguracao(payload){
