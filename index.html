@@ -2474,6 +2474,10 @@ Entrar
 <button class="btn-sair" onclick="sairDoSistema()" type="button">
             🚪 Sair
         </button>
+<div id="controle-tema-usuario-externo" style="display:none;" class="controle-tema-usuario">
+<button type="button" onclick="definirTemaUsuario('claro')">☀️ Claro</button>
+<button type="button" onclick="definirTemaUsuario('escuro')">🌙 Escuro</button>
+</div>
 </div>
 <h1>📦 Consulta de Saldo dos Containers</h1>
 <div class="aviso-armazenamento">
@@ -2550,6 +2554,10 @@ Entrar
 ⚙️ Configuração
 </button>
 <button class="btn-sair" onclick="sairDoSistema()" type="button">🚪 Sair</button>
+<div id="controle-tema-usuario" style="display:none;" class="controle-tema-usuario">
+<button type="button" onclick="definirTemaUsuario('claro')">☀️ Claro</button>
+<button type="button" onclick="definirTemaUsuario('escuro')">🌙 Escuro</button>
+</div>
 </div>
 <h1>📦 Controle de Containers</h1>
 <div class="layout-admin-operacional" id="layout-admin-operacional">
@@ -2670,15 +2678,13 @@ Containers ocupados: 0 / <span class="contador-max-inline">60</span>
 <button class="btn-vis ativo" id="btn-vis-quadro-admin" onclick="alterarVisualizacaoContainers('admin','quadro')" type="button">▦ Quadro</button>
 <button class="btn-vis" id="btn-vis-lista-admin" onclick="alterarVisualizacaoContainers('admin','lista')" type="button">☷ Lista</button>
 </div>
+<button class="btn-vis btn-registrar-mercadoria" id="btn-registrar-mercadoria" onclick="abrirModalRegistroMercadoria()" type="button">📦 Registrar Mercadoria</button>
 <strong style="margin-left:8px;">Status:</strong>
 <select class="select-status" id="filtro-status-containers-admin" onchange="aplicarFiltrosContainers('admin')">
 <option value="todos">Todos</option>
 <option value="cheios">🟢 Cheios</option>
 <option value="vazios">⚪ Vazios</option>
 </select>
-<button class="btn-vis btn-registrar-mercadoria" id="btn-registrar-mercadoria" onclick="abrirModalSolicitacaoMercadoria()" type="button">
-📦 Registrar Mercadoria
-</button>
 </div>
 <div class="resumo-visualizacao" id="resumo-visualizacao-admin"></div>
 </div>
@@ -2718,6 +2724,41 @@ Containers ocupados: 0 / <span class="contador-max-inline">60</span>
 <!-- HISTÓRICO DE SOLICITAÇÕES DO USUÁRIO COMUM -->
 
 </div>
+<!-- ======================================================
+     MODAL — REGISTRAR NOVA MERCADORIA (ADMIN / COMUM)
+     ====================================================== -->
+<div aria-hidden="true" class="modal-solicitacao-externo" id="modal-registro-mercadoria" style="display:none;">
+<div aria-labelledby="titulo-modal-registro" aria-modal="true" class="modal-solicitacao-caixa" role="dialog">
+<div class="modal-solicitacao-cabecalho">
+<div>
+<h2 id="titulo-modal-registro">📦 Registrar Nova Mercadoria</h2>
+<div class="texto-apoio-solicitacao">Preencha os dados da entrada. Para usuário comum, o registro será enviado ao administrador para aprovação.</div>
+</div>
+<button aria-label="Fechar" class="modal-fechar" onclick="fecharModalRegistroMercadoria()" type="button">✕</button>
+</div>
+<div class="modal-solicitacao-corpo">
+<div class="linha-form modal-grid-solicitacao">
+<div class="campo"><label>📅 Data de Entrada:</label><input id="reg-data" type="date"></div>
+<div class="campo"><label>📦 Container:</label><input id="reg-num" type="number" min="1" max="999" placeholder="Nº do container"></div>
+<div class="campo"><label>🧾 Nº de Nota:</label><input id="reg-nf" type="text" placeholder="Número da NF-e"></div>
+<div class="campo"><label>🏢 Nome do Fornecedor:</label><input id="reg-fornecedor" type="text" placeholder="Nome do fornecedor"></div>
+<div class="campo"><label>🔢 Código do Produto:</label><input id="reg-codigo" type="text" placeholder="Digite o código" autocomplete="off" oninput="localizarProdutoRegistroPorCodigo()"></div>
+<div class="campo campo-produto" style="position:relative;"><label>📋 Mercadoria:</label><input id="reg-prod" type="text" placeholder="Digite nome ou código" autocomplete="off" oninput="mostrarSugestoesRegistroProduto()" onblur="preencherCodigoRegistroProduto(); esconderSugestoesRegistroProduto()"><div class="sugestoes-produto" id="sugestoes-registro-produto"></div></div>
+<div class="campo"><label>🏷️ Lote:</label><input id="reg-lote" type="text" maxlength="25" placeholder="Número do lote"></div>
+<div class="campo"><label>📅 Validade:</label><input id="reg-validade" type="date"></div>
+<div class="campo"><label>🔢 Quantidade:</label><input id="reg-qtd" type="number" min="1" step="1" placeholder="Volumes" oninput="calcularPesoRegistro()"></div>
+<div class="campo"><label>⚖️ Peso Unitário (KG):</label><input id="reg-kg" type="number" min="0.01" step="0.01" placeholder="KG por volume" oninput="calcularPesoRegistro()"></div>
+<div class="campo"><label>🧮 Peso Total (KG):</label><input id="reg-peso" type="number" readonly placeholder="Calculado automaticamente"></div>
+</div>
+<div class="resumo-container-solicitacao" id="resumo-registro-mercadoria"><span>📦 A mercadoria será contabilizada no container após aprovação.</span></div>
+</div>
+<div class="modal-solicitacao-rodape">
+<button class="btn-cancelar" onclick="fecharModalRegistroMercadoria()" type="button">❌ Cancelar</button>
+<button class="btn-salvar" onclick="confirmarRegistroMercadoriaModal()" type="button">💾 Registrar Mercadoria</button>
+</div>
+</div>
+</div>
+
 <!-- Solicitação do usuário externo: agora fica em uma janela pequena -->
 <div aria-hidden="true" class="modal-solicitacao-externo" id="modal-solicitacao-externo" style="display:none;">
 <div aria-labelledby="titulo-modal-solicitacao" aria-modal="true" class="modal-solicitacao-caixa" role="dialog">
@@ -6106,7 +6147,7 @@ const editIndex = document.getElementById("edit-index").value;
 
 if(!data){ alert("Informe a data."); return; }
 if(!num){ alert("Informe o container."); return; }
-if(num < 1 || num > quantidadeContainersSistema){ alert("O container deve estar entre 1 e 60."); return; }
+if(num < 1 || num > quantidadeContainersSistema){ alert("O container deve estar entre 1 e " + quantidadeContainersSistema + "."); return; }
 if(!fornecedor){ alert("Informe o fornecedor."); return; }
 if(!nf){ alert("Informe a Nota Fiscal."); return; }
 if(!prod){ alert("Informe o produto."); return; }
@@ -7677,11 +7718,32 @@ function exportarMinhasSolicitacoesExternoExcel(){
 }
 
 // ======================================================
+// TEMA INDIVIDUAL POR USUÁRIO — NÃO ALTERA OUTROS USUÁRIOS
+// ======================================================
+async function carregarTemaUsuario(){
+    try{
+        if(!firebaseAuth.currentUser) return;
+        const snap=await firebaseDB.ref("preferenciasUsuarios/"+firebaseAuth.currentUser.uid+"/tema").once("value");
+        const tema=(snap.exists()&&snap.val())?String(snap.val()):String(configuracoesSistemaAplicacao.tema||"escuro");
+        aplicarTemaSistema(tema);
+    }catch(e){ console.warn("Tema individual não carregado:",e); }
+}
+async function definirTemaUsuario(tema){
+    const t=String(tema||"escuro").toLowerCase()==="claro"?"claro":"escuro";
+    aplicarTemaSistema(t);
+    if(firebaseAuth.currentUser){
+        try{ await firebaseDB.ref("preferenciasUsuarios/"+firebaseAuth.currentUser.uid+"/tema").set(t); }
+        catch(e){ console.error("Erro ao salvar tema individual:",e); }
+    }
+}
+
+// ======================================================
 // INICIALIZAÇÃO
 // ======================================================
 
 async function iniciarAplicativo(){
     await carregarConfiguracoesSistemaAplicacao();
+    await carregarTemaUsuario();
     criarContainers();
     preencherDataHora();
     garantirIdsEstoque();
@@ -8550,6 +8612,80 @@ function ocultarUmaSolicitacaoExterno(id){
 // ======================================================
 
 let listenerEstoqueExterno = null;
+
+// ======================================================
+// REGISTRO DE NOVA MERCADORIA — ADMIN / USUÁRIO COMUM
+// ======================================================
+function calcularPesoRegistro(){
+    const qtd=Number(document.getElementById("reg-qtd")?.value||0);
+    const kg=Number(document.getElementById("reg-kg")?.value||0);
+    const campo=document.getElementById("reg-peso");
+    if(campo) campo.value=(qtd>0 && kg>0) ? (qtd*kg).toFixed(2) : "";
+}
+function encontrarProdutoRegistro(valor){
+    const texto=normalizarTextoProduto(valor||"");
+    if(!texto) return null;
+    return produtosCadastrados.find(x=>normalizarTextoProduto(x.nome)===texto || normalizarTextoProduto(x.codigo)===texto)
+        || produtosCadastrados.find(x=>normalizarTextoProduto(x.nome).includes(texto) || normalizarTextoProduto(x.codigo).includes(texto)) || null;
+}
+function localizarProdutoRegistroPorCodigo(){
+    const codigo=document.getElementById("reg-codigo");
+    const prod=document.getElementById("reg-prod");
+    if(!codigo||!prod) return;
+    const item=encontrarProdutoRegistro(codigo.value);
+    if(item){ codigo.value=item.codigo||codigo.value; prod.value=item.nome||""; }
+}
+function preencherCodigoRegistroProduto(){
+    const prod=document.getElementById("reg-prod");
+    const codigo=document.getElementById("reg-codigo");
+    if(!prod||!codigo)return;
+    const item=encontrarProdutoRegistro(prod.value);
+    if(item){prod.value=item.nome||"";codigo.value=item.codigo||"";}
+}
+function mostrarSugestoesRegistroProduto(){
+    const campo=document.getElementById("reg-prod"), caixa=document.getElementById("sugestoes-registro-produto");
+    if(!campo||!caixa)return;
+    const texto=normalizarTextoProduto(campo.value);
+    let lista=produtosCadastrados.slice().filter(x=>!texto || normalizarTextoProduto(x.nome).includes(texto)||normalizarTextoProduto(x.codigo).includes(texto)).slice(0,30);
+    caixa.innerHTML="";
+    if(!lista.length){caixa.style.display="none";return;}
+    lista.forEach(item=>{
+        const div=document.createElement("div"); div.className="sugestao-item";
+        div.innerText=(item.codigo?"["+item.codigo+"] ":"")+(item.nome||"");
+        div.onmousedown=function(){
+            document.getElementById("reg-prod").value=item.nome||"";
+            document.getElementById("reg-codigo").value=item.codigo||"";
+            caixa.style.display="none";
+        };
+        caixa.appendChild(div);
+    });
+    caixa.style.display="block";
+}
+function esconderSugestoesRegistroProduto(){
+    setTimeout(()=>{const c=document.getElementById("sugestoes-registro-produto");if(c)c.style.display="none";},150);
+}
+function abrirModalRegistroMercadoria(){
+    if(!firebaseAuth.currentUser || !usuarioLogadoAtual){alert("Faça login novamente.");return;}
+    const modal=document.getElementById("modal-registro-mercadoria"); if(!modal)return;
+    limparRegistroMercadoriaModal();
+    const data=document.getElementById("reg-data"); if(data)data.value=new Date().toISOString().slice(0,10);
+    modal.style.display="flex"; modal.setAttribute("aria-hidden","false"); document.body.style.overflow="hidden";
+}
+function fecharModalRegistroMercadoria(){
+    const modal=document.getElementById("modal-registro-mercadoria"); if(!modal)return;
+    modal.style.display="none"; modal.setAttribute("aria-hidden","true"); document.body.style.overflow="";
+}
+function limparRegistroMercadoriaModal(){
+    ["reg-data","reg-num","reg-nf","reg-fornecedor","reg-codigo","reg-prod","reg-lote","reg-validade","reg-qtd","reg-kg","reg-peso"].forEach(id=>{const e=document.getElementById(id);if(e)e.value="";});
+    const c=document.getElementById("sugestoes-registro-produto");if(c)c.style.display="none";
+}
+async function confirmarRegistroMercadoriaModal(){
+    preencherCodigoRegistroProduto(); calcularPesoRegistro();
+    const mapa={"data":"reg-data","num":"reg-num","nf":"reg-nf","fornecedor":"reg-fornecedor","codigo":"reg-codigo","prod":"reg-prod","lote":"reg-lote","validade":"reg-validade","qtd":"reg-qtd","kg":"reg-kg","peso":"reg-peso"};
+    Object.keys(mapa).forEach(dest=>{const alvo=document.getElementById(dest), origem=document.getElementById(mapa[dest]);if(alvo&&origem)alvo.value=origem.value;});
+    await adicionarItem();
+    fecharModalRegistroMercadoria();
+}
 
 function abrirModalSolicitacaoMercadoria(){
     const modal=document.getElementById("modal-solicitacao-externo");
