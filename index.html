@@ -2900,7 +2900,6 @@ let configuracoesSistemaAplicacao = {
     avisosEntrada: true,
     avisosRecusa: true,
     avisosSolicitacoes: true,
-    tema: "escuro"
 };
 
 async function carregarConfiguracoesSistemaAplicacao(){
@@ -2915,14 +2914,11 @@ async function carregarConfiguracoesSistemaAplicacao(){
             avisosEntrada: true,
             avisosRecusa: true,
             avisosSolicitacoes: true,
-            tema: "escuro"
         }, c, {quantidadeContainers: quantidadeContainersSistema});
-        aplicarTemaSistema(configuracoesSistemaAplicacao.tema);
         return configuracoesSistemaAplicacao;
     }catch(e){
         console.warn("Não foi possível carregar as configurações do sistema:",e);
         quantidadeContainersSistema = 60;
-        aplicarTemaSistema("escuro");
         return configuracoesSistemaAplicacao;
     }
 }
@@ -7839,6 +7835,7 @@ async function salvarTemaEscolhidoAposLogin(usuarioObjeto){
     if(!temaEscolhidoAntesDoLogin || !usuarioObjeto || !usuarioObjeto.uid) return;
     try{
         await firebaseDB.ref("preferenciasUsuarios/"+usuarioObjeto.uid+"/tema").set(temaEscolhidoAntesDoLogin);
+        aplicarTemaSistema(temaEscolhidoAntesDoLogin);
     }catch(e){ console.warn("Não foi possível salvar o tema escolhido na tela de login:",e); }
 }
 
@@ -7846,7 +7843,7 @@ async function carregarTemaUsuario(){
     try{
         if(!firebaseAuth.currentUser) return;
         const snap=await firebaseDB.ref("preferenciasUsuarios/"+firebaseAuth.currentUser.uid+"/tema").once("value");
-        const tema=(snap.exists()&&snap.val())?String(snap.val()):String(configuracoesSistemaAplicacao.tema||"escuro");
+        const tema=(snap.exists()&&snap.val())?String(snap.val()):"escuro";
         aplicarTemaSistema(tema);
     }catch(e){ console.warn("Tema individual não carregado:",e); }
 }
@@ -8221,7 +8218,12 @@ async function tratarEnvioLogin(){
 async function entrarNoApp(usuarioObjeto){
     usuarioLogadoAtual=usuarioObjeto;
     await carregarConfiguracoesSistemaAplicacao();
-    await salvarTemaEscolhidoAposLogin(usuarioObjeto);
+    if(temaEscolhidoAntesDoLogin){
+        await salvarTemaEscolhidoAposLogin(usuarioObjeto);
+        aplicarTemaSistema(temaEscolhidoAntesDoLogin);
+    }else{
+        await carregarTemaUsuario();
+    }
 
     // O layout de duas colunas é exclusivo do administrador.
     // Usuário comum continua com a tela completa/original.
@@ -11308,7 +11310,6 @@ function ouvirConfiguracoesSistemaTempoReal(){
                     }
                 });
             }
-            aplicarTemaSistema(configuracoesSistemaAplicacao.tema);
             atualizarContadoresQuantidadeContainers();
             if(mudou){
                 // Reconstrói somente as grades; os dados continuam no Firebase.
@@ -12057,7 +12058,6 @@ function ouvirConfiguracoesSistemaTempoReal(){
                     }
                 });
             }
-            aplicarTemaSistema(configuracoesSistemaAplicacao.tema);
             atualizarContadoresQuantidadeContainers();
             if(mudou){
                 // Reconstrói somente as grades; os dados continuam no Firebase.
@@ -12084,8 +12084,9 @@ document.addEventListener("DOMContentLoaded",function(){
 <script id="tema-login-inicializacao">
 (function(){
     function inicializarTemaLogin(){
-        const temaInicial=(window.configuracoesSistemaAplicacao && window.configuracoesSistemaAplicacao.tema) || "escuro";
-        atualizarBotoesTemaLogin(temaEscolhidoAntesDoLogin || temaInicial);
+        const temaInicial=temaEscolhidoAntesDoLogin || "escuro";
+        aplicarTemaSistema(temaInicial);
+        atualizarBotoesTemaLogin(temaInicial);
     }
     if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", inicializarTemaLogin);
     else inicializarTemaLogin();
