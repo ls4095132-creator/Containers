@@ -1113,6 +1113,64 @@ button:disabled {
     .btn-notificacao-web{padding:6px 9px;font-size:11px;}
     .toast-notificacao-web{right:10px;bottom:10px;width:calc(100vw - 20px);}
 }
+
+/* ======================================================
+   ADMIN — BOTÕES PARA ACEITAR / RECUSAR NOVOS ACESSOS
+   ====================================================== */
+.solicitacao-acesso-admin-card{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:12px;
+    margin-bottom:8px;
+    background:var(--bg-painel-2);
+    border:1px solid var(--borda);
+    border-radius:8px;
+}
+.solicitacao-acesso-admin-dados{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    min-width:0;
+    line-height:1.35;
+}
+.solicitacao-acesso-admin-dados strong{
+    color:var(--texto);
+    font-size:13px;
+}
+.solicitacao-acesso-admin-dados span{
+    color:var(--texto-fraco);
+    font-size:11px;
+    overflow-wrap:anywhere;
+}
+.solicitacao-acesso-admin-dados .solicitacao-acesso-admin-mensagem{
+    color:var(--texto-fraco);
+}
+.solicitacao-acesso-admin-acoes{
+    display:flex;
+    gap:7px;
+    flex-shrink:0;
+}
+.btn-acao-acesso-admin{
+    width:auto !important;
+    min-width:88px;
+    padding:7px 10px;
+    font-size:11.5px;
+}
+@media(max-width:700px){
+    .solicitacao-acesso-admin-card{
+        align-items:stretch;
+        flex-direction:column;
+    }
+    .solicitacao-acesso-admin-acoes{
+        width:100%;
+    }
+    .btn-acao-acesso-admin{
+        flex:1;
+    }
+}
+
 </style>
 <!-- FIREBASE: conexão do sistema -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -4697,11 +4755,155 @@ function renderizarSolicitacoesAcessoAdmin(){
     const area=document.getElementById("lista-solicitacoes-acesso-admin");
     const contador=document.getElementById("contador-solicitacoes-acesso-admin");
     if(!area||!usuarioEhAdmin())return;
-    const pendentes=carregarSolicitacoesAcesso().filter(function(item){return item.status==="pendente";});
-    if(contador)contador.innerText=pendentes.length?"("+pendentes.length+" pendente(s))":"(nenhuma pendente)";
-    if(!pendentes.length){area.innerHTML='<div class="vazio" style="margin-top:10px;">✅ Nenhuma solicitação de acesso pendente.</div>';return;}
-    area.innerHTML=pendentes.map(function(item){return '<div class="produto-item" style="margin-bottom:8px;"><strong>'+escaparHtmlAlteracao(item.email||item.usuario||"Usuário")+'</strong><br><span style="font-size:11px;color:var(--texto-fraco);">'+escaparHtmlAlteracao(item.mensagem||"Solicitação de acesso")+'</span></div>';}).join("");
+
+    const pendentes=carregarSolicitacoesAcesso().filter(function(item){
+        return String(item.status||"pendente").toLowerCase()==="pendente";
+    });
+
+    if(contador){
+        contador.innerText=pendentes.length
+            ? "("+pendentes.length+" pendente(s))"
+            : "(nenhuma pendente)";
+    }
+
+    if(!pendentes.length){
+        area.innerHTML='<div class="vazio" style="margin-top:10px;">✅ Nenhuma solicitação de acesso pendente.</div>';
+        return;
+    }
+
+    area.innerHTML=pendentes.map(function(item){
+        const nome=escaparHtmlSolicitacao(
+            item.nomeCompleto ||
+            ((item.nome||"")+" "+(item.sobrenome||"")).trim() ||
+            "Usuário"
+        );
+        const email=escaparHtmlSolicitacao(item.email||item.usuario||"—");
+        const filial=escaparHtmlSolicitacao(item.filial||"Não informada");
+        const mensagem=escaparHtmlSolicitacao(item.mensagem||"Solicitação de novo acesso");
+
+        return `
+            <div class="solicitacao-acesso-admin-card">
+                <div class="solicitacao-acesso-admin-dados">
+                    <strong>👤 ${nome}</strong>
+                    <span>📧 ${email}</span>
+                    <span>🏢 Filial: ${filial}</span>
+                    <span class="solicitacao-acesso-admin-mensagem">📝 ${mensagem}</span>
+                </div>
+
+                <div class="solicitacao-acesso-admin-acoes">
+                    <button
+                        type="button"
+                        class="btn-salvar btn-acao-acesso-admin"
+                        onclick="aceitarSolicitacaoAcessoAdmin('${String(item.id||"").replace(/'/g,"\\'")}')">
+                        ✅ Aceitar
+                    </button>
+
+                    <button
+                        type="button"
+                        class="btn-limpar btn-acao-acesso-admin"
+                        onclick="recusarSolicitacaoAcessoAdmin('${String(item.id||"").replace(/'/g,"\\'")}')">
+                        ❌ Recusar
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join("");
 }
+
+/* ======================================================
+   APROVAÇÃO / RECUSA DE NOVOS ACESSOS
+   O registro permanece no Firebase com seu status final,
+   mas sai imediatamente da lista de pendências do Admin.
+   ====================================================== */
+async function processarSolicitacaoAcessoAdmin(id, novoStatus){
+    if(!usuarioEhAdmin()){
+        alert("❌ Apenas o administrador pode processar solicitações de acesso.");
+        return;
+    }
+
+    if(!id){
+        alert("❌ Solicitação de acesso inválida.");
+        return;
+    }
+
+    const lista=carregarSolicitacoesAcesso();
+    const solicitacao=lista.find(function(item){
+        return String(item.id||"")===String(id) &&
+               String(item.status||"pendente").toLowerCase()==="pendente";
+    });
+
+    if(!solicitacao){
+        renderizarSolicitacoesAcessoAdmin();
+        atualizarIndicadorAdmin();
+        return;
+    }
+
+    const nome=solicitacao.nomeCompleto ||
+        ((solicitacao.nome||"")+" "+(solicitacao.sobrenome||"")).trim() ||
+        solicitacao.email ||
+        solicitacao.usuario ||
+        "usuário";
+
+    const aceitar=novoStatus==="aprovado";
+
+    if(!confirm(
+        aceitar
+            ? "Aceitar a solicitação de acesso de "+nome+"?"
+            : "Recusar a solicitação de acesso de "+nome+"?"
+    )){
+        return;
+    }
+
+    try{
+        const uidAdmin=firebaseAuth.currentUser ? firebaseAuth.currentUser.uid : "";
+        const operador=(typeof operadorAtual==="function")
+            ? operadorAtual()
+            : "Administrador";
+
+        const dadosAtualizacao={
+            status:aceitar ? "aprovado" : "recusado",
+            processadoEm:new Date().toISOString(),
+            processadoPor:operador,
+            processadoPorUid:uidAdmin
+        };
+
+        await firebaseDB.ref("solicitacoesAcesso/"+String(id)).update(dadosAtualizacao);
+
+        /* Atualiza a lista local para o card desaparecer imediatamente,
+           sem esperar uma nova leitura do Firebase. */
+        solicitacao.status=dadosAtualizacao.status;
+        solicitacao.processadoEm=dadosAtualizacao.processadoEm;
+        solicitacao.processadoPor=dadosAtualizacao.processadoPor;
+        solicitacao.processadoPorUid=dadosAtualizacao.processadoPorUid;
+
+        solicitacoesAcessoCache=lista;
+
+        renderizarSolicitacoesAcessoAdmin();
+        atualizarIndicadorAdmin();
+
+        mostrarAvisoOperacaoVerde(
+            aceitar ? "Acesso aceito" : "Acesso recusado",
+            nome+" • "+(solicitacao.email||solicitacao.usuario||"")
+        );
+    }catch(erro){
+        console.error("Erro ao processar solicitação de acesso:",erro);
+        alert(
+            "❌ Não foi possível processar a solicitação.\n\n"+
+            (erro && erro.message ? erro.message : erro)
+        );
+    }
+}
+
+async function aceitarSolicitacaoAcessoAdmin(id){
+    return processarSolicitacaoAcessoAdmin(id,"aprovado");
+}
+
+async function recusarSolicitacaoAcessoAdmin(id){
+    return processarSolicitacaoAcessoAdmin(id,"recusado");
+}
+
+window.aceitarSolicitacaoAcessoAdmin=aceitarSolicitacaoAcessoAdmin;
+window.recusarSolicitacaoAcessoAdmin=recusarSolicitacaoAcessoAdmin;
 
 function renderizarSolicitacoesMercadoriaAdmin(){
 
