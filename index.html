@@ -5105,7 +5105,7 @@ const pendentes = lista.filter(function(item){
                     <input
                         type="text"
                         id="nf-solicitacao-${item.id}"
-                        placeholder="Digite o Nº da NF"
+                        placeholder="Digite o Nº da NF para dar baixa"
                         style="
                             width:100%;
                             margin-top:8px;
@@ -5113,6 +5113,10 @@ const pendentes = lista.filter(function(item){
                             box-sizing:border-box;
                         "
                     >
+
+                    <div style="font-size:11px;color:var(--texto-fraco);margin-top:5px;">
+                        Informe a NF para aceitar e dar baixa no estoque. Se houver desistência, use <strong>Recusar</strong>.
+                    </div>
 
                     <div class="container-botoes"
                          style="margin-top:10px;">
@@ -5131,7 +5135,7 @@ const pendentes = lista.filter(function(item){
                             class="btn-apagar-historico"
                             onclick="cancelarSolicitacaoMercadoriaAdmin('${item.id}')">
 
-                            ❌ Cancelar
+                            ❌ Recusar
 
                         </button>
 
@@ -5861,7 +5865,7 @@ async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
         // ==================================================
         if(novoStatus === "cancelado"){
 
-            if(!confirm("Deseja cancelar esta solicitação?")) return;
+            if(!confirm("Deseja recusar esta solicitação? A mercadoria não será baixada do estoque.")) return;
 
             await ref.update({
                 status: "cancelado",
@@ -5888,7 +5892,7 @@ async function atualizarStatusSolicitacaoMercadoriaAdmin(id, novoStatus){
             }
 
             atualizarIndicadorAdmin();
-            alert("❌ Solicitação cancelada.");
+            alert("❌ Solicitação recusada.");
             return;
         }
 
