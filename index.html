@@ -4916,6 +4916,22 @@ function renderizarSolicitacoesMercadoriaAdmin(){
 
     if(!area || !usuarioEhAdmin()) return;
 
+    // O painel é atualizado automaticamente pelo Firebase. Guardamos os
+    // valores dos campos de NF antes de recriar os cards para que o número
+    // digitado pelo administrador não seja perdido e o campo não perca o foco.
+    const valoresNF = {};
+    area.querySelectorAll('input[id^="nf-solicitacao-"]').forEach(function(campo){
+        valoresNF[campo.id] = campo.value;
+    });
+
+    const campoAtivo = document.activeElement;
+    const idCampoAtivo = campoAtivo && campoAtivo.id &&
+        campoAtivo.id.indexOf("nf-solicitacao-") === 0
+        ? campoAtivo.id : null;
+    const posicaoCursor = campoAtivo &&
+        typeof campoAtivo.selectionStart === "number"
+        ? campoAtivo.selectionStart : null;
+
     const lista = Array.isArray(solicitacoesMercadoriaAdminCache)
         ? solicitacoesMercadoriaAdminCache.slice()
         : [];
@@ -5224,6 +5240,25 @@ const pendentes = lista.filter(function(item){
         `;
 
     }).join("");
+
+
+    // Restaura os números já digitados após a atualização visual.
+    Object.keys(valoresNF).forEach(function(idCampo){
+        const campo = document.getElementById(idCampo);
+        if(campo) campo.value = valoresNF[idCampo];
+    });
+
+    // Se o administrador estava digitando a NF, mantém o foco e o cursor.
+    if(idCampoAtivo){
+        const campo = document.getElementById(idCampoAtivo);
+        if(campo){
+            campo.focus({preventScroll:true});
+            if(posicaoCursor !== null && typeof campo.setSelectionRange === "function"){
+                const pos = Math.min(posicaoCursor, campo.value.length);
+                try{ campo.setSelectionRange(pos, pos); }catch(e){}
+            }
+        }
+    }
 }
 
 // ======================================================
@@ -6462,7 +6497,9 @@ const item={
     codigo:codigo || produtoCadastrado.codigo || "",
     lote:lote,
     validade:validade,
-    filial:(usuarioLogadoAtual && usuarioLogadoAtual.filial) || "NÃO CADASTRADA",
+    filial:editIndex !== "" && estoque[Number(editIndex)]
+        ? (estoque[Number(editIndex)].filial || ((usuarioLogadoAtual && usuarioLogadoAtual.filial) || "NÃO CADASTRADA"))
+        : ((usuarioLogadoAtual && usuarioLogadoAtual.filial) || "NÃO CADASTRADA"),
     qtd:Number(qtd),
     kg:Number(kg),
     peso:Number(peso)
@@ -6641,7 +6678,7 @@ ${item.codigo ? item.codigo+" - " : ""}${item.prod}
 
 <button
 class="btn-acao"
-onclick="editarItem(${index})"
+onclick="editarItemContainer(${index})"
 title="Editar"
 >
 ✏️
@@ -6699,6 +6736,70 @@ aplicarFiltrosContainers('admin');
 // ======================================================
 // EDITAR
 // ======================================================
+
+function editarItemContainer(index){
+    const item=estoque[index];
+    if(!item){
+        alert("❌ A mercadoria selecionada não existe mais no estoque.");
+        return;
+    }
+
+    if(!firebaseAuth.currentUser || !usuarioLogadoAtual){
+        alert("Faça login novamente.");
+        return;
+    }
+
+    const modal=document.getElementById("modal-registro-mercadoria");
+    if(!modal){
+        // Fallback para a edição antiga caso o modal não esteja disponível.
+        editarItem(index);
+        return;
+    }
+
+    const valores={
+        "reg-data":item.data || "",
+        "reg-num":item.num != null ? item.num : "",
+        "reg-nf":item.nf || "",
+        "reg-fornecedor":item.fornecedor || "",
+        "reg-codigo":item.codigo || "",
+        "reg-prod":item.prod || "",
+        "reg-lote":item.lote || "",
+        "reg-validade":item.validade || "",
+        "reg-qtd":item.qtd != null ? item.qtd : "",
+        "reg-kg":item.kg != null ? item.kg : (Number(item.qtd)>0 ? Number(item.peso||0)/Number(item.qtd) : "")
+    };
+
+    Object.keys(valores).forEach(function(id){
+        const campo=document.getElementById(id);
+        if(campo) campo.value=valores[id];
+    });
+
+    const peso=document.getElementById("reg-peso");
+    if(peso){
+        const qtd=Number(item.qtd||0);
+        const kg=Number(item.kg||0);
+        peso.value=(qtd>0 && kg>0) ? (qtd*kg).toFixed(2) : (item.peso || "");
+    }
+
+    const editIndex=document.getElementById("edit-index");
+    if(editIndex) editIndex.value=String(index);
+
+    const titulo=document.getElementById("titulo-modal-registro");
+    if(titulo) titulo.innerText="✏️ Alterar Mercadoria do Container "+item.num;
+
+    const apoio=modal.querySelector(".texto-apoio-solicitacao");
+    if(apoio) apoio.innerText="Altere a mercadoria ou qualquer informação deste container. Os dados atuais já estão preenchidos.";
+
+    const botao=modal.querySelector(".modal-solicitacao-rodape .btn-salvar");
+    if(botao) botao.innerText="💾 Salvar Alteração";
+
+    const sugestoes=document.getElementById("sugestoes-registro-produto");
+    if(sugestoes) sugestoes.style.display="none";
+
+    modal.style.display="flex";
+    modal.setAttribute("aria-hidden","false");
+    document.body.style.overflow="hidden";
+}
 
 function editarItem(index){
 
@@ -8990,16 +9091,37 @@ function mostrarSugestoesRegistroProduto(){
 function esconderSugestoesRegistroProduto(){
     setTimeout(()=>{const c=document.getElementById("sugestoes-registro-produto");if(c)c.style.display="none";},150);
 }
+function prepararTituloModalRegistroMercadoria(edicao){
+    const titulo=document.getElementById("titulo-modal-registro");
+    const apoio=document.querySelector("#modal-registro-mercadoria .texto-apoio-solicitacao");
+    const botao=document.querySelector("#modal-registro-mercadoria .modal-solicitacao-rodape .btn-salvar");
+
+    if(edicao){
+        const item=estoque[Number(document.getElementById("edit-index")?.value)];
+        if(titulo) titulo.innerText=item ? "✏️ Alterar Mercadoria do Container "+item.num : "✏️ Alterar Mercadoria";
+        if(apoio) apoio.innerText="Altere a mercadoria ou qualquer informação deste container. Os dados atuais já estão preenchidos.";
+        if(botao) botao.innerText="💾 Salvar Alteração";
+    }else{
+        if(titulo) titulo.innerText="📦 Registrar Nova Mercadoria";
+        if(apoio) apoio.innerText="Preencha os dados da entrada. Para usuário comum, o registro será enviado ao administrador para aprovação.";
+        if(botao) botao.innerText="💾 Registrar Mercadoria";
+    }
+}
+
 function abrirModalRegistroMercadoria(){
     if(!firebaseAuth.currentUser || !usuarioLogadoAtual){alert("Faça login novamente.");return;}
     const modal=document.getElementById("modal-registro-mercadoria"); if(!modal)return;
+    const editIndex=document.getElementById("edit-index"); if(editIndex) editIndex.value="";
     limparRegistroMercadoriaModal();
     const data=document.getElementById("reg-data"); if(data)data.value=new Date().toISOString().slice(0,10);
+    prepararTituloModalRegistroMercadoria(false);
     modal.style.display="flex"; modal.setAttribute("aria-hidden","false"); document.body.style.overflow="hidden";
 }
 function fecharModalRegistroMercadoria(){
     const modal=document.getElementById("modal-registro-mercadoria"); if(!modal)return;
     modal.style.display="none"; modal.setAttribute("aria-hidden","true"); document.body.style.overflow="";
+    const editIndex=document.getElementById("edit-index"); if(editIndex) editIndex.value="";
+    prepararTituloModalRegistroMercadoria(false);
 }
 function limparRegistroMercadoriaModal(){
     ["reg-data","reg-num","reg-nf","reg-fornecedor","reg-codigo","reg-prod","reg-lote","reg-validade","reg-qtd","reg-kg","reg-peso"].forEach(id=>{const e=document.getElementById(id);if(e)e.value="";});
@@ -9009,7 +9131,11 @@ async function confirmarRegistroMercadoriaModal(){
     preencherCodigoRegistroProduto(); calcularPesoRegistro();
     const mapa={"data":"reg-data","num":"reg-num","nf":"reg-nf","fornecedor":"reg-fornecedor","codigo":"reg-codigo","prod":"reg-prod","lote":"reg-lote","validade":"reg-validade","qtd":"reg-qtd","kg":"reg-kg","peso":"reg-peso"};
     Object.keys(mapa).forEach(dest=>{const alvo=document.getElementById(dest), origem=document.getElementById(mapa[dest]);if(alvo&&origem)alvo.value=origem.value;});
+
+    const editIndex=document.getElementById("edit-index")?.value || "";
     await adicionarItem();
+
+    // adicionarItem limpa o índice de edição; fechamos o modal apenas depois de concluir.
     fecharModalRegistroMercadoria();
 }
 
