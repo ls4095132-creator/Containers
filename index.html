@@ -2620,12 +2620,7 @@ Entrar
 <!-- CONTROLES DE VISUALIZAÇÃO DOS CONTAINERS EXTERNOS -->
 <div class="painel-visualizacao" id="painel-visualizacao-externo">
 <div class="visualizacao-linha">
-<strong>👁️ Visualização:</strong>
-<div class="visualizacao-botoes">
-<button class="btn-vis ativo" id="btn-vis-quadro-externo" onclick="alterarVisualizacaoContainers('externo','quadro')" type="button">▦ Quadro</button>
-<button class="btn-vis" id="btn-vis-lista-externo" onclick="alterarVisualizacaoContainers('externo','lista')" type="button">☷ Lista</button>
-</div>
-<strong style="margin-left:8px;">Status:</strong>
+<strong>Status:</strong>
 <select class="select-status" id="filtro-status-containers-externo" onchange="aplicarFiltrosContainers('externo')">
 <option value="todos">Todos</option>
 <option value="cheios">🟢 Cheios</option>
@@ -2833,11 +2828,6 @@ Containers ocupados: 0 / <span class="contador-max-inline">60</span>
 <!-- CONTROLES DE VISUALIZAÇÃO DOS CONTAINERS -->
 <div class="painel-visualizacao" id="painel-visualizacao-admin">
 <div class="visualizacao-linha">
-<strong>👁️ Visualização:</strong>
-<div class="visualizacao-botoes">
-<button class="btn-vis ativo" id="btn-vis-quadro-admin" onclick="alterarVisualizacaoContainers('admin','quadro')" type="button">▦ Quadro</button>
-<button class="btn-vis" id="btn-vis-lista-admin" onclick="alterarVisualizacaoContainers('admin','lista')" type="button">☷ Lista</button>
-</div>
 <button class="btn-vis btn-registrar-mercadoria" id="btn-registrar-mercadoria" onclick="abrirModalRegistroMercadoria()" type="button">📦 Registrar Mercadoria</button>
 <button class="btn-vis btn-exportar-containers" id="btn-exportar-containers" onclick="exportarParaExcel()" type="button">📊 Exportar Excel dos Containers</button>
 <strong style="margin-left:8px;">Status:</strong>
@@ -6044,27 +6034,15 @@ function aplicarFiltrosContainers(tipo){
     const cfg=configuracaoVisualizacaoContainers[tipo];
     const filtro=(document.getElementById('filtro-status-containers-'+tipo)||{}).value || cfg.status || 'todos';
     cfg.status=filtro;
-    const grade=obterGradeVisualizacao(tipo);
-    if(grade) grade.classList.toggle('modo-lista',cfg.modo==='lista');
-    let exibidos=0;
-    for(let i=1;i<=quantidadeContainersSistema;i++){
-        const el=obterContainerVisualizacao(tipo,i);
-        if(!el) continue;
-        const selecionado=cfg.selecionados.has(i);
-        const cheio=containerEstaCheio(tipo,i);
-        const passaStatus=filtro==='todos' || (filtro==='cheios' && cheio) || (filtro==='vazios' && !cheio);
-        el.classList.toggle('escondido',!(selecionado && passaStatus));
-        if(selecionado && passaStatus) exibidos++;
-    }
-    const resumo=document.getElementById('resumo-visualizacao-'+tipo);
-    if(resumo) resumo.textContent=exibidos+' container(s) exibido(s) de '+quantidadeContainersSistema;
+    if(tipo==='admin') renderizarMapaContainers('principal');
+    else if(tipo==='externo') renderizarMapaContainers('externo');
 }
 function inicializarVisualizacaoContainers(tipo){
-    construirCheckboxesContainers(tipo);
     const cfg=configuracaoVisualizacaoContainers[tipo];
     const sel=document.getElementById('filtro-status-containers-'+tipo);
     if(sel) sel.value=cfg.status;
-    alterarVisualizacaoContainers(tipo,cfg.modo);
+    if(tipo==='admin') renderizarMapaContainers('principal');
+    if(tipo==='externo') renderizarMapaContainers('externo');
 }
 
 // ======================================================
@@ -6992,22 +6970,7 @@ function esvaziarContainer(){
 // ======================================================
 
 function filtrarEstoque(){
-
-const campo = document.getElementById("campo-busca");
-if(!campo)return;
-const texto = campo.value.toLowerCase().trim();
-const cfg=configuracaoVisualizacaoContainers.admin;
-
-for(let i=1;i<=quantidadeContainersSistema;i++){
-    const container=document.getElementById("c-"+i);
-    if(!container)continue;
-    const conteudo=container.innerText.toLowerCase();
-    const buscaOk=(texto==="" || conteudo.includes(texto));
-    const cheio=containerEstaCheio('admin',i);
-    const statusOk=cfg.status==='todos' || (cfg.status==='cheios' && cheio) || (cfg.status==='vazios' && !cheio);
-    const selecaoOk=cfg.selecionados.has(i);
-    container.classList.toggle("escondido",!(buscaOk && statusOk && selecaoOk));
-}
+    renderizarMapaContainers('principal');
 }
 
 
@@ -9605,24 +9568,8 @@ function atualizarContadorExterno(){
 // ======================================================
 
 function filtrarEstoqueExterno(){
-
-const campo=document.getElementById("campo-busca-externo");
-if(!campo)return;
-const texto=campo.value.toLowerCase().trim();
-const cfg=configuracaoVisualizacaoContainers.externo;
-
-for(let i=1;i<=quantidadeContainersSistema;i++){
-    const container=document.getElementById("externo-c-"+i);
-    if(!container)continue;
-    const conteudo=container.innerText.toLowerCase();
-    const buscaOk=(texto==="" || conteudo.includes(texto));
-    const cheio=containerEstaCheio('externo',i);
-    const statusOk=cfg.status==='todos' || (cfg.status==='cheios' && cheio) || (cfg.status==='vazios' && !cheio);
-    const selecaoOk=cfg.selecionados.has(i);
-    container.classList.toggle("escondido",!(buscaOk && statusOk && selecaoOk));
+    renderizarMapaContainers('externo');
 }
-}
-
 
 
 // ======================================================
@@ -11705,7 +11652,18 @@ document.addEventListener("DOMContentLoaded",function(){
 .mapa-container-card{position:relative;border:1px solid var(--borda);background:var(--bg-painel-2);border-radius:10px;padding:11px;cursor:pointer;min-height:82px;transition:transform .12s,border-color .12s}
 .mapa-container-card:hover{transform:translateY(-1px);border-color:var(--azul)}
 .mapa-container-card.ocupado{border-left:4px solid #22c55e}.mapa-container-card.vazio{border-left:4px solid #94a3b8}.mapa-container-card.atencao{border-left:4px solid #ef4444}
-.mapa-container-numero{font-weight:700;font-size:14px}.mapa-container-status{font-size:11px;margin-top:5px}.mapa-container-qtd{font-size:11px;color:var(--texto-fraco);margin-top:5px}.mapa-favorito{position:absolute;right:7px;top:6px;border:0;background:transparent;color:inherit;font-size:17px;cursor:pointer;padding:2px}
+.mapa-container-numero{font-weight:700;font-size:14px}.mapa-container-status{font-size:11px;margin-top:5px}.mapa-container-qtd{font-size:11px;color:var(--texto-fraco);margin-top:5px}
+.mapa-container-mercadorias{margin-top:8px;display:flex;flex-direction:column;gap:5px}
+.mapa-mercadoria-linha{padding:6px 7px;border:1px solid var(--borda);border-radius:7px;background:var(--bg-input);font-size:10.5px;line-height:1.35;cursor:default}
+.mapa-mercadoria-topo{display:flex;align-items:center;justify-content:space-between;gap:5px}
+.mapa-mercadoria-nome{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mapa-mercadoria-info{color:var(--texto-fraco);margin-top:2px}
+.mapa-mercadoria-acoes{display:flex;gap:3px;flex-shrink:0}
+.mapa-mercadoria-acoes button{border:1px solid var(--borda-forte);background:var(--bg-painel-2);border-radius:5px;padding:2px 5px;cursor:pointer;font-size:12px;color:var(--texto)}
+.mapa-mercadoria-acoes button:hover{border-color:var(--azul)}
+.mapa-sem-mercadoria{font-size:11px;color:var(--texto-fraco);margin-top:7px}
+.mapa-container-card.oculto-filtro{display:none !important}
+.mapa-favorito{position:absolute;right:7px;top:6px;border:0;background:transparent;color:inherit;font-size:17px;cursor:pointer;padding:2px}
 .btn-central-notificacoes{border:1px solid var(--borda);background:var(--bg-painel-2);color:var(--texto);border-radius:8px;padding:6px 9px;cursor:pointer;font-weight:600}
 .central-notificacoes{margin:10px 0}.central-notificacoes .notificacao-individual{border:1px solid var(--borda);border-radius:9px;padding:11px;margin:7px 0;background:var(--bg-painel-2)}
 .central-notificacoes .notificacao-individual.nao-lida{border-left:4px solid var(--azul)}
@@ -11749,36 +11707,106 @@ async function alternarFavoritoContainer(numero,ev){
   catch(e){ console.error("Erro ao salvar favorito:",e); alert("Não foi possível salvar o favorito. Verifique as regras do Firebase."); }
 }
 function obterItensContainerMelhorias(numero){ return (Array.isArray(estoque)?estoque:[]).filter(x=>x && Number(x.num)===Number(numero)); }
+function obterIndicesItensContainerMelhorias(numero){
+  const saida=[];
+  (Array.isArray(estoque)?estoque:[]).forEach((it,index)=>{
+    if(it && Number(it.num)===Number(numero)) saida.push({item:it,index:index});
+  });
+  return saida;
+}
+
 function abrirDetalhesContainerMelhorias(numero){
-  const itens=obterItensContainerMelhorias(numero);
+  const itens=obterIndicesItensContainerMelhorias(numero);
   const favorito=favoritosContainersUsuario.includes(Number(numero));
   let html='<div style="text-align:left;line-height:1.65"><strong>Container '+String(numero).padStart(2,'0')+'</strong><br>';
-  if(!itens.length){ html+='⚪ Container vazio.'; }
-  else { itens.forEach((it,i)=>{ html+=(i?' <hr>':'')+'📋 <strong>'+(typeof escaparHtmlExterno==='function'?escaparHtmlExterno(it.prod||'—'):String(it.prod||'—'))+'</strong><br>🔢 Quantidade: '+Number(it.qtd||0).toLocaleString('pt-BR')+'<br>⚖️ Peso: '+Number(it.peso||0).toLocaleString('pt-BR',{minimumFractionDigits:2})+' KG<br>🏷️ Lote: '+(it.lote||'—')+'<br>📅 Validade: '+(typeof formatarData==='function'&&it.validade?formatarData(it.validade):(it.validade||'—')); }); }
+  if(!itens.length){ html+='<div class="vazio">⚪ Container vazio.</div>'; }
+  else {
+    itens.forEach((obj,i)=>{
+      const it=obj.item, idx=obj.index;
+      const nome=(typeof escaparHtmlExterno==='function'?escaparHtmlExterno(it.prod||'—'):String(it.prod||'—'));
+      html+=(i?' <hr>':'')+'📋 <strong>'+nome+'</strong><br>'+
+        '🔢 Quantidade: '+Number(it.qtd||0).toLocaleString('pt-BR')+'<br>'+
+        '⚖️ Peso: '+Number(it.peso||0).toLocaleString('pt-BR',{minimumFractionDigits:2})+' KG<br>'+
+        '🏷️ Lote: '+(it.lote||'—')+'<br>'+
+        '📅 Validade: '+(typeof formatarData==='function'&&it.validade?formatarData(it.validade):(it.validade||'—'))+
+        '<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:5px">'+
+        '<button class="btn-vis" type="button" onclick="editarItemContainer('+idx+');fecharDetalhesContainerMelhorias()">✏️ Editar</button>'+
+        '<button class="btn-vis" type="button" onclick="excluirItem('+idx+');fecharDetalhesContainerMelhorias()">🗑️ Excluir</button></div>';
+    });
+  }
   html+='</div>';
-  // Usa um modal simples próprio, sem interferir nos modais existentes.
   let modal=document.getElementById('modal-detalhes-container-melhorias');
-  if(!modal){ modal=document.createElement('div'); modal.id='modal-detalhes-container-melhorias'; modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:99999;display:flex;align-items:center;justify-content:center;padding:18px'; document.body.appendChild(modal); }
-  modal.innerHTML='<div style="max-width:520px;width:100%;background:var(--bg-painel);border:1px solid var(--borda);border-radius:12px;padding:18px;color:var(--texto);box-shadow:0 10px 40px rgba(0,0,0,.45)"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><h2 style="margin:0">📦 Detalhes do Container '+String(numero).padStart(2,'0')+'</h2><button class="btn-vis" onclick="fecharDetalhesContainerMelhorias()">✕</button></div><div style="margin-top:12px">'+html+'</div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px"><button class="btn-vis" onclick="alternarFavoritoContainer('+Number(numero)+');fecharDetalhesContainerMelhorias()">'+(favorito?'⭐ Remover favorito':'☆ Favoritar')+'</button><button class="btn-vis" onclick="fecharDetalhesContainerMelhorias()">Fechar</button></div></div>';
+  if(!modal){
+    modal=document.createElement('div'); modal.id='modal-detalhes-container-melhorias';
+    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:99999;display:flex;align-items:center;justify-content:center;padding:18px';
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML='<div style="max-height:90vh;overflow:auto;max-width:620px;width:100%;background:var(--bg-painel);border:1px solid var(--borda);border-radius:12px;padding:18px;color:var(--texto);box-shadow:0 10px 40px rgba(0,0,0,.45)">'+
+    '<div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><h2 style="margin:0">📦 Detalhes do Container '+String(numero).padStart(2,'0')+'</h2><button class="btn-vis" type="button" onclick="fecharDetalhesContainerMelhorias()">✕</button></div>'+
+    '<div style="margin-top:12px">'+html+'</div>'+
+    '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px"><button class="btn-vis" type="button" onclick="alternarFavoritoContainer('+Number(numero)+');fecharDetalhesContainerMelhorias()">'+(favorito?'⭐ Remover favorito':'☆ Favoritar')+'</button><button class="btn-vis" type="button" onclick="fecharDetalhesContainerMelhorias()">Fechar</button></div></div>';
   modal.style.display='flex';
 }
 function fecharDetalhesContainerMelhorias(){const m=document.getElementById('modal-detalhes-container-melhorias');if(m)m.style.display='none';}
+
+function textoPesquisaMapaContainer(tipo){
+  const id=tipo==='principal'?'campo-busca':'campo-busca-externo';
+  return String(document.getElementById(id)?.value||'').toLowerCase().trim();
+}
+
+function containerPassaFiltrosMapa(tipo,numero){
+  const cfg=configuracaoVisualizacaoContainers[tipo==='principal'?'admin':'externo'];
+  const filtro=(document.getElementById('filtro-status-containers-'+(tipo==='principal'?'admin':'externo'))||{}).value || 'todos';
+  const itens=obterIndicesItensContainerMelhorias(numero);
+  const cheio=itens.length>0;
+  const passaStatus=filtro==='todos' || (filtro==='cheios'&&cheio) || (filtro==='vazios'&&!cheio);
+  if(!passaStatus)return false;
+  const texto=textoPesquisaMapaContainer(tipo);
+  if(!texto)return true;
+  const partes=['container '+numero,String(numero),String(numero).padStart(2,'0')];
+  itens.forEach(obj=>{
+    const it=obj.item;
+    partes.push(it.codigo,it.prod,it.fornecedor,it.nf,it.lote,it.validade,it.qtd,it.kg,it.peso);
+  });
+  return partes.join(' ').toLowerCase().includes(texto);
+}
+
 function renderizarMapaContainers(tipo){
   const grade=document.getElementById('mapa-grade-'+tipo), resumo=document.getElementById('mapa-resumo-'+tipo); if(!grade) return;
   const total=Math.max(1,Number(quantidadeContainersSistema)||60), lista=Array.isArray(estoque)?estoque:[];
-  const ocupados=new Set(), atencao=new Set(); let qtdTotal=0;
+  const ocupados=new Set(), atencao=new Set(); let qtdTotal=0, exibidos=0;
   lista.forEach(it=>{const n=normalizarNumeroContainerMelhorias(it&&it.num);if(!n)return;ocupados.add(n);qtdTotal+=Number(it.qtd)||0;if(Number(it.qtd)<0||Number(it.peso)<0)atencao.add(n);});
   const favoritos=new Set(favoritosContainersUsuario);
   grade.innerHTML='';
   for(let i=1;i<=total;i++){
-    const occ=ocupados.has(i), prob=atencao.has(i), fav=favoritos.has(i), cls=prob?'atencao':(occ?'ocupado':'vazio');
+    if(!containerPassaFiltrosMapa(tipo,i)) continue;
+    exibidos++;
+    const itens=obterIndicesItensContainerMelhorias(i), occ=itens.length>0, prob=atencao.has(i), fav=favoritos.has(i);
+    const cls=prob?'atencao':(occ?'ocupado':'vazio');
     const status=prob?'🔴 Atenção':(occ?'🟢 Ocupado':'⚪ Vazio');
-    const itens=obterItensContainerMelhorias(i), q=itens.reduce((a,x)=>a+(Number(x.qtd)||0),0);
-    const card=document.createElement('div'); card.className='mapa-container-card '+cls; card.onclick=()=>abrirDetalhesContainerMelhorias(i);
-    card.innerHTML='<button class="mapa-favorito" title="Favoritar" onclick="alternarFavoritoContainer('+i+',event)">'+(fav?'⭐':'☆')+'</button><div class="mapa-container-numero">📦 Container '+String(i).padStart(2,'0')+'</div><div class="mapa-container-status">'+status+'</div><div class="mapa-container-qtd">'+(occ?Number(q).toLocaleString('pt-BR')+' volume(s)':'Sem mercadoria')+'</div>';
+    const q=itens.reduce((a,x)=>a+(Number(x.item.qtd)||0),0);
+    const peso=itens.reduce((a,x)=>a+(Number(x.item.peso)||0),0);
+    const card=document.createElement('div'); card.className='mapa-container-card '+cls;
+    card.onclick=()=>abrirDetalhesContainerMelhorias(i);
+    let mercadorias='';
+    if(itens.length){
+      mercadorias='<div class="mapa-container-mercadorias">'+itens.map(obj=>{
+        const it=obj.item, idx=obj.index;
+        const codigo=it.codigo?String(it.codigo):'Sem código';
+        const nome=String(it.prod||'Sem nome');
+        return '<div class="mapa-mercadoria-linha" onclick="event.stopPropagation()">'+
+          '<div class="mapa-mercadoria-topo"><div class="mapa-mercadoria-nome" title="'+nome.replace(/"/g,'&quot;')+'">'+(codigo+' - '+nome)+'</div>'+ 
+          (tipo==='principal'?'<div class="mapa-mercadoria-acoes"><button type="button" title="Editar mercadoria" onclick="editarItemContainer('+idx+');event.stopPropagation()">✏️</button><button type="button" title="Excluir mercadoria" onclick="excluirItem('+idx+');event.stopPropagation()">🗑️</button></div>':'')+
+          '</div><div class="mapa-mercadoria-info">🔢 '+Number(it.qtd||0).toLocaleString('pt-BR')+' vol. &nbsp;|&nbsp; ⚖️ '+Number(it.peso||0).toLocaleString('pt-BR',{minimumFractionDigits:2})+' KG</div></div>';
+      }).join('')+'</div>';
+    }else mercadorias='<div class="mapa-sem-mercadoria">Sem mercadoria cadastrada</div>';
+    card.innerHTML='<button class="mapa-favorito" title="Favoritar" type="button" onclick="alternarFavoritoContainer('+i+',event)">'+(fav?'⭐':'☆')+'</button>'+
+      '<div class="mapa-container-numero">📦 Container '+String(i).padStart(2,'0')+'</div>'+
+      '<div class="mapa-container-status">'+status+'</div>'+ 
+      '<div class="mapa-container-qtd">🔢 '+Number(q).toLocaleString('pt-BR')+' volume(s) &nbsp;|&nbsp; ⚖️ '+Number(peso).toLocaleString('pt-BR',{minimumFractionDigits:2})+' KG</div>'+mercadorias;
     grade.appendChild(card);
   }
-  if(resumo) resumo.innerHTML='Total: <strong>'+total+'</strong> &nbsp;|&nbsp; 🟢 Ocupados: <strong>'+ocupados.size+'</strong> &nbsp;|&nbsp; ⚪ Vazios: <strong>'+(total-ocupados.size)+'</strong> &nbsp;|&nbsp; 🔴 Atenção: <strong>'+atencao.size+'</strong> &nbsp;|&nbsp; 📦 Volumes: <strong>'+Number(qtdTotal).toLocaleString('pt-BR')+'</strong>';
+  if(resumo) resumo.innerHTML='Total: <strong>'+total+'</strong> &nbsp;|&nbsp; 🟢 Ocupados: <strong>'+ocupados.size+'</strong> &nbsp;|&nbsp; ⚪ Vazios: <strong>'+(total-ocupados.size)+'</strong> &nbsp;|&nbsp; 🔴 Atenção: <strong>'+atencao.size+'</strong> &nbsp;|&nbsp; 📦 Volumes: <strong>'+Number(qtdTotal).toLocaleString('pt-BR')+'</strong> &nbsp;|&nbsp; 👁️ Exibidos: <strong>'+exibidos+'</strong>';
 }
 function renderizarMapasTodos(){ if(document.getElementById('mapa-grade-principal')) renderizarMapaContainers('principal'); if(document.getElementById('mapa-grade-externo')) renderizarMapaContainers('externo'); }
 
