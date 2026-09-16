@@ -11718,20 +11718,20 @@ function obterIndicesItensContainerMelhorias(numero){
 function abrirDetalhesContainerMelhorias(numero){
   const itens=obterIndicesItensContainerMelhorias(numero);
   const favorito=favoritosContainersUsuario.includes(Number(numero));
+  const podeAlterar=!!(usuarioLogadoAtual && String(usuarioLogadoAtual.tipo||'').toLowerCase()!=='externo');
   let html='<div style="text-align:left;line-height:1.65"><strong>Container '+String(numero).padStart(2,'0')+'</strong><br>';
   if(!itens.length){ html+='<div class="vazio">⚪ Container vazio.</div>'; }
   else {
     itens.forEach((obj,i)=>{
       const it=obj.item, idx=obj.index;
       const nome=(typeof escaparHtmlExterno==='function'?escaparHtmlExterno(it.prod||'—'):String(it.prod||'—'));
+      const pesoUnitario=Number(it.kg||0);
+      const acoes=podeAlterar?'<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:7px"><button class="btn-vis" type="button" onclick="editarItemContainer('+idx+');fecharDetalhesContainerMelhorias()">✏️ Editar</button><button class="btn-vis" type="button" onclick="excluirItem('+idx+');fecharDetalhesContainerMelhorias()">🗑️ Excluir</button></div>':'';
       html+=(i?' <hr>':'')+'📋 <strong>'+nome+'</strong><br>'+
         '🔢 Quantidade: '+Number(it.qtd||0).toLocaleString('pt-BR')+'<br>'+
-        '⚖️ Peso: '+Number(it.peso||0).toLocaleString('pt-BR',{minimumFractionDigits:2})+' KG<br>'+
+        '⚖️ Peso unitário: '+pesoUnitario.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2})+' kg<br>'+
         '🏷️ Lote: '+(it.lote||'—')+'<br>'+
-        '📅 Validade: '+(typeof formatarData==='function'&&it.validade?formatarData(it.validade):(it.validade||'—'))+
-        '<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:5px">'+
-        '<button class="btn-vis" type="button" onclick="editarItemContainer('+idx+');fecharDetalhesContainerMelhorias()">✏️ Editar</button>'+
-        '<button class="btn-vis" type="button" onclick="excluirItem('+idx+');fecharDetalhesContainerMelhorias()">🗑️ Excluir</button></div>';
+        '📅 Validade: '+(typeof formatarData==='function'&&it.validade?formatarData(it.validade):(it.validade||'—'))+acoes;
     });
   }
   html+='</div>';
@@ -11792,18 +11792,17 @@ function renderizarMapaContainers(tipo){
     if(itens.length){
       mercadorias='<div class="mapa-container-mercadorias">'+itens.map(obj=>{
         const it=obj.item, idx=obj.index;
-        const codigo=it.codigo?String(it.codigo):'Sem código';
         const nome=String(it.prod||'Sem nome');
-        return '<div class="mapa-mercadoria-linha" onclick="event.stopPropagation()">'+
-          '<div class="mapa-mercadoria-topo"><div class="mapa-mercadoria-nome" title="'+nome.replace(/"/g,'&quot;')+'">'+(codigo+' - '+nome)+'</div>'+ 
-          (tipo==='principal'?'<div class="mapa-mercadoria-acoes"><button type="button" title="Editar mercadoria" onclick="editarItemContainer('+idx+');event.stopPropagation()">✏️</button><button type="button" title="Excluir mercadoria" onclick="excluirItem('+idx+');event.stopPropagation()">🗑️</button></div>':'')+
-          '</div><div class="mapa-mercadoria-info">🔢 '+Number(it.qtd||0).toLocaleString('pt-BR')+' vol. &nbsp;|&nbsp; ⚖️ '+Number(it.peso||0).toLocaleString('pt-BR',{minimumFractionDigits:2})+' KG</div></div>';
+        const pesoUnitario=Number(it.kg||0);
+        return '<div class="mapa-mercadoria-linha" onclick="event.stopPropagation();abrirDetalhesContainerMelhorias('+i+')">'+
+          '<div class="mapa-mercadoria-nome" title="'+nome.replace(/"/g,'&quot;')+'">'+nome+'</div>'+
+          '<div class="mapa-mercadoria-info">⚖️ '+pesoUnitario.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2})+' kg</div></div>';
       }).join('')+'</div>';
     }else mercadorias='<div class="mapa-sem-mercadoria">Sem mercadoria cadastrada</div>';
     card.innerHTML='<button class="mapa-favorito" title="Favoritar" type="button" onclick="alternarFavoritoContainer('+i+',event)">'+(fav?'⭐':'☆')+'</button>'+
       '<div class="mapa-container-numero">📦 Container '+String(i).padStart(2,'0')+'</div>'+
       '<div class="mapa-container-status">'+status+'</div>'+ 
-      '<div class="mapa-container-qtd">🔢 '+Number(q).toLocaleString('pt-BR')+' volume(s) &nbsp;|&nbsp; ⚖️ '+Number(peso).toLocaleString('pt-BR',{minimumFractionDigits:2})+' KG</div>'+mercadorias;
+      mercadorias;
     grade.appendChild(card);
   }
   if(resumo) resumo.innerHTML='Total: <strong>'+total+'</strong> &nbsp;|&nbsp; 🟢 Ocupados: <strong>'+ocupados.size+'</strong> &nbsp;|&nbsp; ⚪ Vazios: <strong>'+(total-ocupados.size)+'</strong> &nbsp;|&nbsp; 🔴 Atenção: <strong>'+atencao.size+'</strong> &nbsp;|&nbsp; 📦 Volumes: <strong>'+Number(qtdTotal).toLocaleString('pt-BR')+'</strong> &nbsp;|&nbsp; 👁️ Exibidos: <strong>'+exibidos+'</strong>';
