@@ -11820,7 +11820,7 @@ function abrirDetalhesContainerMelhorias(numero){
       const nome=esc(it.prod||'—');
       const pesoUnitario=Number(it.kg||0);
       const pesoTotal=Number(it.peso||0);
-      const acoes=podeAlterar?'<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:10px"><button class="btn-vis" type="button" onclick="editarItemContainer('+idx+');fecharDetalhesContainerMelhorias()">✏️ Editar</button><button class="btn-vis" type="button" onclick="excluirItem('+idx+');fecharDetalhesContainerMelhorias()">🗑️ Excluir</button></div>':'';
+      const acoes=podeAlterar?'<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:10px"><button class="btn-vis" type="button" onclick="editarItemContainer('+idx+');fecharDetalhesContainerMelhorias()">✏️ Editar</button><button class="btn-vis" type="button" onclick="excluirItem('+idx+');fecharDetalhesContainerMelhorias()">🗑️ Excluir</button><button class="btn-vis" type="button" onclick="imprimirEtiquetaContainerMelhorias('+idx+')">🖨️ Imprimir Etiqueta</button></div>':'';
       html+=(i?' <hr>':'')+
         '<div style="font-size:14px">'+
         '📅 Data de entrada: '+esc(it.data||it.dataEntrada||it.entradaEm||'—')+'<br>'+
@@ -11849,6 +11849,43 @@ function abrirDetalhesContainerMelhorias(numero){
     '<div style="margin-top:12px">'+html+'</div>'+    '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px"><button class="btn-vis" type="button" onclick="fecharDetalhesContainerMelhorias()">Fechar</button></div></div>';
   modal.style.display='flex';
 }
+
+
+function imprimirEtiquetaContainerMelhorias(index){
+  const item=Array.isArray(estoque)?estoque[index]:null;
+  if(!item){ alert('❌ Mercadoria não encontrada.'); return; }
+  const numero=normalizarNumeroContainerMelhorias(item.num)||item.num||'';
+  const nome=String(item.prod||'Sem nome');
+  const codigo=String(item.codigo||'—');
+  const kg=Number(item.kg||0).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2});
+  const qtd=Number(item.qtd||0).toLocaleString('pt-BR');
+  const peso=Number(item.peso||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const validade=(typeof formatarData==='function'&&item.validade)?formatarData(item.validade):String(item.validade||'—');
+  const win=window.open('','_blank','width=900,height=600');
+  if(!win){ alert('❌ O navegador bloqueou a janela de impressão. Permita pop-ups para este site.'); return; }
+  win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Etiqueta Container ${numero}</title><style>
+@page{size:100mm 50mm;margin:0}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;width:100mm;height:50mm;background:#fff;color:#000;font-family:Arial,Helvetica,sans-serif}
+.etiqueta{width:100mm;height:50mm;padding:4mm 5mm;display:flex;flex-direction:column;justify-content:center;overflow:hidden}
+.container{font-size:7mm;font-weight:800;text-align:center;line-height:1;margin-bottom:2mm}
+.produto{font-size:4.2mm;font-weight:800;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:1mm}
+.linha{font-size:3.2mm;font-weight:600;line-height:1.45}
+.codigo{font-size:3.2mm;font-weight:700;margin-bottom:1mm}
+.validade{margin-top:1mm;font-size:3.4mm;font-weight:800}
+@media print{body{width:100mm;height:50mm}.etiqueta{break-after:page}}
+</style></head><body><div class="etiqueta">
+<div class="container">📦 CONTAINER ${escapeHtmlPrint(numero)}</div>
+<div class="produto">${escapeHtmlPrint(nome)}</div>
+<div class="codigo">CÓDIGO: ${escapeHtmlPrint(codigo)}</div>
+<div class="linha">PESO UNIT.: ${escapeHtmlPrint(kg)} KG</div>
+<div class="linha">QUANTIDADE: ${escapeHtmlPrint(qtd)}</div>
+<div class="linha">PESO TOTAL: ${escapeHtmlPrint(peso)} KG</div>
+<div class="validade">VALIDADE: ${escapeHtmlPrint(validade)}</div>
+</div><script>window.onload=function(){setTimeout(function(){window.print();},250)};window.onafterprint=function(){window.close()};</script></body></html>`);
+  win.document.close();
+}
+function escapeHtmlPrint(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
 function fecharDetalhesContainerMelhorias(){const m=document.getElementById('modal-detalhes-container-melhorias');if(m)m.style.display='none';}
 
