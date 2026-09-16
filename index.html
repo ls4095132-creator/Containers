@@ -11854,31 +11854,52 @@ function abrirDetalhesContainerMelhorias(numero){
 function imprimirEtiquetaContainerMelhorias(index){
   const item=Array.isArray(estoque)?estoque[index]:null;
   if(!item){ alert('❌ Mercadoria não encontrada.'); return; }
+
   const numero=normalizarNumeroContainerMelhorias(item.num)||item.num||'';
   const nome=String(item.prod||'Sem nome');
   const codigo=String(item.codigo||'—');
-  const kg=Number(item.kg||0).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2});
-  const qtd=Number(item.qtd||0).toLocaleString('pt-BR');
-  const peso=Number(item.peso||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const fornecedor=String(item.fornecedor||'—');
+  const lote=String(item.lote||'—');
   const validade=(typeof formatarData==='function'&&item.validade)?formatarData(item.validade):String(item.validade||'—');
-  const win=window.open('','_blank','width=900,height=600');
+  const codigoBarras=(String(codigo||'')+'-'+String(numero||'')).replace(/\s+/g,'');
+
+  const win=window.open('','_blank','width=900,height=800');
   if(!win){ alert('❌ O navegador bloqueou a janela de impressão. Permita pop-ups para este site.'); return; }
-  win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Etiqueta Container ${numero}</title><style>
+
+  /* Barras visuais simples e consistentes para identificação da etiqueta. */
+  let barras='';
+  const fonte='101101110110100101011001101011100101101110010110101101001011011001010110110101';
+  for(let i=0;i<fonte.length;i++){
+    barras += '<span style="display:inline-block;width:'+(fonte[i]==='1'?'0.48mm':'0.22mm')+';height:11mm;background:#000;margin:0;padding:0"></span>';
+  }
+
+  win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Etiqueta Container ${escapeHtmlPrint(numero)}</title><style>
 @page{size:110mm 100mm;margin:0}
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;width:110mm;height:100mm;background:#fff;color:#000;font-family:Arial,Helvetica,sans-serif}
-.etiqueta{width:110mm;height:100mm;padding:7mm 8mm;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;overflow:hidden}
-.container{font-size:8mm;font-weight:900;text-align:center;line-height:1;margin-bottom:7mm;color:#000}
-.produto,.codigo,.fornecedor,.lote-validade{width:100%;font-size:4.6mm;font-weight:900;line-height:1.35;color:#000;text-align:center;margin-bottom:3mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.codigo{margin-bottom:3mm}
-.lote-validade{margin-bottom:0}
-@media print{html,body{width:110mm;height:100mm}.etiqueta{width:110mm;height:100mm;break-after:page}}
+body{display:flex;align-items:center;justify-content:center;overflow:hidden}
+.etiqueta{position:relative;width:110mm;height:100mm;margin:0;padding:4mm 5mm;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;overflow:hidden;border:1.2mm solid #000;border-radius:4mm;background:#fff}
+.cabecalho{width:100%;height:18mm;display:flex;align-items:center;justify-content:center;background:#000;color:#fff;border-radius:3mm;font-size:8.2mm;font-weight:900;line-height:1;white-space:nowrap;margin-bottom:5mm}
+.conteudo{width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.linha{width:100%;font-size:4.35mm;font-weight:900;line-height:1.12;text-align:center;margin:0 0 3.1mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#000}
+.linha.produto{font-size:4.35mm;margin-bottom:3.2mm}
+.linha.codigo{font-size:4.45mm;margin-bottom:3.2mm}
+.linha.fornecedor{font-size:4.25mm;margin-bottom:3.2mm}
+.linha.lote{font-size:4.2mm;margin-bottom:4.2mm}
+.codigo-barras{width:82mm;height:13mm;display:flex;align-items:stretch;justify-content:center;overflow:hidden;white-space:nowrap;margin:0 auto 1.5mm}
+.codigo-barras span{flex:0 0 auto}
+.texto-barras{font-size:3.6mm;font-weight:900;line-height:1;text-align:center;margin:0;color:#000}
+@media print{html,body{width:110mm;height:100mm}.etiqueta{break-after:page;page-break-after:always}}
 </style></head><body><div class="etiqueta">
-<div class="container">📦 CONTAINER ${escapeHtmlPrint(numero)}</div>
-<div class="produto">PRODUTO: ${escapeHtmlPrint(nome)}</div>
-<div class="codigo">CÓDIGO: ${escapeHtmlPrint(codigo)}</div>
-<div class="fornecedor">FORNECEDOR: ${escapeHtmlPrint(String(item.fornecedor||'—'))}</div>
-<div class="lote-validade">LOTE: ${escapeHtmlPrint(String(item.lote||'—'))} &nbsp;|&nbsp; VALIDADE: ${escapeHtmlPrint(validade)}</div>
+<div class="cabecalho">CONTAINER ${escapeHtmlPrint(numero)}</div>
+<div class="conteudo">
+  <div class="linha produto">PRODUTO: ${escapeHtmlPrint(nome)}</div>
+  <div class="linha codigo">CÓDIGO: ${escapeHtmlPrint(codigo)}</div>
+  <div class="linha fornecedor">FORNECEDOR: ${escapeHtmlPrint(fornecedor)}</div>
+  <div class="linha lote">LOTE: ${escapeHtmlPrint(lote)} &nbsp;|&nbsp; VALIDADE: ${escapeHtmlPrint(validade)}</div>
+  <div class="codigo-barras" aria-label="Código de barras">${barras}</div>
+  <div class="texto-barras">${escapeHtmlPrint(codigoBarras)}</div>
+</div>
 </div></body></html>`);
   win.document.close();
   setTimeout(function(){ try{ win.focus(); win.print(); }catch(e){ console.warn('Impressão da etiqueta:',e); } },300);
