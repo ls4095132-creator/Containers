@@ -2484,6 +2484,27 @@ body.usuario-admin .layout-admin-operacional > .painel-solicitacoes-admin-inicia
 body.usuario-admin .layout-admin-operacional > .painel-entrada{grid-column:2!important;}
 @media(max-width:1100px){body.usuario-admin .layout-admin-operacional{grid-template-columns:1fr!important;}body.usuario-admin .layout-admin-operacional > .painel-solicitacoes-admin-inicial,body.usuario-admin .layout-admin-operacional > .painel-entrada{grid-column:1!important;}}
 </style>
+<style id="substituicao-grade-mapa-v2">
+/* NOVO MAPA — substitui apenas a grade antiga; formulários, solicitações,
+   filtros, histórico e demais funções existentes permanecem preservados. */
+#grade,
+#grade-externa{
+    display:none !important;
+}
+#painel-mapa-containers-principal{
+    display:block !important;
+}
+#painel-mapa-containers-externo{
+    display:block !important;
+}
+@media(max-width:700px){
+    #painel-mapa-containers-principal,
+    #painel-mapa-containers-externo{
+        margin-top:10px;
+        padding:10px;
+    }
+}
+</style>
 </head>
 <body class="auth-carregando">
 <!-- TELA DE LOGIN -->
@@ -2827,6 +2848,17 @@ Containers ocupados: 0 / <span class="contador-max-inline">60</span>
 </select>
 </div>
 <div class="resumo-visualizacao" id="resumo-visualizacao-admin"></div>
+</div>
+<div class="painel mapa-containers-painel" id="painel-mapa-containers-principal">
+  <div class="mapa-cabecalho">
+    <div>
+      <h2>🗺️ Mapa dos Containers</h2>
+      <div class="mapa-legenda">🟢 Ocupado &nbsp; ⚪ Vazio &nbsp; 🔴 Atenção &nbsp; ⭐ Favorito</div>
+    </div>
+    <button class="btn-vis" type="button" onclick="renderizarMapaContainers('principal')">🔄 Atualizar mapa</button>
+  </div>
+  <div class="mapa-resumo" id="mapa-resumo-principal"></div>
+  <div class="mapa-grade" id="mapa-grade-principal"></div>
 </div>
 <div class="grid" id="grade">
 </div>
@@ -11748,7 +11780,7 @@ function renderizarMapaContainers(tipo){
   }
   if(resumo) resumo.innerHTML='Total: <strong>'+total+'</strong> &nbsp;|&nbsp; 🟢 Ocupados: <strong>'+ocupados.size+'</strong> &nbsp;|&nbsp; ⚪ Vazios: <strong>'+(total-ocupados.size)+'</strong> &nbsp;|&nbsp; 🔴 Atenção: <strong>'+atencao.size+'</strong> &nbsp;|&nbsp; 📦 Volumes: <strong>'+Number(qtdTotal).toLocaleString('pt-BR')+'</strong>';
 }
-function renderizarMapasTodos(){ if(document.getElementById('mapa-grade-admin')) renderizarMapaContainers('admin'); if(document.getElementById('mapa-grade-externo')) renderizarMapaContainers('externo'); }
+function renderizarMapasTodos(){ if(document.getElementById('mapa-grade-principal')) renderizarMapaContainers('principal'); if(document.getElementById('mapa-grade-externo')) renderizarMapaContainers('externo'); }
 
 async function registrarNotificacaoIndividual(uid,dados){
   if(!uid) return;
