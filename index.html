@@ -11882,7 +11882,7 @@ html,body{margin:0;padding:0;width:100mm;height:50mm;background:#fff;color:#000;
 <div class="linha">QUANTIDADE: ${escapeHtmlPrint(qtd)}</div>
 <div class="linha">PESO TOTAL: ${escapeHtmlPrint(peso)} KG</div>
 <div class="validade">VALIDADE: ${escapeHtmlPrint(validade)}</div>
-</div><script>window.onload=function(){setTimeout(function(){window.print();},250)};window.onafterprint=function(){window.close()};</script></body></html>`);
+</div><script>window.onload=function(){setTimeout(function(){window.print();},250)};window.onafterprint=function(){window.close()};<\/script></body></html>`);
   win.document.close();
 }
 function escapeHtmlPrint(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
