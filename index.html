@@ -11676,7 +11676,6 @@ document.addEventListener("DOMContentLoaded",function(){
 .mapa-mercadoria-acoes button:hover{border-color:var(--azul)}
 .mapa-sem-mercadoria{font-size:11px;color:var(--texto-fraco);margin-top:7px}
 .mapa-container-card.oculto-filtro{display:none !important}
-.mapa-favorito{position:absolute;right:7px;top:6px;border:0;background:transparent;color:inherit;font-size:17px;cursor:pointer;padding:2px}
 .btn-central-notificacoes{border:1px solid var(--borda);background:var(--bg-painel-2);color:var(--texto);border-radius:8px;padding:6px 9px;cursor:pointer;font-weight:600}
 .central-notificacoes{margin:10px 0}.central-notificacoes .notificacao-individual{border:1px solid var(--borda);border-radius:9px;padding:11px;margin:7px 0;background:var(--bg-painel-2)}
 .central-notificacoes .notificacao-individual.nao-lida{border-left:4px solid var(--azul)}
@@ -11730,7 +11729,6 @@ function obterIndicesItensContainerMelhorias(numero){
 
 function abrirDetalhesContainerMelhorias(numero){
   const itens=obterIndicesItensContainerMelhorias(numero);
-  const favorito=favoritosContainersUsuario.includes(Number(numero));
   const podeAlterar=!!(usuarioLogadoAtual && String(usuarioLogadoAtual.tipo||'').toLowerCase()!=='externo');
   let html='<div style="text-align:left;line-height:1.65"><strong>Container '+String(numero).padStart(2,'0')+'</strong><br>';
   if(!itens.length){ html+='<div class="vazio">⚪ Container vazio.</div>'; }
@@ -11767,7 +11765,7 @@ function abrirDetalhesContainerMelhorias(numero){
   }
   modal.innerHTML='<div style="max-height:90vh;overflow:auto;max-width:620px;width:100%;background:var(--bg-painel);border:1px solid var(--borda);border-radius:12px;padding:18px;color:var(--texto);box-shadow:0 10px 40px rgba(0,0,0,.45)">'+
     '<div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><h2 style="margin:0">📦 Detalhes do Container '+String(numero).padStart(2,'0')+'</h2><button class="btn-vis" type="button" onclick="fecharDetalhesContainerMelhorias()">✕</button></div>'+
-    '<div style="margin-top:12px">'+html+'</div>'+    '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px"><button class="btn-vis" type="button" onclick="alternarFavoritoContainer('+Number(numero)+');fecharDetalhesContainerMelhorias()">'+(favorito?'Remover favorito':'Favoritar')+'</button><button class="btn-vis" type="button" onclick="fecharDetalhesContainerMelhorias()">Fechar</button></div></div>';
+    '<div style="margin-top:12px">'+html+'</div>'+    '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px"><button class="btn-vis" type="button" onclick="fecharDetalhesContainerMelhorias()">Fechar</button></div></div>';
   modal.style.display='flex';
 }
 
@@ -11800,12 +11798,11 @@ function renderizarMapaContainers(tipo){
   const total=Math.max(1,Number(quantidadeContainersSistema)||60), lista=Array.isArray(estoque)?estoque:[];
   const ocupados=new Set(), atencao=new Set(); let qtdTotal=0, exibidos=0;
   lista.forEach(it=>{const n=normalizarNumeroContainerMelhorias(it&&it.num);if(!n)return;ocupados.add(n);qtdTotal+=Number(it.qtd)||0;if(Number(it.qtd)<0||Number(it.peso)<0)atencao.add(n);});
-  const favoritos=new Set(favoritosContainersUsuario);
   grade.innerHTML='';
   for(let i=1;i<=total;i++){
     if(!containerPassaFiltrosMapa(tipo,i)) continue;
     exibidos++;
-    const itens=obterIndicesItensContainerMelhorias(i), occ=itens.length>0, prob=atencao.has(i), fav=favoritos.has(i);
+    const itens=obterIndicesItensContainerMelhorias(i), occ=itens.length>0, prob=atencao.has(i);
     const cls=prob?'atencao':(occ?'ocupado':'vazio');
     const status=prob?'🔴 Atenção':(occ?'🟢 Ocupado':'⚪ Vazio');
     const q=itens.reduce((a,x)=>a+(Number(x.item.qtd)||0),0);
@@ -11823,7 +11820,7 @@ function renderizarMapaContainers(tipo){
           '<div class="mapa-mercadoria-info">⚖️ '+pesoUnitario.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2})+' kg</div></div>';
       }).join('')+'</div>';
     }else mercadorias='<div class="mapa-sem-mercadoria">Sem mercadoria cadastrada</div>';
-    card.innerHTML='<button class="mapa-favorito" title="Favoritar" type="button" onclick="alternarFavoritoContainer('+i+',event)">'+(fav?'Favoritado':'Favoritar')+'</button>'+
+    card.innerHTML=
       '<div class="mapa-container-numero">📦 Container '+String(i).padStart(2,'0')+'</div>'+
       '<div class="mapa-container-status">'+status+'</div>'+ 
       mercadorias;
