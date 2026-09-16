@@ -2922,6 +2922,7 @@ Containers ocupados: 0 / <span class="contador-max-inline">60</span>
 <option value="cheios">🟢 Cheios</option>
 <option value="vazios">⚪ Vazios</option>
 </select>
+<button class="btn-vis btn-backup-onedrive" id="btn-backup-onedrive" onclick="fazerBackupExcelOneDrive()" type="button">💾 Backup OneDrive</button>
 </div>
 <div class="resumo-visualizacao" id="resumo-visualizacao-admin"></div>
 </div>
@@ -7898,6 +7899,325 @@ function exportarParaExcel(){
     );
 }
 
+// ======================================================
+// BACKUP COMPLETO EM EXCEL — ONE DRIVE (PASTA LOCAL)
+// ======================================================
+// O arquivo é criado diretamente a partir do Firebase.
+// No primeiro uso da sessão, o administrador escolhe a pasta
+// do OneDrive no computador. O navegador não recebe acesso ao
+// restante dos arquivos do computador.
+
+function valorBackupExcel(valor){
+    if(valor===null || valor===undefined) return "";
+    if(typeof valor === "object"){
+        try{return JSON.stringify(valor);}
+        catch(e){return String(valor);}
+    }
+    return String(valor);
+}
+
+function dataBackupExcel(valor){
+    if(valor===null || valor===undefined || valor==="") return "";
+    const texto=String(valor);
+    if(/^\d{4}-\d{2}-\d{2}/.test(texto)){
+        const d=new Date(texto);
+        if(!Number.isNaN(d.getTime())) return d.toLocaleString("pt-BR");
+    }
+    return texto;
+}
+
+function criarAbaBackupExcel(nome,headers,rows){
+    return {
+        nome:String(nome||"Dados").slice(0,31),
+        dados:[headers].concat((Array.isArray(rows)?rows:[]).map(function(row){
+            return headers.map(function(_,i){return escaparValorExcel(row[i]);});
+        }))
+    };
+}
+
+function linhasUsuariosBackup(perfis){
+    const rows=[];
+    Object.keys(perfis||{}).forEach(function(uid){
+        const p=perfis[uid]||{};
+        rows.push([
+            uid,
+            p.usuario||"",
+            p.nome||"",
+            p.sobrenome||"",
+            p.email||"",
+            p.tipo||"",
+            String(p.filial||"").toUpperCase(),
+            p.ativo===false?"Bloqueado":"Ativo",
+            dataBackupExcel(p.criadoEm),
+            valorBackupExcel(p)
+        ]);
+    });
+    return rows;
+}
+
+function linhasEstoqueBackup(lista){
+    const rows=[];
+    const total=Math.max(1,Number(quantidadeContainersSistema)||60);
+    const porContainer={};
+    (Array.isArray(lista)?lista:[]).forEach(function(item){
+        const n=String(item&&item.num!=null?item.num:"").trim();
+        if(!porContainer[n]) porContainer[n]=[];
+        porContainer[n].push(item);
+    });
+
+    for(let numero=1;numero<=total;numero++){
+        const chave=String(numero), itens=porContainer[chave]||[];
+        if(!itens.length){
+            rows.push(["", "VAZIO", String(numero).padStart(2,"0"), "", "", "", "", "", "", "", "", "", "", ""]);
+            continue;
+        }
+        itens.forEach(function(item){
+            rows.push([
+                valorBackupExcel(item.id||""),
+                "OCUPADO",
+                String(numero).padStart(2,"0"),
+                dataBackupExcel(item.data||item.dataEntrada||item.entradaEm||""),
+                valorBackupExcel(item.fornecedor||""),
+                valorBackupExcel(item.nf||item.notaFiscal||""),
+                valorBackupExcel(item.codigo||""),
+                valorBackupExcel(item.prod||item.produto||""),
+                valorBackupExcel(item.lote||""),
+                dataBackupExcel(item.validade||""),
+                valorBackupExcel(item.qtd||""),
+                valorBackupExcel(item.kg||""),
+                valorBackupExcel(item.peso||""),
+                valorBackupExcel(item.filial||"")
+            ]);
+        });
+    }
+    return rows;
+}
+
+function linhasHistoricoBackup(lista){
+    return (Array.isArray(lista)?lista:[]).map(function(item){
+        return [
+            valorBackupExcel(item.id||""),
+            dataBackupExcel(item.data||""),
+            valorBackupExcel(item.hora||""),
+            valorBackupExcel(item.tipo||""),
+            valorBackupExcel(item.num||""),
+            valorBackupExcel(item.fornecedor||""),
+            valorBackupExcel(item.nf||""),
+            valorBackupExcel(item.codigo||""),
+            valorBackupExcel(item.prod||""),
+            valorBackupExcel(item.lote||""),
+            dataBackupExcel(item.validade||""),
+            valorBackupExcel(item.qtd||""),
+            valorBackupExcel(item.kg||""),
+            valorBackupExcel(item.peso||""),
+            valorBackupExcel(item.filial||""),
+            valorBackupExcel(item.detalhes||"")
+        ];
+    });
+}
+
+function linhasProdutosBackup(lista){
+    return (Array.isArray(lista)?lista:[]).map(function(item){
+        return [valorBackupExcel(item.codigo||""),valorBackupExcel(item.nome||item.prod||""),valorBackupExcel(item.descricao||""),valorBackupExcel(item.unidade||"")];
+    });
+}
+
+function linhasSolicitacoesAcessoBackup(lista){
+    return (Array.isArray(lista)?lista:[]).map(function(item){
+        return [
+            valorBackupExcel(item.id||""),
+            valorBackupExcel(item.status||""),
+            valorBackupExcel(item.nome||""),
+            valorBackupExcel(item.sobrenome||""),
+            valorBackupExcel(item.nomeCompleto||""),
+            valorBackupExcel(item.email||item.usuario||""),
+            valorBackupExcel(item.filial||""),
+            dataBackupExcel(item.data||item.dataHora||""),
+            valorBackupExcel(item.mensagem||""),
+            valorBackupExcel(item)
+        ];
+    });
+}
+
+function linhasSolicitacoesMercadoriaBackup(lista){
+    return (Array.isArray(lista)?lista:[]).map(function(item){
+        return [
+            valorBackupExcel(item.id||""),
+            valorBackupExcel(item.status||""),
+            valorBackupExcel(item.container||item.num||""),
+            valorBackupExcel(item.codigo||""),
+            valorBackupExcel(item.produto||item.prod||""),
+            valorBackupExcel(item.lote||""),
+            valorBackupExcel(item.fornecedor||""),
+            valorBackupExcel(item.solicitanteNome||item.solicitante||""),
+            valorBackupExcel(item.solicitanteUid||""),
+            valorBackupExcel(item.tipoUsuario||item.tipo||""),
+            valorBackupExcel(item.quantidadeSolicitada||item.qtd||""),
+            valorBackupExcel(item.pesoSolicitado||item.peso||""),
+            dataBackupExcel(item.dataHora||item.data||""),
+            valorBackupExcel(item.nf||item.notaFiscal||""),
+            valorBackupExcel(item.observacao||""),
+            valorBackupExcel(item)
+        ];
+    });
+}
+
+function linhasAlteracoesBackup(lista){
+    return (Array.isArray(lista)?lista:[]).map(function(item){
+        return [
+            valorBackupExcel(item.id||""),
+            valorBackupExcel(item.status||""),
+            valorBackupExcel(item.tipo||""),
+            valorBackupExcel(item.operador||item.solicitante||""),
+            valorBackupExcel(item.solicitanteUid||""),
+            valorBackupExcel(item.itemId||""),
+            dataBackupExcel(item.dataHora||item.data||""),
+            valorBackupExcel(item.motivo||item.detalhes||item.observacao||""),
+            valorBackupExcel(item)
+        ];
+    });
+}
+
+async function criarBackupExcelCompleto(){
+    if(!firebaseAuth.currentUser) throw new Error("Faça login antes de realizar o backup.");
+    if(!usuarioEhAdmin()) throw new Error("Apenas o administrador pode realizar o backup completo.");
+
+    const snaps=await Promise.all([
+        firebaseDB.ref("estoque").once("value"),
+        firebaseDB.ref("historico").once("value"),
+        firebaseDB.ref("produtos").once("value"),
+        firebaseDB.ref("perfisUsuarios").once("value"),
+        firebaseDB.ref("solicitacoesAcesso").once("value"),
+        firebaseDB.ref("solicitacoesMercadoria").once("value"),
+        firebaseDB.ref("solicitacoesAlteracoes").once("value"),
+        firebaseDB.ref("configuracoes").once("value")
+    ]);
+
+    const dadosEstoque=normalizarListaFirebase(snaps[0].val());
+    const dadosHistorico=normalizarListaFirebase(snaps[1].val());
+    const dadosProdutos=normalizarListaFirebase(snaps[2].val());
+    const dadosPerfis=snaps[3].val()||{};
+    const dadosAcesso=normalizarListaFirebase(snaps[4].val());
+    const dadosMercadoria=normalizarListaFirebase(snaps[5].val());
+    const dadosAlteracoes=normalizarListaFirebase(snaps[6].val());
+    const dadosConfiguracoes=snaps[7].val()||{};
+
+    const resumoRows=[
+        ["Data/hora do backup",new Date().toLocaleString("pt-BR")],
+        ["Origem","Firebase Realtime Database"],
+        ["Administrador",firebaseAuth.currentUser.email||firebaseAuth.currentUser.uid],
+        ["Containers configurados",Number(quantidadeContainersSistema)||60],
+        ["Registros de estoque",dadosEstoque.length],
+        ["Movimentações históricas",dadosHistorico.length],
+        ["Produtos cadastrados",dadosProdutos.length],
+        ["Usuários cadastrados",Object.keys(dadosPerfis).length],
+        ["Solicitações de acesso",dadosAcesso.length],
+        ["Solicitações de mercadoria",dadosMercadoria.length],
+        ["Solicitações de alterações",dadosAlteracoes.length]
+    ];
+
+    const abas=[
+        criarAbaBackupExcel("Resumo",["Indicador","Valor"],resumoRows),
+        criarAbaBackupExcel("Estoque Atual",["ID","Status","Container","Data Entrada","Fornecedor","Nota Fiscal","Código","Produto","Lote","Validade","Quantidade","Peso Unitário KG","Peso Total KG","Filial"],linhasEstoqueBackup(dadosEstoque)),
+        criarAbaBackupExcel("Histórico",["ID","Data","Hora","Tipo","Container","Fornecedor","Nota Fiscal","Código","Produto","Lote","Validade","Quantidade","Peso Unitário KG","Peso Total KG","Filial","Detalhes"],linhasHistoricoBackup(dadosHistorico)),
+        criarAbaBackupExcel("Usuários",["UID","Usuário","Nome","Sobrenome","E-mail","Tipo","Filial","Status","Criado em","Dados adicionais"],linhasUsuariosBackup(dadosPerfis)),
+        criarAbaBackupExcel("Produtos",["Código","Nome","Descrição","Unidade"],linhasProdutosBackup(dadosProdutos)),
+        criarAbaBackupExcel("Acesso",["ID","Status","Nome","Sobrenome","Nome Completo","E-mail","Filial","Data","Mensagem","Dados adicionais"],linhasSolicitacoesAcessoBackup(dadosAcesso)),
+        criarAbaBackupExcel("Solic. Mercadoria",["ID","Status","Container","Código","Produto","Lote","Fornecedor","Solicitante","UID Solicitante","Tipo Usuário","Quantidade","Peso KG","Data/Hora","Nota Fiscal","Observação","Dados adicionais"],linhasSolicitacoesMercadoriaBackup(dadosMercadoria)),
+        criarAbaBackupExcel("Alterações",["ID","Status","Tipo","Operador/Solicitante","UID Solicitante","ID Item","Data/Hora","Motivo/Detalhes","Dados adicionais"],linhasAlteracoesBackup(dadosAlteracoes)),
+        criarAbaBackupExcel("Configurações",["Chave","Valor"],Object.keys(dadosConfiguracoes).map(function(k){return [k,valorBackupExcel(dadosConfiguracoes[k])];}))
+    ];
+
+    const arquivos=[
+        {nome:"[Content_Types].xml",conteudo:excelContentTypesXml(abas.length)},
+        {nome:"_rels/.rels",conteudo:excelRootRelsXml()},
+        {nome:"xl/workbook.xml",conteudo:excelWorkbookXml(abas.map(function(a){return a.nome;}))},
+        {nome:"xl/_rels/workbook.xml.rels",conteudo:excelWorkbookRelsXml(abas.length)},
+        {nome:"xl/styles.xml",conteudo:excelStylesXml()},
+        {nome:"docProps/core.xml",conteudo:excelCoreXml()},
+        {nome:"docProps/app.xml",conteudo:excelAppXml(abas.length)}
+    ];
+    abas.forEach(function(aba,i){
+        arquivos.push({nome:"xl/worksheets/sheet"+(i+1)+".xml",conteudo:excelWorksheetXml(aba.dados)});
+    });
+
+    return {
+        blob:excelCriarZip(arquivos),
+        resumo:{
+            estoque:dadosEstoque.length,
+            historico:dadosHistorico.length,
+            produtos:dadosProdutos.length,
+            usuarios:Object.keys(dadosPerfis).length,
+            acesso:dadosAcesso.length,
+            mercadoria:dadosMercadoria.length,
+            alteracoes:dadosAlteracoes.length
+        }
+    };
+}
+
+async function salvarArquivoBackupOneDrive(blob,nomeArquivo){
+    if(!window.showDirectoryPicker){
+        // Navegadores sem File System Access fazem o download normal.
+        const url=URL.createObjectURL(blob), link=document.createElement("a");
+        link.href=url;link.download=nomeArquivo;document.body.appendChild(link);link.click();link.remove();
+        setTimeout(function(){URL.revokeObjectURL(url);},1000);
+        return {modo:"download"};
+    }
+
+    if(!pastaBackupSessao){
+        pastaBackupSessao=await window.showDirectoryPicker({mode:"readwrite"});
+    }
+
+    // Cria/usa uma pasta própria dentro da pasta do OneDrive escolhida.
+    const pasta=await pastaBackupSessao.getDirectoryHandle("Backup Controle de Containers",{create:true});
+    const arquivo=await pasta.getFileHandle(nomeArquivo,{create:true});
+    const gravador=await arquivo.createWritable();
+    await gravador.write(blob);
+    await gravador.close();
+    return {modo:"onedrive"};
+}
+
+async function fazerBackupExcelOneDrive(){
+    const botao=document.getElementById("btn-backup-onedrive");
+    if(!usuarioEhAdmin()){
+        alert("❌ Apenas o administrador pode realizar o backup completo.");
+        return;
+    }
+    try{
+        if(botao){botao.disabled=true;botao.textContent="⏳ Criando backup...";}
+
+        const resultado=await criarBackupExcelCompleto();
+        const agora=new Date();
+        const nomeArquivo="backup_controle_containers_"+
+            agora.getFullYear()+"-"+
+            String(agora.getMonth()+1).padStart(2,"0")+"-"+
+            String(agora.getDate()).padStart(2,"0")+"_"+
+            String(agora.getHours()).padStart(2,"0")+"-"+
+            String(agora.getMinutes()).padStart(2,"0")+"-"+
+            String(agora.getSeconds()).padStart(2,"0")+".xlsx";
+
+        const salvo=await salvarArquivoBackupOneDrive(resultado.blob,nomeArquivo);
+
+        const destino=salvo.modo==="onedrive"
+            ? "OneDrive → Backup Controle de Containers"
+            : "Downloads do navegador (selecione/mova para o OneDrive)";
+
+        alert("✅ BACKUP CONCLUÍDO!\n\nDestino: "+destino+
+            "\nArquivo: "+nomeArquivo+
+            "\n\nAbas: Resumo, Estoque Atual, Histórico, Usuários, Produtos, Acesso, Solic. Mercadoria, Alterações e Configurações."+
+            "\n\nRegistros de estoque: "+resultado.resumo.estoque+
+            "\nHistórico: "+resultado.resumo.historico+
+            "\nUsuários: "+resultado.resumo.usuarios);
+    }catch(e){
+        if(e && e.name!=="AbortError"){
+            console.error("Erro no backup Excel OneDrive:",e);
+            alert("❌ Não foi possível concluir o backup.\n\n"+(e.message||e));
+        }
+    }finally{
+        if(botao){botao.disabled=false;botao.textContent="💾 Backup OneDrive";}
+    }
+}
+
 function exportarHistoricoSolicitacoesComumExcel(){
 
     if(!firebaseAuth.currentUser){
@@ -11553,6 +11873,18 @@ body.tema-claro .toast-notificacao-web div{color:#334155;}
     display:none;
     white-space:nowrap;
 }
+.btn-backup-onedrive{
+    display:inline-block;
+    white-space:nowrap;
+    padding:7px 11px !important;
+    font-size:inherit !important;
+    min-height:0 !important;
+    line-height:normal !important;
+    box-sizing:border-box !important;
+    background:#1f2937 !important;
+    color:#fff !important;
+    border-color:#1f2937 !important;
+}
 #app-principal .btn-registrar-mercadoria{display:inline-block;}
 #app-principal .btn-exportar-containers{display:inline-block;}
 /* Exportar Excel fica com o mesmo tamanho compacto de Registrar Mercadoria. */
@@ -11565,7 +11897,8 @@ body.tema-claro .toast-notificacao-web div{color:#334155;}
 }
 @media(max-width:700px){
     #app-principal .btn-registrar-mercadoria,
-    #app-principal .btn-exportar-containers{width:100%;}
+    #app-principal .btn-exportar-containers,
+    #app-principal .btn-backup-onedrive{width:100%;}
 }
 /* A área de visualização acompanha o número configurado. */
 .contador-max-inline{font-weight:700;}
