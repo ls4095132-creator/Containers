@@ -12190,6 +12190,9 @@ function imprimirEtiquetaContainerMelhorias(index){
 
   const numero=normalizarNumeroContainerMelhorias(item.num)||item.num||'';
   const nome=String(item.prod||'Sem nome');
+  const palavrasProduto=nome.trim().split(/\s+/).filter(Boolean);
+  const produtoLinha1=palavrasProduto.slice(0,2).join(' ')||'Sem nome';
+  const produtoLinha2=palavrasProduto.slice(2).join(' ');
   const codigo=String(item.codigo||'—');
   const fornecedor=String(item.fornecedor||'—');
   const lote=String(item.lote||'—');
@@ -12205,7 +12208,7 @@ function imprimirEtiquetaContainerMelhorias(index){
   let barras='';
   const fonte='101101110110100101011001101011100101101110010110101101001011011001010110110101';
   for(let i=0;i<fonte.length;i++){
-    barras += '<span style="display:inline-block;width:'+(fonte[i]==='1'?'0.48mm':'0.22mm')+';height:11mm;background:#000;margin:0;padding:0"></span>';
+    barras += '<span style="display:inline-block;width:'+(fonte[i]==='1'?'0.48mm':'0.22mm')+';height:10mm;background:#000;margin:0;padding:0"></span>';
   }
 
   win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Etiqueta Container ${escapeHtmlPrint(numero)}</title><style>
@@ -12214,26 +12217,30 @@ function imprimirEtiquetaContainerMelhorias(index){
 html,body{margin:0;padding:0;width:110mm;height:100mm;background:#fff;color:#000;font-family:Arial,Helvetica,sans-serif}
 body{display:flex;align-items:center;justify-content:center;overflow:hidden}
 .etiqueta{position:relative;width:110mm;height:100mm;margin:0;padding:4mm 5mm;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;overflow:hidden;border:1.2mm solid #000;border-radius:4mm;background:#fff}
-.cabecalho{width:100%;height:18mm;display:flex;align-items:center;justify-content:center;background:#000;color:#fff;border-radius:3mm;font-size:9.02mm;font-weight:900;line-height:1;white-space:nowrap;margin-bottom:5mm}
+.cabecalho{width:100%;height:17mm;display:flex;align-items:center;justify-content:center;background:#000;color:#fff;border-radius:3mm;font-size:9.92mm;font-weight:900;line-height:1;white-space:nowrap;margin-bottom:3mm}
 .conteudo{width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
-.linha{width:100%;font-size:3.91mm;font-weight:900;line-height:1.12;text-align:center;margin:0 0 3.1mm;white-space:nowrap;overflow:visible;text-overflow:clip;color:#000}
-.linha.produto{font-size:4.51mm;margin-bottom:3.2mm}
-.linha.codigo{font-size:4.84mm;margin-bottom:3.2mm}
-.linha.fornecedor{font-size:4.18mm;margin-bottom:2.5mm}
-.linha.lote{font-size:4.06mm;margin-bottom:2.5mm}
-.linha.volumes{font-size:4.18mm;margin-bottom:2.5mm}
-.linha.peso{font-size:4.18mm;margin-bottom:4mm}
-.codigo-barras{width:82mm;height:13mm;display:flex;align-items:stretch;justify-content:center;overflow:hidden;white-space:nowrap;margin:0 auto 1.5mm}
+.linha{width:100%;font-size:4.30mm;font-weight:900;line-height:1.05;text-align:center;margin:0 0 1.8mm;white-space:nowrap;overflow:visible;text-overflow:clip;color:#000}
+.linha.produto{font-size:4.96mm;margin-bottom:1.2mm;line-height:1.02}
+.linha.produto.continuacao{margin-bottom:1.8mm}
+.linha.codigo{font-size:5.32mm;margin-bottom:2mm}
+.linha.fornecedor{font-size:4.60mm;margin-bottom:1.8mm}
+.linha.lote{font-size:4.47mm;margin-bottom:1mm}
+.linha.validade{font-size:4.47mm;margin-bottom:1.8mm}
+.linha.volumes{font-size:4.60mm;margin-bottom:1.8mm}
+.linha.peso{font-size:4.60mm;margin-bottom:2.5mm}
+.codigo-barras{width:82mm;height:10mm;display:flex;align-items:stretch;justify-content:center;overflow:hidden;white-space:nowrap;margin:0 auto 1mm}
 .codigo-barras span{flex:0 0 auto}
-.texto-barras{font-size:4.18mm;font-weight:900;line-height:1;text-align:center;margin:0;color:#000}
+.texto-barras{font-size:4.60mm;font-weight:900;line-height:1;text-align:center;margin:0;color:#000}
 @media print{html,body{width:110mm;height:100mm}.etiqueta{break-after:page;page-break-after:always}}
 </style></head><body><div class="etiqueta">
 <div class="cabecalho">CONTAINER ${escapeHtmlPrint(numero)}</div>
 <div class="conteudo">
-  <div class="linha produto">PRODUTO: ${escapeHtmlPrint(nome)}</div>
+  <div class="linha produto">PRODUTO: ${escapeHtmlPrint(produtoLinha1)}</div>
+  ${produtoLinha2 ? '<div class="linha produto continuacao">'+escapeHtmlPrint(produtoLinha2)+'</div>' : ''}
   <div class="linha codigo">CÓDIGO: ${escapeHtmlPrint(codigo)}</div>
   <div class="linha fornecedor">FORNECEDOR: ${escapeHtmlPrint(fornecedor)}</div>
-  <div class="linha lote">LOTE: ${escapeHtmlPrint(lote)} &nbsp;|&nbsp; VALIDADE: ${escapeHtmlPrint(validade)}</div>
+  <div class="linha lote">LOTE: ${escapeHtmlPrint(lote)}</div>
+  <div class="linha validade">VALIDADE: ${escapeHtmlPrint(validade)}</div>
   <div class="linha volumes">VOLUMES: ${escapeHtmlPrint(volumes)}</div>
   <div class="linha peso">PESO TOTAL: ${escapeHtmlPrint(pesoTotal)} KG</div>
   <div class="codigo-barras" aria-label="Código de barras">${barras}</div>
