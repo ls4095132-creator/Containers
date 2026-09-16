@@ -2505,8 +2505,94 @@ body.usuario-admin .layout-admin-operacional > .painel-entrada{grid-column:2!imp
     }
 }
 </style>
+
+<style id="tela-carregamento-logo-percentual">
+/* ======================================================
+   TELA INICIAL — LOGO + PROGRESSO 0% A 100%
+   Exibida ao abrir o aplicativo em computador e celular.
+   ====================================================== */
+#tela-carregamento-app{
+    position:fixed;
+    inset:0;
+    width:100vw;
+    height:100vh;
+    min-height:100dvh;
+    box-sizing:border-box;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:16px;
+    padding:24px;
+    background:var(--bg,#0b1220);
+    color:var(--texto,#dbe6f5);
+    z-index:9999999;
+    opacity:1;
+    visibility:visible;
+    transition:opacity .35s ease,visibility .35s ease;
+}
+#tela-carregamento-app.oculta{
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+}
+#tela-carregamento-logo{
+    width:120px;
+    height:120px;
+    max-width:32vw;
+    max-height:32vw;
+    object-fit:contain;
+    display:block;
+    filter:drop-shadow(0 8px 24px rgba(0,0,0,.35));
+}
+.carregamento-titulo{
+    font-size:18px;
+    font-weight:700;
+    text-align:center;
+    margin:0;
+}
+.carregamento-percentual{
+    font-size:17px;
+    font-weight:700;
+    min-width:52px;
+    text-align:center;
+}
+.carregamento-barra{
+    width:min(360px,78vw);
+    height:8px;
+    border-radius:999px;
+    overflow:hidden;
+    background:var(--bg-painel-2,#26344f);
+    border:1px solid var(--borda,#2c3e63);
+}
+#carregamento-progresso{
+    width:0%;
+    height:100%;
+    border-radius:inherit;
+    background:var(--azul-forte,#0b8fb8);
+    transition:width .08s linear;
+}
+@media(max-width:700px){
+    #tela-carregamento-app{gap:13px;padding:20px;}
+    #tela-carregamento-logo{width:92px;height:92px;}
+    .carregamento-titulo{font-size:15px;}
+    .carregamento-percentual{font-size:15px;}
+    .carregamento-barra{width:min(300px,82vw);height:7px;}
+}
+</style>
+
 </head>
 <body class="auth-carregando">
+<!-- TELA DE CARREGAMENTO INICIAL -->
+<div id="tela-carregamento-app" aria-label="Carregando aplicativo">
+    <img id="tela-carregamento-logo" src="./icon-192.png" alt="Logo Controle de Containers" onerror="this.style.display='none'">
+    <div class="carregamento-titulo">Controle de Containers</div>
+    <div class="carregamento-percentual" id="carregamento-percentual">0%</div>
+    <div class="carregamento-barra" aria-hidden="true">
+        <div id="carregamento-progresso"></div>
+    </div>
+</div>
+
 <!-- TELA DE LOGIN -->
 <div class="tela-login" id="tela-login">
 <div class="cartao-login">
@@ -11905,6 +11991,43 @@ if(typeof atualizarStatusSolicitacaoMercadoriaAdminOriginal==='function'){
 // Inicializa também quando o sistema já estiver aberto.
 setTimeout(ativarMelhoriasContainers,1200);
 </script>
+
+<script id="carregamento-inicial-logo-js">
+/* ======================================================
+   CARREGAMENTO INICIAL — 0% A 100%
+   Depois da animação, libera a tela de login/app conforme
+   a sessão Firebase já existente. Não altera a autenticação.
+   ====================================================== */
+(function(){
+    const tela=document.getElementById("tela-carregamento-app");
+    const barra=document.getElementById("carregamento-progresso");
+    const percentual=document.getElementById("carregamento-percentual");
+    if(!tela || !barra || !percentual) return;
+
+    let valor=0;
+    const duracao=1800;
+    const inicio=performance.now();
+
+    function atualizar(agora){
+        const decorrido=agora-inicio;
+        valor=Math.min(100,Math.floor((decorrido/duracao)*100));
+        barra.style.width=valor+"%";
+        percentual.textContent=valor+"%";
+        if(valor<100){
+            requestAnimationFrame(atualizar);
+        }else{
+            percentual.textContent="100%";
+            barra.style.width="100%";
+            setTimeout(function(){
+                tela.classList.add("oculta");
+                setTimeout(function(){tela.remove();},400);
+            },180);
+        }
+    }
+    requestAnimationFrame(atualizar);
+})();
+</script>
+
 </body>
 </html>
 <style id="ajuste-admin-igual-usuario-comum-final">
