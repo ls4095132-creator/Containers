@@ -11864,26 +11864,24 @@ function imprimirEtiquetaContainerMelhorias(index){
   const win=window.open('','_blank','width=900,height=600');
   if(!win){ alert('❌ O navegador bloqueou a janela de impressão. Permita pop-ups para este site.'); return; }
   win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Etiqueta Container ${numero}</title><style>
-@page{size:100mm 50mm;margin:0}
+@page{size:110mm 100mm;margin:0}
 *{box-sizing:border-box}
-html,body{margin:0;padding:0;width:100mm;height:50mm;background:#fff;color:#000;font-family:Arial,Helvetica,sans-serif}
-.etiqueta{width:100mm;height:50mm;padding:4mm 5mm;display:flex;flex-direction:column;justify-content:center;overflow:hidden}
-.container{font-size:7mm;font-weight:800;text-align:center;line-height:1;margin-bottom:2mm}
-.produto{font-size:4.2mm;font-weight:800;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:1mm}
-.linha{font-size:3.2mm;font-weight:600;line-height:1.45}
-.codigo{font-size:3.2mm;font-weight:700;margin-bottom:1mm}
-.validade{margin-top:1mm;font-size:3.4mm;font-weight:800}
-@media print{body{width:100mm;height:50mm}.etiqueta{break-after:page}}
+html,body{margin:0;padding:0;width:110mm;height:100mm;background:#fff;color:#000;font-family:Arial,Helvetica,sans-serif}
+.etiqueta{width:110mm;height:100mm;padding:7mm 8mm;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;overflow:hidden}
+.container{font-size:8mm;font-weight:900;text-align:center;line-height:1;margin-bottom:7mm;color:#000}
+.produto,.codigo,.fornecedor,.lote-validade{width:100%;font-size:4.6mm;font-weight:900;line-height:1.35;color:#000;text-align:center;margin-bottom:3mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.codigo{margin-bottom:3mm}
+.lote-validade{margin-bottom:0}
+@media print{html,body{width:110mm;height:100mm}.etiqueta{width:110mm;height:100mm;break-after:page}}
 </style></head><body><div class="etiqueta">
 <div class="container">📦 CONTAINER ${escapeHtmlPrint(numero)}</div>
-<div class="produto">${escapeHtmlPrint(nome)}</div>
+<div class="produto">PRODUTO: ${escapeHtmlPrint(nome)}</div>
 <div class="codigo">CÓDIGO: ${escapeHtmlPrint(codigo)}</div>
-<div class="linha">PESO UNIT.: ${escapeHtmlPrint(kg)} KG</div>
-<div class="linha">QUANTIDADE: ${escapeHtmlPrint(qtd)}</div>
-<div class="linha">PESO TOTAL: ${escapeHtmlPrint(peso)} KG</div>
-<div class="validade">VALIDADE: ${escapeHtmlPrint(validade)}</div>
-</div><script>window.onload=function(){setTimeout(function(){window.print();},250)};window.onafterprint=function(){window.close()};<\/script></body></html>`);
+<div class="fornecedor">FORNECEDOR: ${escapeHtmlPrint(String(item.fornecedor||'—'))}</div>
+<div class="lote-validade">LOTE: ${escapeHtmlPrint(String(item.lote||'—'))} &nbsp;|&nbsp; VALIDADE: ${escapeHtmlPrint(validade)}</div>
+</div></body></html>`);
   win.document.close();
+  setTimeout(function(){ try{ win.focus(); win.print(); }catch(e){ console.warn('Impressão da etiqueta:',e); } },300);
 }
 function escapeHtmlPrint(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
