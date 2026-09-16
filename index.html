@@ -2564,6 +2564,7 @@ Entrar
 <div class="barra-usuario">
 <span id="texto-usuario-externo"></span>
 <button class="btn-notificacao-web" id="btn-notificacoes-externo" onclick="ativarNotificacoesWeb()" type="button">🔔 Ativar</button>
+<button class="btn-central-notificacoes" type="button" onclick="toggleCentralNotificacoes()">🔔 <span id="contador-notificacoes-individuais">0</span></button>
 <button class="btn-atualizar-sistema" onclick="atualizarSistemaSemDeslogar()" type="button">🔄 Atualizar</button>
 <button class="btn-sair" onclick="sairDoSistema()" type="button">
             🚪 Sair
@@ -2572,6 +2573,10 @@ Entrar
 <button onclick="definirTemaUsuario('claro')" type="button">☀️ Claro</button>
 <button onclick="definirTemaUsuario('escuro')" type="button">🌙 Escuro</button>
 </div>
+</div>
+<div class="painel central-notificacoes" id="central-notificacoes-externo" style="display:none;">
+  <div class="mapa-cabecalho"><h2>🔔 Minhas Notificações</h2><button class="btn-vis" type="button" onclick="marcarTodasNotificacoesLidas()">✓ Marcar todas como lidas</button></div>
+  <div id="lista-notificacoes-individuais-externo"></div>
 </div>
 <h1>📦 Consulta de Saldo dos Containers</h1>
 <div class="aviso-armazenamento">
@@ -2609,6 +2614,14 @@ Entrar
 <div class="resumo-visualizacao" id="resumo-visualizacao-externo"></div>
 </div>
 <!-- CONTAINERS -->
+<div class="painel mapa-containers-painel" id="painel-mapa-containers-externo">
+  <div class="mapa-cabecalho">
+    <div><h2>🗺️ Mapa dos Containers</h2><div class="mapa-legenda">🟢 Ocupado &nbsp; ⚪ Vazio &nbsp; 🔴 Atenção &nbsp; ⭐ Favorito</div></div>
+    <button class="btn-vis" type="button" onclick="renderizarMapaContainers('externo')">🔄 Atualizar mapa</button>
+  </div>
+  <div class="mapa-resumo" id="mapa-resumo-externo"></div>
+  <div class="mapa-grade" id="mapa-grade-externo"></div>
+</div>
 <div class="grid" id="grade-externa"></div>
 <!-- ==================================================
          SOLICITAÇÃO DE MERCADORIA — ACESSO POR MODAL
@@ -2643,6 +2656,7 @@ Entrar
 <div class="barra-usuario">
 <span id="texto-usuario-logado"></span>
 <button class="btn-notificacao-web" id="btn-notificacoes-app" onclick="ativarNotificacoesWeb()" type="button">🔔 Ativar</button>
+<button class="btn-central-notificacoes" type="button" onclick="toggleCentralNotificacoes()">🔔 <span id="contador-notificacoes-individuais">0</span></button>
 <button class="btn-atualizar-sistema" onclick="atualizarSistemaSemDeslogar()" type="button">🔄 Atualizar</button>
 <button class="btn-historico btn-configuracao-admin" id="btn-abrir-configuracao" onclick="abrirConfiguracaoSistema()" style="display:none;" type="button">
 ⚙️ Configuração
@@ -2652,6 +2666,10 @@ Entrar
 <button onclick="definirTemaUsuario('claro')" type="button">☀️ Claro</button>
 <button onclick="definirTemaUsuario('escuro')" type="button">🌙 Escuro</button>
 </div>
+</div>
+<div class="painel central-notificacoes" id="central-notificacoes" style="display:none;">
+  <div class="mapa-cabecalho"><h2>🔔 Minhas Notificações</h2><button class="btn-vis" type="button" onclick="marcarTodasNotificacoesLidas()">✓ Marcar todas como lidas</button></div>
+  <div id="lista-notificacoes-individuais"></div>
 </div>
 <h1>📦 Controle de Containers</h1>
 <div class="layout-admin-operacional" id="layout-admin-operacional">
@@ -11643,6 +11661,169 @@ document.addEventListener("DOMContentLoaded",function(){
         atualizarContadoresQuantidadeContainers();
     },800);
 });
+</script>
+
+<style id="melhorias-containers-v1">
+.mapa-containers-painel{margin:14px 0;padding:16px;}
+.mapa-cabecalho{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.mapa-cabecalho h2{margin:0 0 5px 0}
+.mapa-legenda{font-size:12px;color:var(--texto-fraco)}
+.mapa-resumo{margin:12px 0;font-size:12px;color:var(--texto-fraco)}
+.mapa-grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(125px,1fr));gap:9px}
+.mapa-container-card{position:relative;border:1px solid var(--borda);background:var(--bg-painel-2);border-radius:10px;padding:11px;cursor:pointer;min-height:82px;transition:transform .12s,border-color .12s}
+.mapa-container-card:hover{transform:translateY(-1px);border-color:var(--azul)}
+.mapa-container-card.ocupado{border-left:4px solid #22c55e}.mapa-container-card.vazio{border-left:4px solid #94a3b8}.mapa-container-card.atencao{border-left:4px solid #ef4444}
+.mapa-container-numero{font-weight:700;font-size:14px}.mapa-container-status{font-size:11px;margin-top:5px}.mapa-container-qtd{font-size:11px;color:var(--texto-fraco);margin-top:5px}.mapa-favorito{position:absolute;right:7px;top:6px;border:0;background:transparent;color:inherit;font-size:17px;cursor:pointer;padding:2px}
+.btn-central-notificacoes{border:1px solid var(--borda);background:var(--bg-painel-2);color:var(--texto);border-radius:8px;padding:6px 9px;cursor:pointer;font-weight:600}
+.central-notificacoes{margin:10px 0}.central-notificacoes .notificacao-individual{border:1px solid var(--borda);border-radius:9px;padding:11px;margin:7px 0;background:var(--bg-painel-2)}
+.central-notificacoes .notificacao-individual.nao-lida{border-left:4px solid var(--azul)}
+.notificacao-individual small{color:var(--texto-fraco)}
+.btn-confirmar-execucao{margin-top:9px}
+@media(max-width:700px){.mapa-grade{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.mapa-container-card{padding:8px;min-height:70px}.mapa-cabecalho{align-items:flex-start}.mapa-cabecalho .btn-vis{width:auto}}
+</style>
+<script>
+// ======================================================
+// MELHORIAS V1 — MAPA, FAVORITOS, NOTIFICAÇÕES INDIVIDUAIS
+// e confirmação pós-aprovação. Tudo persistido no Firebase.
+// ======================================================
+let favoritosContainersUsuario=[];
+let favoritosUidCarregado="";
+let notificacoesIndividuais=[];
+let listenerNotificacoesIndividuais=null;
+let notificacoesIndividuaisUid="";
+
+function uidAtualMelhorias(){ return firebaseAuth && firebaseAuth.currentUser ? String(firebaseAuth.currentUser.uid||"") : ""; }
+function normalizarNumeroContainerMelhorias(v){ const n=Number(v); return Number.isInteger(n)&&n>0 ? n : 0; }
+
+async function carregarFavoritosContainers(){
+  const uid=uidAtualMelhorias(); if(!uid) return;
+  if(favoritosUidCarregado===uid) return;
+  favoritosUidCarregado=uid;
+  try{
+    const snap=await firebaseDB.ref("preferenciasUsuarios/"+uid+"/favoritosContainers").once("value");
+    const v=snap.val();
+    favoritosContainersUsuario=Array.isArray(v)?v.map(Number).filter(Number.isInteger):[];
+  }catch(e){ console.warn("Favoritos não puderam ser carregados:",e); favoritosContainersUsuario=[]; }
+}
+async function alternarFavoritoContainer(numero,ev){
+  if(ev) ev.stopPropagation();
+  const uid=uidAtualMelhorias(); if(!uid) return;
+  await carregarFavoritosContainers();
+  numero=normalizarNumeroContainerMelhorias(numero); if(!numero) return;
+  const set=new Set(favoritosContainersUsuario);
+  if(set.has(numero)) set.delete(numero); else set.add(numero);
+  favoritosContainersUsuario=Array.from(set).sort((a,b)=>a-b);
+  try{ await firebaseDB.ref("preferenciasUsuarios/"+uid+"/favoritosContainers").set(favoritosContainersUsuario); renderizarMapasTodos(); }
+  catch(e){ console.error("Erro ao salvar favorito:",e); alert("Não foi possível salvar o favorito. Verifique as regras do Firebase."); }
+}
+function obterItensContainerMelhorias(numero){ return (Array.isArray(estoque)?estoque:[]).filter(x=>x && Number(x.num)===Number(numero)); }
+function abrirDetalhesContainerMelhorias(numero){
+  const itens=obterItensContainerMelhorias(numero);
+  const favorito=favoritosContainersUsuario.includes(Number(numero));
+  let html='<div style="text-align:left;line-height:1.65"><strong>Container '+String(numero).padStart(2,'0')+'</strong><br>';
+  if(!itens.length){ html+='⚪ Container vazio.'; }
+  else { itens.forEach((it,i)=>{ html+=(i?' <hr>':'')+'📋 <strong>'+(typeof escaparHtmlExterno==='function'?escaparHtmlExterno(it.prod||'—'):String(it.prod||'—'))+'</strong><br>🔢 Quantidade: '+Number(it.qtd||0).toLocaleString('pt-BR')+'<br>⚖️ Peso: '+Number(it.peso||0).toLocaleString('pt-BR',{minimumFractionDigits:2})+' KG<br>🏷️ Lote: '+(it.lote||'—')+'<br>📅 Validade: '+(typeof formatarData==='function'&&it.validade?formatarData(it.validade):(it.validade||'—')); }); }
+  html+='</div>';
+  // Usa um modal simples próprio, sem interferir nos modais existentes.
+  let modal=document.getElementById('modal-detalhes-container-melhorias');
+  if(!modal){ modal=document.createElement('div'); modal.id='modal-detalhes-container-melhorias'; modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:99999;display:flex;align-items:center;justify-content:center;padding:18px'; document.body.appendChild(modal); }
+  modal.innerHTML='<div style="max-width:520px;width:100%;background:var(--bg-painel);border:1px solid var(--borda);border-radius:12px;padding:18px;color:var(--texto);box-shadow:0 10px 40px rgba(0,0,0,.45)"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><h2 style="margin:0">📦 Detalhes do Container '+String(numero).padStart(2,'0')+'</h2><button class="btn-vis" onclick="fecharDetalhesContainerMelhorias()">✕</button></div><div style="margin-top:12px">'+html+'</div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px"><button class="btn-vis" onclick="alternarFavoritoContainer('+Number(numero)+');fecharDetalhesContainerMelhorias()">'+(favorito?'⭐ Remover favorito':'☆ Favoritar')+'</button><button class="btn-vis" onclick="fecharDetalhesContainerMelhorias()">Fechar</button></div></div>';
+  modal.style.display='flex';
+}
+function fecharDetalhesContainerMelhorias(){const m=document.getElementById('modal-detalhes-container-melhorias');if(m)m.style.display='none';}
+function renderizarMapaContainers(tipo){
+  const grade=document.getElementById('mapa-grade-'+tipo), resumo=document.getElementById('mapa-resumo-'+tipo); if(!grade) return;
+  const total=Math.max(1,Number(quantidadeContainersSistema)||60), lista=Array.isArray(estoque)?estoque:[];
+  const ocupados=new Set(), atencao=new Set(); let qtdTotal=0;
+  lista.forEach(it=>{const n=normalizarNumeroContainerMelhorias(it&&it.num);if(!n)return;ocupados.add(n);qtdTotal+=Number(it.qtd)||0;if(Number(it.qtd)<0||Number(it.peso)<0)atencao.add(n);});
+  const favoritos=new Set(favoritosContainersUsuario);
+  grade.innerHTML='';
+  for(let i=1;i<=total;i++){
+    const occ=ocupados.has(i), prob=atencao.has(i), fav=favoritos.has(i), cls=prob?'atencao':(occ?'ocupado':'vazio');
+    const status=prob?'🔴 Atenção':(occ?'🟢 Ocupado':'⚪ Vazio');
+    const itens=obterItensContainerMelhorias(i), q=itens.reduce((a,x)=>a+(Number(x.qtd)||0),0);
+    const card=document.createElement('div'); card.className='mapa-container-card '+cls; card.onclick=()=>abrirDetalhesContainerMelhorias(i);
+    card.innerHTML='<button class="mapa-favorito" title="Favoritar" onclick="alternarFavoritoContainer('+i+',event)">'+(fav?'⭐':'☆')+'</button><div class="mapa-container-numero">📦 Container '+String(i).padStart(2,'0')+'</div><div class="mapa-container-status">'+status+'</div><div class="mapa-container-qtd">'+(occ?Number(q).toLocaleString('pt-BR')+' volume(s)':'Sem mercadoria')+'</div>';
+    grade.appendChild(card);
+  }
+  if(resumo) resumo.innerHTML='Total: <strong>'+total+'</strong> &nbsp;|&nbsp; 🟢 Ocupados: <strong>'+ocupados.size+'</strong> &nbsp;|&nbsp; ⚪ Vazios: <strong>'+(total-ocupados.size)+'</strong> &nbsp;|&nbsp; 🔴 Atenção: <strong>'+atencao.size+'</strong> &nbsp;|&nbsp; 📦 Volumes: <strong>'+Number(qtdTotal).toLocaleString('pt-BR')+'</strong>';
+}
+function renderizarMapasTodos(){ if(document.getElementById('mapa-grade-admin')) renderizarMapaContainers('admin'); if(document.getElementById('mapa-grade-externo')) renderizarMapaContainers('externo'); }
+
+async function registrarNotificacaoIndividual(uid,dados){
+  if(!uid) return;
+  try{ const ref=firebaseDB.ref('preferenciasUsuarios/'+String(uid)+'/notificacoes').push(); await ref.set(Object.assign({id:ref.key,lida:false,criadaEm:new Date().toISOString()},dados||{})); }
+  catch(e){ console.warn('Não foi possível registrar a notificação individual:',e); }
+}
+function iniciarNotificacoesIndividuais(){
+  const uid=uidAtualMelhorias(); if(!uid || typeof firebaseDB==='undefined') return;
+  if(notificacoesIndividuaisUid===uid && listenerNotificacoesIndividuais) return;
+  if(listenerNotificacoesIndividuais && notificacoesIndividuaisUid){ try{firebaseDB.ref('preferenciasUsuarios/'+notificacoesIndividuaisUid+'/notificacoes').off('value',listenerNotificacoesIndividuais);}catch(e){} }
+  notificacoesIndividuaisUid=uid;
+  listenerNotificacoesIndividuais=function(snap){const v=snap.val()||{};notificacoesIndividuais=Object.values(v).filter(Boolean).sort((a,b)=>String(b.criadaEm||'').localeCompare(String(a.criadaEm||'')));renderizarCentralNotificacoes();};
+  try{firebaseDB.ref('preferenciasUsuarios/'+uid+'/notificacoes').on('value',listenerNotificacoesIndividuais);}catch(e){console.warn('Listener de notificações individuais:',e);}
+}
+function obterPainelCentralNotificacoes(){
+  const main=document.getElementById('central-notificacoes');
+  const ext=document.getElementById('central-notificacoes-externo');
+  if(main && getComputedStyle(main.closest('#app-principal')||main).display!=='none') return main;
+  return ext || main;
+}
+function renderizarCentralNotificacoes(){
+  const areas=[document.getElementById('lista-notificacoes-individuais'),document.getElementById('lista-notificacoes-individuais-externo')].filter(Boolean);
+  const contadores=document.querySelectorAll('#contador-notificacoes-individuais');
+  if(!areas.length)return;
+  const naoLidas=notificacoesIndividuais.filter(n=>!n.lida).length;
+  contadores.forEach(c=>c.textContent=String(naoLidas));
+  const html=!notificacoesIndividuais.length?'<div class="vazio">📭 Nenhuma notificação.</div>':notificacoesIndividuais.slice(0,50).map(n=>'<div class="notificacao-individual '+(!n.lida?'nao-lida':'')+'"><strong>'+String(n.titulo||'Notificação')+'</strong><div>'+String(n.mensagem||'')+'</div><small>'+ (n.criadaEm?new Date(n.criadaEm).toLocaleString('pt-BR'):'') +'</small></div>').join('');
+  areas.forEach(a=>a.innerHTML=html);
+}
+function toggleCentralNotificacoes(){const p=obterPainelCentralNotificacoes();if(!p)return;p.style.display=p.style.display==='none'?'block':'none';renderizarCentralNotificacoes();}
+async function marcarTodasNotificacoesLidas(){const uid=uidAtualMelhorias();if(!uid||!notificacoesIndividuais.length)return;const updates={};notificacoesIndividuais.forEach(n=>{if(n.id)updates[n.id+'/lida']=true;});try{await firebaseDB.ref('preferenciasUsuarios/'+uid+'/notificacoes').update(updates);}catch(e){console.warn('Não foi possível marcar notificações:',e);}}
+
+async function confirmarExecucaoSolicitacao(id){
+  const uid=uidAtualMelhorias(); if(!uid||!id)return;
+  const ref=firebaseDB.ref('solicitacoesMercadoria/'+String(id));
+  try{const snap=await ref.once('value');if(!snap.exists())return;const p=snap.val()||{};if(String(p.solicitanteUid||'')!==uid){alert('❌ Esta solicitação não pertence ao usuário atual.');return;}if(String(p.status||'').toLowerCase()!=='atendido'){alert('⚠️ Esta solicitação ainda não está pronta para confirmação.');return;}if(p.confirmadoPeloSolicitante){alert('✅ Esta solicitação já foi confirmada.');return;}if(!confirm('Confirmar que a execução/retirada da mercadoria foi realizada?'))return;await ref.update({confirmadoPeloSolicitante:true,confirmadoEm:new Date().toISOString(),confirmadoPorUid:uid});await registrarNotificacaoIndividual(uid,{tipo:'confirmacao',titulo:'✅ Execução confirmada',mensagem:'Sua confirmação da solicitação '+id+' foi registrada.'});alert('✅ Confirmação registrada.');}catch(e){console.error(e);alert('❌ Não foi possível confirmar a solicitação. Verifique as regras do Firebase.');}
+}
+
+// Re-renderização leve: não altera o estoque nem o fluxo atual.
+function ativarMelhoriasContainers(){
+  carregarFavoritosContainers().finally(()=>renderizarMapasTodos());
+  iniciarNotificacoesIndividuais();
+  renderizarMapasTodos();
+}
+if(window.setInterval){setInterval(function(){if(uidAtualMelhorias()){ativarMelhoriasContainers();}},3000);}
+
+// Acrescenta a confirmação aos históricos sem substituir as funções existentes.
+const renderizarHistoricoSolicitacoesComumMelhoriasOriginal=window.renderizarHistoricoSolicitacoesComum;
+if(typeof renderizarHistoricoSolicitacoesComumMelhoriasOriginal==='function'){
+ window.renderizarHistoricoSolicitacoesComum=function(){renderizarHistoricoSolicitacoesComumMelhoriasOriginal();const area=document.getElementById('historico-solicitacoes-comum');if(!area)return;area.querySelectorAll('.produto-item').forEach((el,idx)=>{const lista=obterSolicitacoesFinalizadasComumVisiveis();const item=lista[idx];if(item&&item.status==='atendido'&&!item.confirmadoPeloSolicitante){const b=document.createElement('button');b.type='button';b.className='btn-vis btn-confirmar-execucao';b.textContent='✅ Confirmar execução';b.onclick=()=>confirmarExecucaoSolicitacao(item.id);el.appendChild(b);}});};
+}
+const renderizarMinhasSolicitacoesExternoMelhoriasOriginal=window.renderizarMinhasSolicitacoesExterno;
+if(typeof renderizarMinhasSolicitacoesExternoMelhoriasOriginal==='function'){
+ window.renderizarMinhasSolicitacoesExterno=function(lista){renderizarMinhasSolicitacoesExternoMelhoriasOriginal(lista);const area=document.getElementById('lista-minhas-solicitacoes');if(!area)return;(Array.isArray(lista)?lista:[]).forEach((item,idx)=>{if(item&&item.status==='atendido'&&!item.confirmadoPeloSolicitante){const els=area.querySelectorAll('[data-solicitacao-id]');const el=Array.from(els).find(x=>String(x.getAttribute('data-solicitacao-id'))===String(item.id));if(el){const b=document.createElement('button');b.type='button';b.className='btn-vis btn-confirmar-execucao';b.textContent='✅ Confirmar execução';b.onclick=()=>confirmarExecucaoSolicitacao(item.id);el.appendChild(b);}}});};
+}
+
+// Notificações de aprovação/recusa são adicionadas ao fluxo atual sem alterar sua lógica.
+const atualizarStatusSolicitacaoMercadoriaAdminOriginal=window.atualizarStatusSolicitacaoMercadoriaAdmin;
+if(typeof atualizarStatusSolicitacaoMercadoriaAdminOriginal==='function'){
+ window.atualizarStatusSolicitacaoMercadoriaAdmin=async function(id,novoStatus){
+   const antes=Array.isArray(solicitacoesMercadoriaAdminCache)?solicitacoesMercadoriaAdminCache.find(x=>String(x.id)===String(id)):null;
+   const resultado=await atualizarStatusSolicitacaoMercadoriaAdminOriginal(id,novoStatus);
+   try{
+     const depois=Array.isArray(solicitacoesMercadoriaAdminCache)?solicitacoesMercadoriaAdminCache.find(x=>String(x.id)===String(id)):antes;
+     if(depois&&depois.solicitanteUid){
+       if(novoStatus==='atendido') await registrarNotificacaoIndividual(depois.solicitanteUid,{tipo:'solicitacao_aprovada',titulo:'🟢 Solicitação aprovada',mensagem:'Sua solicitação do Container '+(depois.container||'—')+' foi aprovada e registrada pelo administrador.',solicitacaoId:String(id)});
+       if(novoStatus==='cancelado') await registrarNotificacaoIndividual(depois.solicitanteUid,{tipo:'solicitacao_recusada',titulo:'❌ Solicitação recusada',mensagem:'Sua solicitação do Container '+(depois.container||'—')+' foi recusada pelo administrador.',solicitacaoId:String(id)});
+     }
+   }catch(e){console.warn('Notificação pós-processamento:',e);}
+   return resultado;
+ };
+}
+
+// Inicializa também quando o sistema já estiver aberto.
+setTimeout(ativarMelhoriasContainers,1200);
 </script>
 </body>
 </html>
