@@ -12194,6 +12194,8 @@ function imprimirEtiquetaContainerMelhorias(index){
   const fornecedor=String(item.fornecedor||'—');
   const lote=String(item.lote||'—');
   const validade=(typeof formatarData==='function'&&item.validade)?formatarData(item.validade):String(item.validade||'—');
+  const volumes=Number(item.qtd||0).toLocaleString('pt-BR');
+  const pesoTotal=Number(item.peso||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
   const codigoBarras=(String(codigo||'')+'-'+String(numero||'')).replace(/\s+/g,'');
 
   const win=window.open('','_blank','width=900,height=800');
@@ -12217,8 +12219,10 @@ body{display:flex;align-items:center;justify-content:center;overflow:hidden}
 .linha{width:100%;font-size:3.55mm;font-weight:900;line-height:1.12;text-align:center;margin:0 0 3.1mm;white-space:nowrap;overflow:visible;text-overflow:clip;color:#000}
 .linha.produto{font-size:3.65mm;margin-bottom:3.2mm}
 .linha.codigo{font-size:4mm;margin-bottom:3.2mm}
-.linha.fornecedor{font-size:3.45mm;margin-bottom:3.2mm}
-.linha.lote{font-size:3mm;margin-bottom:4.2mm}
+.linha.fornecedor{font-size:3.45mm;margin-bottom:2.5mm}
+.linha.lote{font-size:3mm;margin-bottom:2.5mm}
+.linha.volumes{font-size:3.5mm;margin-bottom:2.5mm}
+.linha.peso{font-size:3.5mm;margin-bottom:4mm}
 .codigo-barras{width:82mm;height:13mm;display:flex;align-items:stretch;justify-content:center;overflow:hidden;white-space:nowrap;margin:0 auto 1.5mm}
 .codigo-barras span{flex:0 0 auto}
 .texto-barras{font-size:3.6mm;font-weight:900;line-height:1;text-align:center;margin:0;color:#000}
@@ -12230,6 +12234,8 @@ body{display:flex;align-items:center;justify-content:center;overflow:hidden}
   <div class="linha codigo">CÓDIGO: ${escapeHtmlPrint(codigo)}</div>
   <div class="linha fornecedor">FORNECEDOR: ${escapeHtmlPrint(fornecedor)}</div>
   <div class="linha lote">LOTE: ${escapeHtmlPrint(lote)} &nbsp;|&nbsp; VALIDADE: ${escapeHtmlPrint(validade)}</div>
+  <div class="linha volumes">VOLUMES: ${escapeHtmlPrint(volumes)}</div>
+  <div class="linha peso">PESO TOTAL: ${escapeHtmlPrint(pesoTotal)} KG</div>
   <div class="codigo-barras" aria-label="Código de barras">${barras}</div>
   <div class="texto-barras">${escapeHtmlPrint(codigoBarras)}</div>
 </div>
