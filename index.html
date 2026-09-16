@@ -11724,14 +11724,25 @@ function abrirDetalhesContainerMelhorias(numero){
   else {
     itens.forEach((obj,i)=>{
       const it=obj.item, idx=obj.index;
-      const nome=(typeof escaparHtmlExterno==='function'?escaparHtmlExterno(it.prod||'—'):String(it.prod||'—'));
+      const esc=v=>typeof escaparHtmlExterno==='function'?escaparHtmlExterno(v==null?'—':String(v)):String(v==null?'—':v);
+      const nome=esc(it.prod||'—');
       const pesoUnitario=Number(it.kg||0);
-      const acoes=podeAlterar?'<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:7px"><button class="btn-vis" type="button" onclick="editarItemContainer('+idx+');fecharDetalhesContainerMelhorias()">✏️ Editar</button><button class="btn-vis" type="button" onclick="excluirItem('+idx+');fecharDetalhesContainerMelhorias()">🗑️ Excluir</button></div>':'';
-      html+=(i?' <hr>':'')+'📋 <strong>'+nome+'</strong><br>'+
+      const pesoTotal=Number(it.peso||0);
+      const acoes=podeAlterar?'<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:10px"><button class="btn-vis" type="button" onclick="editarItemContainer('+idx+');fecharDetalhesContainerMelhorias()">✏️ Editar</button><button class="btn-vis" type="button" onclick="excluirItem('+idx+');fecharDetalhesContainerMelhorias()">🗑️ Excluir</button></div>':'';
+      html+=(i?' <hr>':'')+
+        '<div style="font-size:14px">'+
+        '📅 Data de entrada: '+esc(it.data||it.dataEntrada||it.entradaEm||'—')+'<br>'+
+        '📦 Container: '+esc(it.num||numero)+'<br>'+
+        '🏭 Fornecedor: '+esc(it.fornecedor||'—')+'<br>'+
+        '🧾 Número da nota: '+esc(it.nf||it.notaFiscal||'—')+'<br>'+
+        '🏷️ Código: '+esc(it.codigo||'—')+'<br>'+
+        '📋 Produto: <strong>'+nome+'</strong><br>'+
+        '🔖 Lote: '+esc(it.lote||'—')+'<br>'+
+        '📅 Validade: '+(typeof formatarData==='function'&&it.validade?formatarData(it.validade):esc(it.validade||'—'))+'<br>'+
         '🔢 Quantidade: '+Number(it.qtd||0).toLocaleString('pt-BR')+'<br>'+
         '⚖️ Peso unitário: '+pesoUnitario.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2})+' kg<br>'+
-        '🏷️ Lote: '+(it.lote||'—')+'<br>'+
-        '📅 Validade: '+(typeof formatarData==='function'&&it.validade?formatarData(it.validade):(it.validade||'—'))+acoes;
+        '⚖️ Peso total: '+pesoTotal.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+' kg'+
+        acoes+'</div>';
     });
   }
   html+='</div>';
@@ -11743,10 +11754,10 @@ function abrirDetalhesContainerMelhorias(numero){
   }
   modal.innerHTML='<div style="max-height:90vh;overflow:auto;max-width:620px;width:100%;background:var(--bg-painel);border:1px solid var(--borda);border-radius:12px;padding:18px;color:var(--texto);box-shadow:0 10px 40px rgba(0,0,0,.45)">'+
     '<div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><h2 style="margin:0">📦 Detalhes do Container '+String(numero).padStart(2,'0')+'</h2><button class="btn-vis" type="button" onclick="fecharDetalhesContainerMelhorias()">✕</button></div>'+
-    '<div style="margin-top:12px">'+html+'</div>'+
-    '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px"><button class="btn-vis" type="button" onclick="alternarFavoritoContainer('+Number(numero)+');fecharDetalhesContainerMelhorias()">'+(favorito?'⭐ Remover favorito':'☆ Favoritar')+'</button><button class="btn-vis" type="button" onclick="fecharDetalhesContainerMelhorias()">Fechar</button></div></div>';
+    '<div style="margin-top:12px">'+html+'</div>'+    '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px"><button class="btn-vis" type="button" onclick="alternarFavoritoContainer('+Number(numero)+');fecharDetalhesContainerMelhorias()">'+(favorito?'⭐ Remover favorito':'☆ Favoritar')+'</button><button class="btn-vis" type="button" onclick="fecharDetalhesContainerMelhorias()">Fechar</button></div></div>';
   modal.style.display='flex';
 }
+
 function fecharDetalhesContainerMelhorias(){const m=document.getElementById('modal-detalhes-container-melhorias');if(m)m.style.display='none';}
 
 function textoPesquisaMapaContainer(tipo){
