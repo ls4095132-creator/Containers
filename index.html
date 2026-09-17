@@ -2800,11 +2800,16 @@ Entrar
 <div class="cabecalho-alertas-validade">
 <div>
 <h2 style="margin:0;">⚠️ Alertas de Validade</h2>
-<div class="texto-apoio-solicitacao">Mercadorias vencidas ou com validade igual ou inferior a 30 dias.</div>
+<div class="texto-apoio-solicitacao">Mercadorias vencidas ou com validade em até 30 dias.</div>
 </div>
+<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
 <div class="resumo-alertas-validade" id="resumo-alertas-validade"></div>
+<button class="btn-vis" id="btn-toggle-alertas-validade" onclick="toggleAlertasValidade()" type="button">🙈 Minimizar</button>
 </div>
+</div>
+<div id="conteudo-alertas-validade">
 <div id="lista-alertas-validade"><div class="vazio">📭 Nenhum alerta de validade.</div></div>
+</div>
 </div>
 <!-- PAINEL ADMINISTRATIVO — SOLICITAÇÕES E MOVIMENTAÇÕES -->
 <div class="painel painel-solicitacoes-admin-inicial" id="painel-solicitacoes-admin-inicial" style="display:none;">
@@ -12888,41 +12893,41 @@ function renderizarAlertasValidade(){
 
     const agora=new Date();
     const limite30=new Date(agora.getTime()+30*24*60*60*1000);
-    const limite60=new Date(agora.getTime()+60*24*60*60*1000);
 
+    // SOMENTE produtos vencidos ou com validade em até 30 dias.
+    // Produtos entre 31 e 60 dias NÃO aparecem neste painel.
     const alertas=(Array.isArray(estoque)?estoque:[]).map(function(item){
         if(!item) return null;
         const validade=obterDataValidadeObjeto(item.validade);
         if(!validade) return null;
+
         let categoria="";
         if(validade.getTime()<agora.getTime()) categoria="vencido";
         else if(validade.getTime()<=limite30.getTime()) categoria="30";
-        else if(validade.getTime()<=limite60.getTime()) categoria="60";
         else return null;
+
         return {item:item,data:validade,categoria:categoria};
     }).filter(Boolean).sort(function(a,b){return a.data-b.data;});
 
     const vencidos=alertas.filter(x=>x.categoria==="vencido").length;
     const ate30=alertas.filter(x=>x.categoria==="30").length;
-    const ate60=alertas.filter(x=>x.categoria==="60").length;
 
     painel.style.display="block";
     if(resumo){
         resumo.innerHTML=(vencidos?'🔴 '+vencidos+' vencido(s) &nbsp; ':'')+
-            (ate30?'🟠 '+ate30+' até 30 dias &nbsp; ':'')+
-            (ate60?'🟡 '+ate60+' até 60 dias':'');
+            (ate30?'🟠 '+ate30+' até 30 dias':'');
         if(!alertas.length) resumo.innerHTML="🟢 Nenhum alerta";
     }
 
     if(!alertas.length){
-        area.innerHTML='<div class="vazio">🟢 Nenhuma mercadoria vencida ou com vencimento nos próximos 60 dias.</div>';
+        area.innerHTML='<div class="vazio">🟢 Nenhuma mercadoria vencida ou com vencimento nos próximos 30 dias.</div>';
         return;
     }
 
     area.innerHTML=alertas.map(function(a){
         const item=a.item;
-        const cor=a.categoria==="vencido"?"🔴":(a.categoria==="30"?"🟠":"🟡");
-        const texto=a.categoria==="vencido"?"Vencido":(a.categoria==="30"?"Vence em até 30 dias":"Vence em até 60 dias");
+        const cor=a.categoria==="vencido"?"🔴":"🟠";
+        const texto=a.categoria==="vencido"?"Vencido":"Vence em até 30 dias";
         return '<div class="alerta-validade-item">'+
             '<div><strong>'+cor+' '+texto+'</strong></div>'+
             '<div style="font-size:12px;line-height:1.65;margin-top:4px;">'+
@@ -12936,6 +12941,18 @@ function renderizarAlertasValidade(){
         '</div>';
     }).join("");
 }
+
+function toggleAlertasValidade(){
+    const conteudo=document.getElementById("conteudo-alertas-validade");
+    const botao=document.getElementById("btn-toggle-alertas-validade");
+    if(!conteudo||!botao) return;
+
+    const oculto=conteudo.style.display==="none";
+    conteudo.style.display=oculto ? "" : "none";
+    botao.innerText=oculto ? "🙈 Minimizar" : "👁️ Mostrar alertas";
+}
+
+window.toggleAlertasValidade=toggleAlertasValidade;
 
 window.abrirModalTransferenciaContainer=abrirModalTransferenciaContainer;
 window.confirmarTransferenciaContainer=confirmarTransferenciaContainer;
