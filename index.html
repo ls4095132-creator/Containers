@@ -2887,7 +2887,7 @@ Entrar
 <div class="linha-form linha-quantidade">
 <div class="campo campo-validade">
 <label>📅 Validade:</label>
-<input id="validade" type="date"/>
+<input id="validade" type="month"/>
 </div>
 <div class="campo">
 <label>🔢 Quantidade:</label>
@@ -3013,7 +3013,7 @@ Containers ocupados: 0 / <span class="contador-max-inline">60</span>
 <div class="campo"><label>🔢 Código do Produto:</label><input autocomplete="off" id="reg-codigo" oninput="localizarProdutoRegistroPorCodigo()" placeholder="Digite o código" type="text"/></div>
 <div class="campo campo-produto" style="position:relative;"><label>📋 Mercadoria:</label><input autocomplete="off" id="reg-prod" onblur="preencherCodigoRegistroProduto(); esconderSugestoesRegistroProduto()" oninput="mostrarSugestoesRegistroProduto()" placeholder="Digite nome ou código" type="text"/><div class="sugestoes-produto" id="sugestoes-registro-produto"></div></div>
 <div class="campo"><label>🏷️ Lote:</label><input id="reg-lote" maxlength="25" placeholder="Número do lote" type="text"/></div>
-<div class="campo"><label>📅 Validade:</label><input id="reg-validade" type="date"/></div>
+<div class="campo"><label>📅 Validade:</label><input id="reg-validade" type="month"/></div>
 <div class="campo"><label>🔢 Quantidade:</label><input id="reg-qtd" min="1" oninput="calcularPesoRegistro()" placeholder="Volumes" step="1" type="number"/></div>
 <div class="campo"><label>⚖️ Peso Unitário (KG):</label><input id="reg-kg" min="0.01" oninput="calcularPesoRegistro()" placeholder="KG por volume" step="0.01" type="number"/></div>
 <div class="campo"><label>🧮 Peso Total (KG):</label><input id="reg-peso" placeholder="Calculado automaticamente" readonly="" type="number"/></div>
@@ -6921,7 +6921,7 @@ ${item.codigo ? item.codigo+" - " : ""}${item.prod}
 
 <br>
 
-📅 Validade: ${item.validade ? formatarData(item.validade) : "—"}
+📅 Validade: ${item.validade ? formatarValidadeMesAno(item.validade) : "—"}
 
 <br>
 
@@ -7028,7 +7028,7 @@ function editarItemContainer(index){
         "reg-codigo":item.codigo || "",
         "reg-prod":item.prod || "",
         "reg-lote":item.lote || "",
-        "reg-validade":item.validade || "",
+        "reg-validade":valorValidadeParaInput(item.validade || ""),
         "reg-qtd":item.qtd != null ? item.qtd : "",
         "reg-kg":item.kg != null ? item.kg : (Number(item.qtd)>0 ? Number(item.peso||0)/Number(item.qtd) : "")
     };
@@ -7093,7 +7093,7 @@ document.getElementById("lote").value =
 item.lote;
 
 const campoValidadeEdicao=document.getElementById("validade");
-if(campoValidadeEdicao) campoValidadeEdicao.value=item.validade || "";
+if(campoValidadeEdicao) campoValidadeEdicao.value=valorValidadeParaInput(item.validade || "");
 
 document.getElementById("qtd").value =
 item.qtd;
@@ -7985,12 +7985,73 @@ function exportarTabelaExcel(headers,rows,nomeArquivo,nomeAba,configuracao){
     setTimeout(function(){URL.revokeObjectURL(url);},1000);
 }
 
+function formatarValidadeMesAno(valor){
+    if(valor===null || valor===undefined || valor==="") return "";
+    const s=String(valor).trim();
+    let m=s.match(/^(\d{4})-(\d{2})(?:-\d{2})?/);
+    if(m) return m[2]+"/"+m[1];
+    m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if(m) return String(m[1]).padStart(2,"0")+"/"+m[3];
+    m=s.match(/^(\d{1,2})\/(\d{4})$/);
+    if(m) return String(m[1]).padStart(2,"0")+"/"+m[2];
+    return s;
+}
+
+function valorValidadeParaInput(valor){
+    if(!valor) return "";
+    const s=String(valor).trim();
+    const m=s.match(/^(\d{4})-(\d{2})/);
+    if(m) return m[1]+"-"+m[2];
+    const br=s.match(/^(\d{1,2})\/(\d{4})$/);
+    if(br) return br[2]+"-"+String(br[1]).padStart(2,"0");
+    const brData=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if(brData) return brData[3]+"-"+String(brData[2]).padStart(2,"0");
+    return "";
+}
+
 function exportarParaExcel(){
 
     // Relatório completo de todos os containers configurados.
-    // Cada container sempre aparece na planilha; se estiver vazio,
-    // os demais campos ficam em branco.
+    // Inclui validade e indicação de lote vencido no estoque atual.
     const rows=[];
+
+    function normalizarDataValidadeExcel(valor){
+        if(valor===null || valor===undefined || valor==="") return null;
+        const s=String(valor).trim();
+        let m=s.match(/^(\d{4})-(\d{2})(?:-(\d{2}))?/);
+        if(m){
+            const ano=Number(m[1]), mes=Number(m[2]);
+            // Quando a validade é apenas mês/ano, considera-se o último dia do mês.
+            const dia=m[3] ? Number(m[3]) : new Date(ano,mes,0).getDate();
+            const d=new Date(ano,mes-1,dia);
+            return Number.isNaN(d.getTime()) ? null : d;
+        }
+        m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if(m){
+            const d=new Date(Number(m[3]),Number(m[2])-1,Number(m[1]));
+            return Number.isNaN(d.getTime()) ? null : d;
+        }
+        m=s.match(/^(\d{1,2})\/(\d{4})$/);
+        if(m){
+            const d=new Date(Number(m[2]),Number(m[1]),0);
+            return Number.isNaN(d.getTime()) ? null : d;
+        }
+        const d=new Date(s);
+        return Number.isNaN(d.getTime()) ? null : d;
+    }
+
+    function validadeExcel(valor){
+        return formatarValidadeMesAno(valor);
+    }
+
+    function loteVencidoExcel(valor){
+        const d=normalizarDataValidadeExcel(valor);
+        if(!d) return "";
+        const hoje=new Date();
+        hoje.setHours(0,0,0,0);
+        d.setHours(23,59,59,999);
+        return d < hoje ? "SIM" : "NÃO";
+    }
 
     for(let numero=1; numero<=quantidadeContainersSistema; numero++){
         const container=String(numero);
@@ -8009,16 +8070,19 @@ function exportarParaExcel(){
                     item.codigo || "",
                     item.prod || "",
                     item.lote || "",
+                    validadeExcel(item.validade || ""),
+                    loteVencidoExcel(item.validade || ""),
                     item.qtd || "",
                     item.peso || ""
                 ]);
             });
         }else{
-            // Container vazio: mantém o container no relatório e deixa os outros campos vazios.
             rows.push([
                 "",
                 "",
                 String(numero).padStart(2,'0'),
+                "",
+                "",
                 "",
                 "",
                 "",
@@ -8031,7 +8095,7 @@ function exportarParaExcel(){
     }
 
     exportarTabelaExcel(
-        ["Data","Tipo","Container","Fornecedor","Nota Fiscal","Código","Produto","Lote","Quantidade","Peso KG"],
+        ["Data","Tipo","Container","Fornecedor","Nota Fiscal","Código","Produto","Lote","Validade","Lote vencido em estoque","Quantidade","Peso KG"],
         rows,
         "controle_saldo_"+quantidadeContainersSistema+"_containers",
         "Saldo dos Containers",
@@ -8040,8 +8104,8 @@ function exportarParaExcel(){
             resumo:{
                 grupoIndex:6,
                 grupoTitulo:"Produto",
-                quantidadeIndex:8,
-                pesoIndex:9
+                quantidadeIndex:10,
+                pesoIndex:11
             }
         }
     );
@@ -12404,7 +12468,7 @@ function imprimirEtiquetaContainerMelhorias(index){
   const codigo=String(item.codigo||'—');
   const fornecedor=String(item.fornecedor||'—');
   const lote=String(item.lote||'—');
-  const validade=(typeof formatarData==='function'&&item.validade)?formatarData(item.validade):String(item.validade||'—');
+  const validade=(typeof formatarData==='function'&&item.validade)?formatarValidadeMesAno(item.validade):String(item.validade||'—');
   const volumes=Number(item.qtd||0).toLocaleString('pt-BR');
   const pesoTotal=Number(item.peso||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
   const codigoBarras=(String(codigo||'')+'-'+String(numero||'')).replace(/\s+/g,'');
@@ -12522,11 +12586,11 @@ function renderizarMapaContainers(tipo){
           alertaValidade30=diasParaVencer<=30;
 
           if(diasParaVencer<0){
-            textoValidade='🔴 VENCIDO — '+validadeProduto.toLocaleDateString('pt-BR');
+            textoValidade='🔴 VENCIDO — '+formatarValidadeMesAno(it.validade);
           }else if(diasParaVencer===0){
-            textoValidade='🔴 VENCE HOJE — '+validadeProduto.toLocaleDateString('pt-BR');
+            textoValidade='🔴 VENCE HOJE — '+formatarValidadeMesAno(it.validade);
           }else if(diasParaVencer<=30){
-            textoValidade='🔴 Vence em '+diasParaVencer+' dia(s) — '+validadeProduto.toLocaleDateString('pt-BR');
+            textoValidade='🔴 Vence em '+diasParaVencer+' dia(s) — '+formatarValidadeMesAno(it.validade);
           }
         }
 
@@ -12870,10 +12934,18 @@ function obterDataValidadeObjeto(valor){
     if(/^\d{4}-\d{2}-\d{2}$/.test(texto)){
         const p=texto.split("-");
         d=new Date(Number(p[0]),Number(p[1])-1,Number(p[2]),23,59,59,999);
+    }else if(/^\d{4}-\d{2}$/.test(texto)){
+        const p=texto.split("-");
+        // Validade mês/ano: considera o último dia do mês.
+        d=new Date(Number(p[0]),Number(p[1]),0,23,59,59,999);
     }else{
         const m=texto.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
         if(m) d=new Date(Number(m[3]),Number(m[2])-1,Number(m[1]),23,59,59,999);
-        else d=new Date(texto);
+        else {
+            const mm=texto.match(/^(\d{2})\/(\d{4})$/);
+            if(mm) d=new Date(Number(mm[2]),Number(mm[1]),0,23,59,59,999);
+            else d=new Date(texto);
+        }
     }
     return d && !Number.isNaN(d.getTime()) ? d : null;
 }
@@ -12935,7 +13007,7 @@ function renderizarAlertasValidade(){
                 (item.codigo?' · '+escaparHtmlSolicitacao(item.codigo):'')+
                 '<br>📦 Container: C'+String(Number(item.num)||0).padStart(2,"0")+
                 ' &nbsp;|&nbsp; 🏷️ Lote: '+escaparHtmlSolicitacao(item.lote||"—")+
-                '<br>📅 Validade: <strong>'+a.data.toLocaleDateString("pt-BR")+'</strong>'+
+                '<br>📅 Validade: <strong>'+formatarValidadeMesAno(item.validade||"")+'</strong>'+
                 ' &nbsp;|&nbsp; 🔢 Quantidade: '+Number(item.qtd||0).toLocaleString("pt-BR")+
             '</div>'+
         '</div>';
