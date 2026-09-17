@@ -12368,6 +12368,17 @@ document.addEventListener("DOMContentLoaded",function(){
 .notificacao-individual small{color:var(--texto-fraco)}
 .btn-confirmar-execucao{margin-top:9px}
 @media(max-width:700px){.mapa-grade{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.mapa-container-card{padding:8px;min-height:70px}.mapa-cabecalho{align-items:flex-start}.mapa-cabecalho .btn-vis{width:auto}}
+
+.historico-produto-modal{max-height:92vh;overflow:hidden;max-width:900px;width:100%;background:var(--bg-painel);border:1px solid var(--borda);border-radius:14px;color:var(--texto);box-shadow:0 14px 50px rgba(0,0,0,.5);display:flex;flex-direction:column}
+.historico-produto-cabecalho{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px;border-bottom:1px solid var(--borda)}
+.historico-produto-cabecalho h2{margin:0;font-size:20px}.historico-produto-subtitulo{font-size:13px;color:var(--texto-fraco);margin-top:4px}
+.historico-produto-conteudo{overflow:auto;padding:16px 18px;flex:1}.historico-produto-topo{padding:12px;border:1px solid var(--borda);border-radius:10px;background:var(--bg-painel-2)}
+.historico-produto-resumo{font-size:12px;color:var(--texto-fraco);margin-top:6px;line-height:1.7}.historico-produto-lista{margin-top:12px;display:flex;flex-direction:column;gap:9px}
+.historico-produto-item{border:1px solid var(--borda);border-radius:10px;padding:11px;background:var(--bg-input)}
+.historico-produto-item-cab{display:flex;justify-content:space-between;gap:10px;align-items:center}.historico-produto-item-cab span{font-size:11px;color:var(--texto-fraco)}
+.historico-produto-detalhes{font-size:12px;line-height:1.65;margin-top:7px}.historico-produto-acoes{display:flex;justify-content:flex-end;margin-top:8px}
+.btn-perigo-historico{border:1px solid #ef4444!important;color:#ef4444!important}.historico-produto-rodape{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding:13px 18px;border-top:1px solid var(--borda)}
+@media(max-width:650px){.historico-produto-modal{max-height:96vh}.historico-produto-cabecalho{padding:14px}.historico-produto-conteudo{padding:12px}.historico-produto-item-cab{align-items:flex-start;flex-direction:column;gap:3px}.historico-produto-rodape button{flex:1;min-width:130px}}
 </style>
 <script>
 // ======================================================
@@ -12433,7 +12444,8 @@ function abrirDetalhesContainerMelhorias(numero){
         '🏭 Fornecedor: '+esc(it.fornecedor||'—')+'<br>'+
         '🧾 Número da nota: '+esc(it.nf||it.notaFiscal||'—')+'<br>'+
         '🏷️ Código: '+esc(it.codigo||'—')+'<br>'+
-        '📋 Produto: <strong>'+nome+'</strong><br>'+
+        '<div style="margin-top:4px;margin-bottom:4px">📋 <span style="font-weight:700">Produto:</span><br>'+
+        '<button type="button" title="Abrir histórico deste produto" onclick="fecharDetalhesContainerMelhorias();abrirHistoricoProdutoMelhorias('+idx+')" style="display:inline-block;margin-top:3px;padding:5px 10px;border:1px solid var(--borda);border-radius:7px;background:transparent;color:var(--texto);font:inherit;font-weight:700;cursor:pointer;max-width:100%;text-align:left;transition:background .15s,border-color .15s">'+nome+'</button></div>'+
         '🔖 Lote: '+esc(it.lote||'—')+'<br>'+
         '📅 Validade: '+(typeof formatarData==='function'&&it.validade?formatarData(it.validade):esc(it.validade||'—'))+'<br>'+
         '🔢 Quantidade: '+Number(it.qtd||0).toLocaleString('pt-BR')+'<br>'+
@@ -12524,6 +12536,195 @@ body{display:flex;align-items:center;justify-content:center;overflow:hidden}
 }
 function escapeHtmlPrint(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
+
+// ======================================================
+// HISTÓRICO INDIVIDUAL DO PRODUTO
+// ======================================================
+function normalizarTextoHistoricoProduto(v){
+  return String(v==null?'':v).trim().toLowerCase();
+}
+
+function movimentoPertenceAoProdutoMelhorias(mov, referencia){
+  if(!mov || !referencia) return false;
+  const codigoRef=normalizarTextoHistoricoProduto(referencia.codigo);
+  const loteRef=normalizarTextoHistoricoProduto(referencia.lote);
+  const prodRef=normalizarTextoHistoricoProduto(referencia.prod);
+  const idRef=normalizarTextoHistoricoProduto(referencia.id);
+
+  const codigo=normalizarTextoHistoricoProduto(mov.codigo);
+  const lote=normalizarTextoHistoricoProduto(mov.lote);
+  const prod=normalizarTextoHistoricoProduto(mov.prod);
+  const id=normalizarTextoHistoricoProduto(mov.itemId || mov.estoqueId);
+
+  // O ID é a referência mais precisa quando existe.
+  if(idRef && id && id===idRef) return true;
+
+  // Para acompanhar transferências, alterações e exclusões, usamos código + lote.
+  if(codigoRef && codigo && loteRef && lote && codigo===codigoRef && lote===loteRef) return true;
+  if(codigoRef && codigo && codigo===codigoRef && (!loteRef || !lote)) return true;
+
+  // Compatibilidade com registros antigos que não possuem código.
+  if(!codigoRef && loteRef && lote && lote===loteRef && prodRef && prod===prodRef) return true;
+  if(!codigoRef && !loteRef && prodRef && prod===prodRef) return true;
+  return false;
+}
+
+function formatarDataHoraHistoricoProduto(mov){
+  const data=mov && (mov.data || mov.dataHora || mov.criadaEm || mov.entradaEm);
+  const hora=mov && mov.hora ? String(mov.hora) : '';
+  let texto='';
+  if(data){
+    const d=String(data);
+    if(/^\d{4}-\d{2}-\d{2}/.test(d)) texto=d.slice(8,10)+'/'+d.slice(5,7)+'/'+d.slice(0,4);
+    else texto=d;
+  }
+  if(hora) texto += (texto?' ':'')+hora;
+  return texto || '—';
+}
+
+function extrairTransferenciaHistoricoProduto(mov){
+  const detalhes=String(mov && mov.detalhes || '');
+  let origem='',destino='';
+  let m=detalhes.match(/(\d+)\s*→\s*(\d+)/);
+  if(!m) m=detalhes.match(/C\s*(\d+)\s*(?:->|→)\s*C?\s*(\d+)/i);
+  if(m){ origem=m[1]; destino=m[2]; }
+  return {origem:origem,destino:destino};
+}
+
+function obterHistoricoIndividualProdutoMelhorias(referencia){
+  const lista=Array.isArray(historico)?historico:[];
+  return lista.filter(function(mov){ return movimentoPertenceAoProdutoMelhorias(mov,referencia); })
+    .sort(function(a,b){
+      const da=String((a&&a.data)||'')+' '+String((a&&a.hora)||'');
+      const db=String((b&&b.data)||'')+' '+String((b&&b.hora)||'');
+      return db.localeCompare(da);
+    });
+}
+
+function abrirHistoricoProdutoMelhorias(index){
+  const referencia=Array.isArray(estoque)?estoque[index]:null;
+  if(!referencia){ alert('❌ Produto não encontrado no estoque atual.'); return; }
+
+  const movimentos=obterHistoricoIndividualProdutoMelhorias(referencia);
+  const nome=String(referencia.prod||'Produto sem nome');
+  const esc=function(v){return typeof escaparHtmlExterno==='function'?escaparHtmlExterno(v==null?'—':String(v)):String(v==null?'—':v).replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c];});};
+  const validade=typeof formatarValidadeMesAno==='function' ? formatarValidadeMesAno(referencia.validade||'') : (referencia.validade||'—');
+  const somenteAdmin=usuarioEhAdmin();
+
+  let html='<div class="historico-produto-topo">'+
+    '<div><strong>'+esc(referencia.codigo||'')+(referencia.codigo?' — ':'')+esc(nome)+'</strong></div>'+
+    '<div class="historico-produto-resumo">📦 Container '+String(referencia.num||'').padStart(2,'0')+
+    ' &nbsp;|&nbsp; 🏷️ Lote: '+esc(referencia.lote||'—')+
+    ' &nbsp;|&nbsp; 📅 Validade: '+esc(validade||'—')+
+    ' &nbsp;|&nbsp; 🔢 Quantidade: '+Number(referencia.qtd||0).toLocaleString('pt-BR')+'</div>'+
+    '</div>';
+
+  if(!movimentos.length){
+    html+='<div class="vazio" style="margin-top:12px">📭 Nenhuma movimentação encontrada para este produto.</div>';
+  }else{
+    html+='<div class="historico-produto-lista">';
+    movimentos.forEach(function(mov){
+      const tipo=String(mov.tipo||'MOVIMENTAÇÃO').toUpperCase();
+      const transferencia=tipo==='TRANSFERÊNCIA' || tipo==='TRANSFERENCIA';
+      const tr=transferencia?extrairTransferenciaHistoricoProduto(mov):{};
+      let origem=tr.origem || (tipo==='TRANSFERÊNCIA'?'—':'');
+      let destino=tr.destino || (tipo==='TRANSFERÊNCIA'?String(mov.num||'—'):'');
+      const icone=typeof iconeMovimentacao==='function'?iconeMovimentacao(tipo):'📋';
+      html+='<div class="historico-produto-item">'+
+        '<div class="historico-produto-item-cab">'+
+          '<strong>'+icone+' '+esc(tipo)+'</strong>'+
+          '<span>'+esc(formatarDataHoraHistoricoProduto(mov))+'</span>'+
+        '</div>'+
+        '<div class="historico-produto-detalhes">'+
+          '📦 Container: <strong>'+esc(mov.num==null?'—':mov.num)+'</strong>'+
+          (transferencia?' &nbsp;|&nbsp; 🔄 Origem: <strong>'+esc(origem)+'</strong> → Destino: <strong>'+esc(destino)+'</strong>':'')+
+          '<br>🔢 Quantidade: '+esc(mov.qtd==null?'—':Number(mov.qtd).toLocaleString('pt-BR'))+
+          ' &nbsp;|&nbsp; 🏷️ Lote: '+esc(mov.lote||referencia.lote||'—')+
+          '<br>👤 Usuário/ação: '+esc(mov.operador || mov.usuario || mov.usuarioNome || 'Registro do sistema')+
+          (mov.detalhes?'<br>ℹ️ '+esc(mov.detalhes):'')+
+        '</div>'+ 
+        (somenteAdmin ? '<div class="historico-produto-acoes"><button class="btn-vis btn-excluir-historico-produto" type="button" onclick="excluirHistoricoProdutoLinhaMelhorias(\''+esc(String(mov.id||'' )).replace(/'/g,"\\'")+'\')">🗑️ Excluir</button></div>' : '')+
+      '</div>';
+    });
+    html+='</div>';
+  }
+
+  const modalId='modal-historico-produto-melhorias';
+  let modal=document.getElementById(modalId);
+  if(!modal){
+    modal=document.createElement('div'); modal.id=modalId;
+    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100000;display:flex;align-items:center;justify-content:center;padding:18px';
+    document.body.appendChild(modal);
+  }
+  const refJson=encodeURIComponent(JSON.stringify({id:referencia.id||'',codigo:referencia.codigo||'',prod:referencia.prod||'',lote:referencia.lote||'',num:referencia.num||''}));
+  modal.innerHTML='<div class="historico-produto-modal">'+
+    '<div class="historico-produto-cabecalho"><div><h2>📦 Histórico do Produto</h2><div class="historico-produto-subtitulo">'+esc(nome)+'</div></div><button class="btn-vis" type="button" onclick="fecharHistoricoProdutoMelhorias()">✕</button></div>'+
+    '<div class="historico-produto-conteudo">'+html+'</div>'+
+    '<div class="historico-produto-rodape">'+
+      '<button class="btn-vis" type="button" onclick="exportarHistoricoProdutoMelhorias(decodeURIComponent(\''+refJson+'\'))">📊 Exportar Excel</button>'+ 
+      (somenteAdmin ? '<button class="btn-vis btn-perigo-historico" type="button" onclick="excluirTodoHistoricoProdutoMelhorias(decodeURIComponent(\''+refJson+'\'))">🗑️ Excluir tudo</button>' : '')+
+      '<button class="btn-vis" type="button" onclick="fecharHistoricoProdutoMelhorias()">Fechar</button>'+ 
+    '</div></div>';
+  modal.style.display='flex';
+  document.body.style.overflow='hidden';
+}
+
+function fecharHistoricoProdutoMelhorias(){
+  const modal=document.getElementById('modal-historico-produto-melhorias');
+  if(modal) modal.style.display='none';
+  document.body.style.overflow='';
+}
+
+async function excluirHistoricoProdutoLinhaMelhorias(id){
+  if(!usuarioEhAdmin()){ alert('❌ Apenas o administrador pode excluir o histórico individual.'); return; }
+  const idHistorico=String(id||'').trim();
+  if(!idHistorico){ alert('❌ Movimentação inválida.'); return; }
+  const indice=(Array.isArray(historico)?historico:[]).findIndex(function(x){return x&&String(x.id||'')===idHistorico;});
+  if(indice<0){ alert('❌ Esta movimentação não foi encontrada.'); return; }
+  if(!confirm('Excluir somente esta movimentação do histórico do produto?\n\nO estoque atual NÃO será alterado.')) return;
+  try{
+    historico.splice(indice,1);
+    await firebaseDB.ref('historico').set(historico);
+    mostrarHistorico();
+    const modal=document.getElementById('modal-historico-produto-melhorias');
+    if(modal) modal.remove();
+    document.body.style.overflow='';
+    alert('✅ Movimentação excluída com sucesso.');
+  }catch(e){ console.error(e); alert('❌ Não foi possível excluir a movimentação. Verifique o Firebase.'); }
+}
+
+async function excluirTodoHistoricoProdutoMelhorias(refEncoded){
+  if(!usuarioEhAdmin()){ alert('❌ Apenas o administrador pode excluir o histórico individual.'); return; }
+  let referencia;
+  try{ referencia=typeof refEncoded==='string'?JSON.parse(refEncoded):refEncoded; }catch(e){ alert('❌ Referência do produto inválida.'); return; }
+  const encontrados=(Array.isArray(historico)?historico:[]).filter(function(m){return movimentoPertenceAoProdutoMelhorias(m,referencia);});
+  if(!encontrados.length){ alert('📭 Não há histórico para excluir deste produto.'); return; }
+  if(!confirm('Excluir TODAS as movimentações deste produto?\n\nSerão excluídas '+encontrados.length+' movimentação(ões) do Firebase.\n\nO estoque atual NÃO será alterado.')) return;
+  try{
+    historico=historico.filter(function(m){return !movimentoPertenceAoProdutoMelhorias(m,referencia);});
+    await firebaseDB.ref('historico').set(historico);
+    mostrarHistorico();
+    fecharHistoricoProdutoMelhorias();
+    alert('✅ Todo o histórico deste produto foi excluído.');
+  }catch(e){ console.error(e); alert('❌ Não foi possível excluir o histórico. Verifique o Firebase.'); }
+}
+
+function exportarHistoricoProdutoMelhorias(refEncoded){
+  let referencia;
+  try{ referencia=typeof refEncoded==='string'?JSON.parse(refEncoded):refEncoded; }catch(e){ alert('❌ Referência do produto inválida.'); return; }
+  const movimentos=obterHistoricoIndividualProdutoMelhorias(referencia);
+  if(!movimentos.length){ alert('📭 Não há histórico deste produto para exportar.'); return; }
+  const rows=movimentos.map(function(m){
+    const tr=((String(m.tipo||'').toUpperCase()==='TRANSFERÊNCIA'||String(m.tipo||'').toUpperCase()==='TRANSFERENCIA')?extrairTransferenciaHistoricoProduto(m):{});
+    return [formatarDataHoraHistoricoProduto(m),m.tipo||'',m.num||'',tr.origem||'',tr.destino||'',m.codigo||'',m.prod||'',m.lote||'',typeof formatarValidadeMesAno==='function'?formatarValidadeMesAno(m.validade||''):(m.validade||''),m.qtd||'',m.kg||'',m.peso||'',m.operador||m.usuario||'',m.detalhes||''];
+  });
+  if(typeof exportarTabelaExcel==='function'){
+    exportarTabelaExcel(['Data/Hora','Tipo de movimentação','Container','Origem','Destino','Código','Produto','Lote','Validade','Quantidade','KG/volume','Peso total','Usuário','Detalhes'],rows,'Historico_Produto_'+String(referencia.codigo||referencia.prod||'produto').replace(/[^a-z0-9_-]+/gi,'_').slice(0,35),'Histórico do Produto');
+  }else{
+    alert('❌ A função de exportação Excel não está disponível nesta versão.');
+  }
+}
+
 function fecharDetalhesContainerMelhorias(){const m=document.getElementById('modal-detalhes-container-melhorias');if(m)m.style.display='none';}
 
 function textoPesquisaMapaContainer(tipo){
@@ -12599,7 +12800,7 @@ function renderizarMapaContainers(tipo){
           ? '<div class="mapa-mercadoria-validade">'+textoValidade+'</div>'
           : '';
 
-        return '<div class="mapa-mercadoria-linha'+classeValidade+'" onclick="event.stopPropagation();abrirDetalhesContainerMelhorias('+i+')">'+
+        return '<div class="mapa-mercadoria-linha'+classeValidade+'" onclick="event.stopPropagation();abrirHistoricoProdutoMelhorias('+idx+')" title="Clique para ver o histórico deste produto">'+
           '<div class="mapa-mercadoria-nome" title="'+nome.replace(/"/g,'&quot;')+'">'+nome+'</div>'+
           '<div class="mapa-mercadoria-info">⚖️ '+pesoUnitario.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2})+' kg</div>'+
           linhaValidade+
@@ -13027,6 +13228,12 @@ function toggleAlertasValidade(){
 window.toggleAlertasValidade=toggleAlertasValidade;
 
 window.abrirModalTransferenciaContainer=abrirModalTransferenciaContainer;
+window.abrirHistoricoProdutoMelhorias=abrirHistoricoProdutoMelhorias;
+window.fecharHistoricoProdutoMelhorias=fecharHistoricoProdutoMelhorias;
+window.excluirHistoricoProdutoLinhaMelhorias=excluirHistoricoProdutoLinhaMelhorias;
+window.excluirTodoHistoricoProdutoMelhorias=excluirTodoHistoricoProdutoMelhorias;
+window.exportarHistoricoProdutoMelhorias=exportarHistoricoProdutoMelhorias;
+
 window.confirmarTransferenciaContainer=confirmarTransferenciaContainer;
 window.fecharModalTransferenciaContainer=fecharModalTransferenciaContainer;
 window.renderizarAlertasValidade=renderizarAlertasValidade;
