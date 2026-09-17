@@ -12800,7 +12800,7 @@ function renderizarMapaContainers(tipo){
           ? '<div class="mapa-mercadoria-validade">'+textoValidade+'</div>'
           : '';
 
-        return '<div class="mapa-mercadoria-linha'+classeValidade+'" onclick="event.stopPropagation();abrirHistoricoProdutoMelhorias('+idx+')" title="Clique para ver o histórico deste produto">'+
+        return '<div class="mapa-mercadoria-linha'+classeValidade+'" title="Clique no produto para abrir os detalhes do container">'+
           '<div class="mapa-mercadoria-nome" title="'+nome.replace(/"/g,'&quot;')+'">'+nome+'</div>'+
           '<div class="mapa-mercadoria-info">⚖️ '+pesoUnitario.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2})+' kg</div>'+
           linhaValidade+
