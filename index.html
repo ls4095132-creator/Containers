@@ -2795,17 +2795,6 @@ Entrar
 </div>
 </div>
 </div>
-<!-- ALERTAS DE VALIDADE — ADMINISTRADOR E USUÁRIO COMUM -->
-<div class="painel painel-alertas-validade" id="painel-alertas-validade" style="display:none;">
-<div class="cabecalho-alertas-validade">
-<div>
-<h2 style="margin:0;">⚠️ Alertas de Validade</h2>
-<div class="texto-apoio-solicitacao">Mercadorias vencidas ou próximas do vencimento.</div>
-</div>
-<div class="resumo-alertas-validade" id="resumo-alertas-validade"></div>
-</div>
-<div id="lista-alertas-validade"><div class="vazio">📭 Nenhum alerta de validade.</div></div>
-</div>
 <!-- PAINEL ADMINISTRATIVO — SOLICITAÇÕES E MOVIMENTAÇÕES -->
 <div class="painel painel-solicitacoes-admin-inicial" id="painel-solicitacoes-admin-inicial" style="display:none;">
 <div class="cabecalho-solicitacoes-admin-inicial">
@@ -2830,10 +2819,6 @@ Entrar
 <div class="subpainel-admin-inicial">
 <div class="subcabecalho-admin-inicial"><strong>📨 Novas solicitações de mercadoria</strong><span id="contador-solicitacoes-mercadoria-admin"></span></div>
 <div id="lista-solicitacoes"></div>
-</div>
-<div class="subpainel-admin-inicial">
-<div class="subcabecalho-admin-inicial"><strong>🔄 Novas solicitações de transferência</strong><span id="contador-transferencias-admin"></span></div>
-<div id="lista-transferencias-admin"><div class="vazio">📭 Nenhuma transferência aguardando validação.</div></div>
 </div>
 </div>
 </div>
@@ -3615,11 +3600,7 @@ async function iniciarSincronizacaoFirebase(){
 
                     // Novas movimentações/alterações devem avisar o administrador em tempo real.
                     if(!anterior && tipo !== "ENTRADA") {
-                        if(tipo === "TRANSFERENCIA_CONTAINER"){
-                            mostrarAvisoOperacaoVerde("Nova solicitação de transferência", (item.descricao || "Transferência entre containers aguardando aprovação."));
-                        }else{
-                            mostrarAvisoOperacaoVerde("Nova movimentação/alteração", (item.descricao || textoTipoAlteracao(tipo)));
-                        }
+                        mostrarAvisoOperacaoVerde("Nova movimentação/alteração", (item.descricao || textoTipoAlteracao(tipo)));
                     }
                     // Mudanças de status feitas por outro dispositivo também são notificadas ao admin.
                     if(anterior && !ehSolicitante && statusAnterior !== statusNovo && (statusNovo === "aprovada" || statusNovo === "recusada")){
@@ -3642,7 +3623,6 @@ async function iniciarSincronizacaoFirebase(){
             }
 
             if(typeof renderizarSolicitacoesAlteracoesAdmin==="function" && souAdmin) renderizarSolicitacoesAlteracoesAdmin();
-            if(typeof renderizarSolicitacoesTransferenciaAdmin==="function" && souAdmin) renderizarSolicitacoesTransferenciaAdmin();
             atualizarIndicadorAdmin();
         },function(e){console.error("Firebase solicitações de alteração:",e);});
 
@@ -4768,8 +4748,7 @@ function textoTipoAlteracao(tipo){
         ALTERACAO:"✏️ Alteração de container",
         EXCLUSAO:"🗑️ Exclusão de item do container",
         ZERAR_CONTAINER:"🧹 Zerar container",
-        LIMPAR_HISTORICO:"🧾 Limpeza do histórico",
-        TRANSFERENCIA_CONTAINER:"🔄 Transferência entre containers"
+        LIMPAR_HISTORICO:"🧾 Limpeza do histórico"
     };
     return mapa[tipo] || "📋 Alteração";
 }
@@ -4778,10 +4757,6 @@ function resumoSolicitacaoAlteracao(sol){
     const dados=sol.dados || {};
     if(sol.tipo === "ZERAR_CONTAINER") return "Container <strong>"+escaparHtmlAlteracao(dados.num)+"</strong> — "+((dados.itens || []).length)+" item(ns) serão removidos.";
     if(sol.tipo === "LIMPAR_HISTORICO") return "Solicitado pelo operador: apagar o histórico de movimentações.";
-    if(sol.tipo === "TRANSFERENCIA_CONTAINER"){
-        const item=dados.item || {};
-        return "Produto <strong>"+escaparHtmlAlteracao(item.prod || "—")+"</strong> — C"+String(dados.containerOrigem||item.num||"—").padStart(2,"0")+" → C"+String(dados.containerDestino||"—").padStart(2,"0")+" — Qtd: "+escaparHtmlAlteracao(dados.quantidade || "0");
-    }
     const item=dados.novoItem || dados.item || {};
     return "Container <strong>"+escaparHtmlAlteracao(item.num)+"</strong> — "+escaparHtmlAlteracao(item.prod || "")+(item.qtd != null ? " — Qtd: "+escaparHtmlAlteracao(item.qtd) : "");
 }
@@ -4816,49 +4791,6 @@ function aplicarAlteracaoAprovada(sol){
         return "Exclusão aprovada.";
     }
 
-    if(sol.tipo === "TRANSFERENCIA_CONTAINER"){
-        const itemId=String(dados.itemId || "");
-        const origem=Number(dados.containerOrigem || (dados.item||{}).num);
-        const destino=Number(dados.containerDestino);
-        const quantidade=Number(dados.quantidade || 0);
-        if(!itemId || !Number.isInteger(origem) || !Number.isInteger(destino) || origem<=0 || destino<=0 || origem===destino){
-            throw new Error("Dados da transferência inválidos.");
-        }
-        if(!Number.isFinite(quantidade) || quantidade<=0){
-            throw new Error("A quantidade para transferência deve ser maior que zero.");
-        }
-        const indice=estoque.findIndex(function(item){ return item && String(item.id||"")===itemId; });
-        if(indice<0) throw new Error("A mercadoria de origem não foi encontrada no estoque.");
-        const origemItem=estoque[indice];
-        if(Number(origemItem.num)!==origem) throw new Error("O container de origem mudou. Atualize o sistema e tente novamente.");
-        const saldo=Number(origemItem.qtd||0);
-        if(quantidade>saldo) throw new Error("A quantidade solicitada é maior que o saldo disponível no container de origem.");
-
-        const destinoItem={...origemItem};
-        destinoItem.id=gerarIdEstoque();
-        destinoItem.num=destino;
-        destinoItem.qtd=quantidade;
-        destinoItem.peso=(Number(origemItem.kg||0)*quantidade);
-        destinoItem.transferenciaOrigem=origem;
-        destinoItem.transferenciaAprovadaEm=new Date().toISOString();
-        destinoItem.transferenciaSolicitacaoId=String(sol.id||"");
-
-        const saldoRestante=saldo-quantidade;
-        if(saldoRestante<=0){
-            estoque.splice(indice,1);
-        }else{
-            origemItem.qtd=saldoRestante;
-            origemItem.peso=Number(origemItem.kg||0)*saldoRestante;
-            estoque[indice]=origemItem;
-        }
-        estoque.push(destinoItem);
-
-        registrarMovimentacao("TRANSFERÊNCIA", destinoItem,
-            "Transferência aprovada pelo administrador. "+origem+" → "+destino+
-            ". Quantidade: "+quantidade+". Operador: "+sol.operador);
-        return "Transferência aprovada: "+quantidade+" volume(s) do C"+String(origem).padStart(2,"0")+" para C"+String(destino).padStart(2,"0")+".";
-    }
-
     if(sol.tipo === "ZERAR_CONTAINER"){
         const num=Number(dados.num);
         const itensAtuais=estoque.filter(function(item){ return Number(item.num)===num; });
@@ -4878,7 +4810,7 @@ function aplicarAlteracaoAprovada(sol){
     throw new Error("Tipo de alteração desconhecido.");
 }
 
-async function aprovarAlteracaoAdmin(id){
+function aprovarAlteracaoAdmin(id){
     if(!usuarioEhAdmin()){ alert("Apenas o administrador pode aprovar alterações."); return; }
     const lista=carregarSolicitacoesAlteracoes();
     const sol=lista.find(function(item){ return item.id===id && item.status==="pendente"; });
@@ -4888,26 +4820,18 @@ async function aprovarAlteracaoAdmin(id){
         sol.status="aprovada";
         sol.atendidoPor=usuarioLogadoAtual.usuario;
         sol.atendidoEm=new Date().toISOString();
-        await salvarSolicitacoesAlteracoes(lista);
-        await salvarDados();
+        salvarSolicitacoesAlteracoes(lista);
+        salvarDados();
         mostrarEstoque();
         mostrarHistorico();
         renderizarSolicitacoesAlteracoesAdmin();
-        if(sol.tipo==="TRANSFERENCIA_CONTAINER" && sol.operadorUid && typeof registrarNotificacaoIndividual==="function"){
-            await registrarNotificacaoIndividual(sol.operadorUid,{
-                tipo:"transferencia_aprovada",
-                titulo:"🟢 Transferência aprovada",
-                mensagem:"Sua transferência foi aprovada: C"+String(sol.dados.containerOrigem).padStart(2,"0")+" → C"+String(sol.dados.containerDestino).padStart(2,"0")+" • "+Number(sol.dados.quantidade||0)+" volume(s).",
-                solicitacaoId:String(sol.id)
-            });
-        }
         alert("✅ "+mensagem);
     }catch(erro){
         alert("Não foi possível aprovar a alteração.\n\n"+erro.message);
     }
 }
 
-async function recusarAlteracaoAdmin(id){
+function recusarAlteracaoAdmin(id){
     if(!usuarioEhAdmin()){ alert("Apenas o administrador pode recusar alterações."); return; }
     const lista=carregarSolicitacoesAlteracoes();
     const sol=lista.find(function(item){ return item.id===id && item.status==="pendente"; });
@@ -4916,29 +4840,18 @@ async function recusarAlteracaoAdmin(id){
     sol.status="recusada";
     sol.atendidoPor=usuarioLogadoAtual.usuario;
     sol.atendidoEm=new Date().toISOString();
-    await salvarSolicitacoesAlteracoes(lista);
+    salvarSolicitacoesAlteracoes(lista);
     renderizarSolicitacoesAlteracoesAdmin();
-    if(sol.tipo==="TRANSFERENCIA_CONTAINER" && sol.operadorUid && typeof registrarNotificacaoIndividual==="function"){
-        await registrarNotificacaoIndividual(sol.operadorUid,{
-            tipo:"transferencia_recusada",
-            titulo:"❌ Transferência recusada",
-            mensagem:"Sua transferência C"+String(sol.dados.containerOrigem).padStart(2,"0")+" → C"+String(sol.dados.containerDestino).padStart(2,"0")+" foi recusada pelo administrador.",
-            solicitacaoId:String(sol.id)
-        });
-    }
 }
 
 function renderizarSolicitacoesAlteracoesAdmin(){
     const area=document.getElementById("lista-alteracoes-admin");
     const contador=document.getElementById("contador-alteracoes-admin");
     if(!area)return;
-    const pendentes=carregarSolicitacoesAlteracoes().filter(function(item){
-        return item.status==="pendente" && String(item.tipo||"").toUpperCase()!=="TRANSFERENCIA_CONTAINER";
-    });
+    const pendentes=carregarSolicitacoesAlteracoes().filter(function(item){ return item.status==="pendente"; });
     if(contador) contador.innerText=pendentes.length ? "("+pendentes.length+" pendente(s))" : "(nenhuma pendente)";
     if(pendentes.length===0){
         area.innerHTML='<div class="vazio" style="margin-top:10px;">✅ Nenhuma alteração aguardando validação.</div>';
-        if(typeof renderizarSolicitacoesTransferenciaAdmin==="function") renderizarSolicitacoesTransferenciaAdmin();
         atualizarIndicadorAdmin();
         return;
     }
@@ -4953,7 +4866,6 @@ function renderizarSolicitacoesAlteracoesAdmin(){
         '<button type="button" class="btn-limpar" onclick="recusarAlteracaoAdmin('+sol.id+')">❌ Recusar</button>'+
         '</div></div>';
     }).join("");
-    if(typeof renderizarSolicitacoesTransferenciaAdmin==="function") renderizarSolicitacoesTransferenciaAdmin();
     atualizarIndicadorAdmin();
 }
 
@@ -4964,58 +4876,6 @@ function escaparHtmlSolicitacao(valor){
         .replace(/>/g,"&gt;")
         .replace(/\"/g,"&quot;")
         .replace(/'/g,"&#039;");
-}
-
-function renderizarSolicitacoesTransferenciaAdmin(){
-    const area=document.getElementById("lista-transferencias-admin");
-    const contador=document.getElementById("contador-transferencias-admin");
-    if(!area || !usuarioEhAdmin()) return;
-
-    const pendentes=carregarSolicitacoesAlteracoes().filter(function(item){
-        return item && item.status==="pendente" && String(item.tipo||"").toUpperCase()==="TRANSFERENCIA_CONTAINER";
-    }).sort(function(a,b){
-        return String(b.data||"").localeCompare(String(a.data||""));
-    });
-
-    if(contador) contador.innerText=pendentes.length ? "("+pendentes.length+" pendente(s))" : "(nenhuma pendente)";
-
-    if(!pendentes.length){
-        area.innerHTML='<div class="vazio" style="margin-top:10px;">📭 Nenhuma transferência aguardando validação.</div>';
-        return;
-    }
-
-    area.innerHTML=pendentes.map(function(sol){
-        const d=sol.dados||{};
-        const item=d.item||{};
-        const origem=Number(d.containerOrigem||item.num||0);
-        const destino=Number(d.containerDestino||0);
-        const qtd=Number(d.quantidade||0);
-        const operador=escaparHtmlSolicitacao(sol.operador||"Usuário comum");
-        const produto=escaparHtmlSolicitacao(item.prod||"—");
-        const codigo=escaparHtmlSolicitacao(item.codigo||"—");
-        const lote=escaparHtmlSolicitacao(item.lote||"—");
-        const data=sol.data ? new Date(sol.data).toLocaleString("pt-BR") : "—";
-        const descricao=sol.descricao ? escaparHtmlSolicitacao(sol.descricao) : "";
-
-        return '<div class="produto-item" style="padding-right:0;margin-bottom:10px;background:var(--bg-painel-2);border:1px solid var(--azul-forte);border-radius:8px;padding:12px;">'+
-            '<strong>🔄 Transferência solicitada</strong><br>'+
-            '<span style="font-size:11.5px;color:var(--texto-fraco);">👤 '+operador+' · 🕒 '+data+'</span><br>'+
-            '<div style="font-size:12px;line-height:1.7;margin-top:6px;">'+
-                '📋 <strong>Produto:</strong> '+produto+'<br>'+
-                '🔢 <strong>Código:</strong> '+codigo+'<br>'+
-                '🏷️ <strong>Lote:</strong> '+lote+'<br>'+
-                '📦 <strong>Origem:</strong> C'+String(origem).padStart(2,"0")+
-                ' &nbsp;→&nbsp; <strong>Destino:</strong> C'+String(destino).padStart(2,"0")+'<br>'+
-                '🔢 <strong>Quantidade:</strong> '+qtd+' volume(s)'+
-                (item.kg!=null ? ' &nbsp;|&nbsp; ⚖️ '+Number(item.kg||0).toLocaleString("pt-BR",{maximumFractionDigits:2})+' kg/volume' : '')+
-                (descricao ? '<br>💬 <strong>Observação:</strong> '+descricao : '')+
-            '</div>'+
-            '<div class="container-botoes" style="margin-top:10px;">'+
-                '<button type="button" class="btn-salvar" onclick="aprovarAlteracaoAdmin('+sol.id+')">✅ Aceitar Transferência</button>'+
-                '<button type="button" class="btn-limpar" onclick="recusarAlteracaoAdmin('+sol.id+')">❌ Recusar</button>'+
-            '</div>'+
-        '</div>';
-    }).join("");
 }
 
 function renderizarSolicitacoesAcessoAdmin(){
@@ -7475,9 +7335,6 @@ return "🗑️";
 if(tipo==="CONTAINER ZERADO")
 return "🧹";
 
-if(tipo==="TRANSFERÊNCIA" || tipo==="TRANSFERENCIA")
-return "🔄";
-
 return "📋";
 
 }
@@ -9119,7 +8976,11 @@ if(usuarioObjeto && usuarioObjeto.tipo === "externo"){
     }
 
     iniciarTelaUsuarioExterno();
-    setTimeout(function(){ if(typeof configurarNotificacoesWeb === "function") configurarNotificacoesWeb(); }, 500);
+    setTimeout(function(){
+        try{
+            if(typeof ativarNotificacoesAutomaticamenteAoEntrar === "function") ativarNotificacoesAutomaticamenteAoEntrar();
+        }catch(e){ console.warn("Notificações automáticas externo:",e); }
+    }, 300);
 
     return;
 }
@@ -9161,6 +9022,14 @@ if(usuarioObjeto && usuarioObjeto.tipo === "externo"){
             try{ configurarNotificacoesOneSignal(); }catch(e){ console.warn("OneSignal usuário:",e); }
         }, 300);
     }
+
+    // Para qualquer perfil, reaproveita a permissão já concedida e ativa/renova
+    // automaticamente FCM + OneSignal ao entrar, sem novo clique.
+    setTimeout(function(){
+        try{
+            if(typeof ativarNotificacoesAutomaticamenteAoEntrar === "function") ativarNotificacoesAutomaticamenteAoEntrar();
+        }catch(e){ console.warn("Notificações automáticas após login:",e); }
+    }, 350);
 
     try{
         await iniciarAplicativo();
@@ -11625,6 +11494,28 @@ async function configurarNotificacoesWeb(){
     return token || null;
 }
 
+// Ativação automática após o login: reaproveita a permissão já concedida
+// e renova o vínculo do usuário atual no FCM e no OneSignal.
+async function ativarNotificacoesAutomaticamenteAoEntrar(){
+    try{
+        if(typeof Notification === "undefined" || Notification.permission !== "granted") return;
+        if(!firebaseAuth.currentUser) return;
+
+        try{
+            if(typeof configurarNotificacoesWeb === "function") await configurarNotificacoesWeb();
+        }catch(e){ console.warn("⚠️ FCM automático após login:",e); }
+
+        try{
+            if(typeof configurarNotificacoesOneSignal === "function") await configurarNotificacoesOneSignal();
+        }catch(e){ console.warn("⚠️ OneSignal automático após login:",e); }
+
+        atualizarBotaoNotificacoesWeb();
+        if(typeof atualizarBotoesNotificacao === "function") atualizarBotoesNotificacao();
+    }catch(e){
+        console.warn("⚠️ Notificações automáticas após login:",e);
+    }
+}
+
 async function ativarNotificacoesWeb(){
     try{
         if(window.configuracoesSistemaAplicacao && window.configuracoesSistemaAplicacao.notificacoesGerais===false){
@@ -12296,7 +12187,7 @@ function abrirDetalhesContainerMelhorias(numero){
       const nome=esc(it.prod||'—');
       const pesoUnitario=Number(it.kg||0);
       const pesoTotal=Number(it.peso||0);
-      const acoes=podeAlterar?'<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap"><button class="btn-vis" type="button" onclick="editarItemContainer('+idx+');fecharDetalhesContainerMelhorias()">✏️ Editar</button><button class="btn-vis" type="button" onclick="excluirItem('+idx+');fecharDetalhesContainerMelhorias()">🗑️ Excluir</button><button class="btn-vis" type="button" onclick="abrirModalTransferenciaContainer('+idx+')">🔄 Transferir</button><button class="btn-vis" type="button" onclick="imprimirEtiquetaContainerMelhorias('+idx+')">🖨️ Imprimir Etiqueta</button></div>':'';
+      const acoes=podeAlterar?'<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:10px"><button class="btn-vis" type="button" onclick="editarItemContainer('+idx+');fecharDetalhesContainerMelhorias()">✏️ Editar</button><button class="btn-vis" type="button" onclick="excluirItem('+idx+');fecharDetalhesContainerMelhorias()">🗑️ Excluir</button><button class="btn-vis" type="button" onclick="imprimirEtiquetaContainerMelhorias('+idx+')">🖨️ Imprimir Etiqueta</button></div>':'';
       html+=(i?' <hr>':'')+
         '<div style="font-size:14px">'+
         '📅 Data de entrada: '+esc(it.data||it.dataEntrada||it.entradaEm||'—')+'<br>'+
@@ -12569,315 +12460,6 @@ setTimeout(ativarMelhoriasContainers,1200);
 </script>
 
 </body>
-
-<style id="estilo-transferencia-validade">
-.cabecalho-alertas-validade{
-    display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
-}
-.resumo-alertas-validade{font-size:11.5px;color:var(--texto-fraco);text-align:right;}
-.alerta-validade-item{
-    background:var(--bg-painel-2);border:1px solid var(--borda);border-radius:8px;
-    padding:10px 12px;margin-top:8px;
-}
-#lista-transferencias-admin .produto-item{box-sizing:border-box;}
-#lista-transferencias-admin .container-botoes button{width:auto;}
-@media(max-width:700px){
-    .cabecalho-alertas-validade{align-items:stretch;flex-direction:column;}
-    .resumo-alertas-validade{text-align:left;}
-    #modal-transferencia-container .linha-form{grid-template-columns:1fr !important;}
-    #modal-transferencia-container .modal-solicitacao-rodape{flex-direction:column-reverse;}
-    #modal-transferencia-container .modal-solicitacao-rodape button{width:100%;}
-}
-</style>
-
-<script id="novas-funcoes-transferencia-validade">
-/* ======================================================
-   TRANSFERÊNCIA ENTRE CONTAINERS
-   Admin: executa diretamente.
-   Usuário comum: solicita aprovação do administrador.
-   Usuário externo: sem acesso.
-   ====================================================== */
-
-function usuarioPodeTransferirContainer(){
-    const tipo=String(usuarioLogadoAtual && usuarioLogadoAtual.tipo || "").toLowerCase();
-    return tipo==="admin" || tipo==="comum" || tipo==="usuario" || tipo==="usuario comum" || tipo==="usuário comum";
-}
-
-function abrirModalTransferenciaContainer(index){
-    const item=Array.isArray(estoque)?estoque[index]:null;
-    if(!item){ alert("❌ Mercadoria não encontrada."); return; }
-
-    if(!usuarioPodeTransferirContainer()){
-        alert("❌ Apenas o administrador e o usuário comum podem solicitar ou realizar transferências.");
-        return;
-    }
-
-    const existente=document.getElementById("modal-transferencia-container");
-    if(existente) existente.remove();
-
-    const total=Math.max(1,Number(quantidadeContainersSistema)||60);
-    const origem=Number(item.num)||0;
-    const saldo=Number(item.qtd||0);
-    if(saldo<=0){ alert("❌ Não há saldo disponível para transferência."); return; }
-
-    let options='<option value="">Selecione o destino</option>';
-    for(let n=1;n<=total;n++){
-        if(n===origem) continue;
-        options+='<option value="'+n+'">Container '+String(n).padStart(2,"0")+'</option>';
-    }
-
-    const modal=document.createElement("div");
-    modal.id="modal-transferencia-container";
-    modal.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.68);z-index:100000;display:flex;align-items:center;justify-content:center;padding:18px;";
-    modal.innerHTML=
-        '<div class="modal-solicitacao-caixa" style="max-width:620px;">'+
-            '<div class="modal-solicitacao-cabecalho">'+
-                '<div><h2 style="margin:0 0 4px;">🔄 Transferência entre Containers</h2>'+
-                '<div class="texto-apoio-solicitacao">Admin transfere diretamente. Usuário comum envia para aprovação.</div></div>'+
-                '<button class="modal-fechar" type="button" onclick="fecharModalTransferenciaContainer()">✕</button>'+
-            '</div>'+
-            '<div class="modal-solicitacao-corpo">'+
-                '<div class="resumo-container-solicitacao">'+
-                    '📋 <strong>Produto:</strong> '+escaparHtmlSolicitacao(item.prod||"—")+'<br>'+
-                    '🔢 <strong>Código:</strong> '+escaparHtmlSolicitacao(item.codigo||"—")+'<br>'+
-                    '🏷️ <strong>Lote:</strong> '+escaparHtmlSolicitacao(item.lote||"—")+'<br>'+
-                    '📦 <strong>Container atual:</strong> C'+String(origem).padStart(2,"0")+'<br>'+
-                    '🔢 <strong>Saldo disponível:</strong> '+saldo.toLocaleString("pt-BR")+' volume(s)'+
-                '</div>'+
-                '<div class="linha-form" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">'+
-                    '<div class="campo"><label>📦 Novo container:</label><select id="transferencia-destino" style="width:100%;padding:10px;border:1px solid var(--borda-forte);border-radius:8px;background:var(--bg-input);color:var(--texto);">'+options+'</select></div>'+
-                    '<div class="campo"><label>🔢 Quantidade:</label><input id="transferencia-quantidade" type="number" min="1" max="'+saldo+'" step="1" value="1" style="width:100%;"></div>'+
-                '</div>'+
-                '<div class="campo" style="margin-top:10px;"><label>💬 Motivo / observação (opcional):</label><textarea id="transferencia-observacao" rows="3" placeholder="Informe o motivo da transferência, se necessário."></textarea></div>'+
-                '<input type="hidden" id="transferencia-index" value="'+index+'">'+
-            '</div>'+
-            '<div class="modal-solicitacao-rodape">'+
-                '<button class="btn-cancelar" type="button" onclick="fecharModalTransferenciaContainer()">❌ Cancelar</button>'+
-                '<button class="btn-salvar" type="button" onclick="confirmarTransferenciaContainer()">🔄 Confirmar Transferência</button>'+
-            '</div>'+
-        '</div>';
-
-    document.body.appendChild(modal);
-    document.body.style.overflow="hidden";
-    modal.addEventListener("click",function(e){if(e.target===modal)fecharModalTransferenciaContainer();});
-}
-
-function fecharModalTransferenciaContainer(){
-    const modal=document.getElementById("modal-transferencia-container");
-    if(modal) modal.remove();
-    document.body.style.overflow="";
-}
-
-async function confirmarTransferenciaContainer(){
-    const index=Number(document.getElementById("transferencia-index")?.value);
-    const destino=Number(document.getElementById("transferencia-destino")?.value);
-    const quantidade=Number(document.getElementById("transferencia-quantidade")?.value);
-    const observacao=String(document.getElementById("transferencia-observacao")?.value||"").trim();
-    const item=Array.isArray(estoque)?estoque[index]:null;
-
-    if(!item){alert("❌ A mercadoria não foi encontrada.");return;}
-    if(!usuarioPodeTransferirContainer()){alert("❌ Perfil sem permissão para transferência.");return;}
-
-    const origem=Number(item.num)||0;
-    const saldo=Number(item.qtd||0);
-    const total=Math.max(1,Number(quantidadeContainersSistema)||60);
-
-    if(!Number.isInteger(destino)||destino<1||destino>total||destino===origem){
-        alert("❌ Selecione um container de destino diferente da origem.");
-        return;
-    }
-    if(!Number.isInteger(quantidade)||quantidade<=0){
-        alert("❌ Informe uma quantidade inteira maior que zero.");
-        return;
-    }
-    if(quantidade>saldo){
-        alert("❌ A quantidade informada é maior que o saldo disponível.");
-        return;
-    }
-    if(!item.id){
-        garantirIdsEstoque();
-        if(!item.id){alert("❌ Não foi possível identificar a mercadoria no estoque.");return;}
-    }
-
-    const dados={
-        itemId:String(item.id),
-        containerOrigem:origem,
-        containerDestino:destino,
-        quantidade:quantidade,
-        observacao:observacao,
-        item:{...item},
-        solicitadoEm:new Date().toISOString()
-    };
-
-    const tipo=String(usuarioLogadoAtual && usuarioLogadoAtual.tipo || "").toLowerCase();
-
-    try{
-        if(tipo==="admin"){
-            const sol={
-                id:"ADM-"+Date.now(),
-                tipo:"TRANSFERENCIA_CONTAINER",
-                dados:dados,
-                operador:operadorAtual(),
-                operadorUid:firebaseAuth.currentUser ? firebaseAuth.currentUser.uid : "",
-                data:new Date().toISOString(),
-                status:"pendente",
-                descricao:observacao || "Transferência realizada diretamente pelo administrador."
-            };
-            const mensagem=aplicarAlteracaoAprovada(sol);
-            await salvarDados();
-            mostrarEstoque();
-            mostrarHistorico();
-            fecharModalTransferenciaContainer();
-            mostrarAvisoOperacaoVerde("Transferência realizada","C"+String(origem).padStart(2,"0")+" → C"+String(destino).padStart(2,"0")+" • "+quantidade+" volume(s)");
-            alert("✅ "+mensagem);
-            return;
-        }
-
-        if(!firebaseAuth.currentUser){alert("Faça login novamente.");return;}
-
-        const solicitacao={
-            id:Date.now()+Math.floor(Math.random()*1000),
-            tipo:"TRANSFERENCIA_CONTAINER",
-            descricao:observacao || "Solicitação de transferência entre containers.",
-            dados:dados,
-            operador:operadorAtual(),
-            operadorUid:firebaseAuth.currentUser.uid,
-            filial:(usuarioLogadoAtual && usuarioLogadoAtual.filial)||"NÃO CADASTRADA",
-            data:new Date().toISOString(),
-            status:"pendente"
-        };
-
-        const lista=carregarSolicitacoesAlteracoes();
-        lista.push(solicitacao);
-        await salvarSolicitacoesAlteracoes(lista);
-
-        fecharModalTransferenciaContainer();
-        mostrarAvisoOperacaoVerde("Solicitação de transferência enviada","C"+String(origem).padStart(2,"0")+" → C"+String(destino).padStart(2,"0")+" • Aguardando administrador.");
-        alert("📨 Solicitação enviada ao administrador.\n\nA transferência só será realizada após a aprovação.");
-    }catch(e){
-        console.error("Erro na transferência:",e);
-        alert("❌ Não foi possível processar a transferência.\n\n"+(e.message||e)+"\n\nVerifique as regras do Firebase.");
-    }
-}
-
-/* ======================================================
-   ALERTAS DE VALIDADE
-   Visíveis somente para Admin e Usuário Comum.
-   ====================================================== */
-
-function obterDataValidadeObjeto(valor){
-    if(!valor) return null;
-    const texto=String(valor).trim();
-    if(!texto) return null;
-
-    let d=null;
-    if(/^\d{4}-\d{2}-\d{2}$/.test(texto)){
-        const p=texto.split("-");
-        d=new Date(Number(p[0]),Number(p[1])-1,Number(p[2]),23,59,59,999);
-    }else{
-        const m=texto.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-        if(m) d=new Date(Number(m[3]),Number(m[2])-1,Number(m[1]),23,59,59,999);
-        else d=new Date(texto);
-    }
-    return d && !Number.isNaN(d.getTime()) ? d : null;
-}
-
-function renderizarAlertasValidade(){
-    const painel=document.getElementById("painel-alertas-validade");
-    const area=document.getElementById("lista-alertas-validade");
-    const resumo=document.getElementById("resumo-alertas-validade");
-    if(!painel||!area) return;
-
-    const tipo=String(usuarioLogadoAtual && usuarioLogadoAtual.tipo || "").toLowerCase();
-    const permitido=tipo==="admin" || tipo==="comum" || tipo==="usuario" || tipo==="usuario comum" || tipo==="usuário comum";
-    if(!permitido){
-        painel.style.display="none";
-        return;
-    }
-
-    const agora=new Date();
-    const limite30=new Date(agora.getTime()+30*24*60*60*1000);
-    const limite60=new Date(agora.getTime()+60*24*60*60*1000);
-
-    const alertas=(Array.isArray(estoque)?estoque:[]).map(function(item){
-        if(!item) return null;
-        const validade=obterDataValidadeObjeto(item.validade);
-        if(!validade) return null;
-        let categoria="";
-        if(validade.getTime()<agora.getTime()) categoria="vencido";
-        else if(validade.getTime()<=limite30.getTime()) categoria="30";
-        else if(validade.getTime()<=limite60.getTime()) categoria="60";
-        else return null;
-        return {item:item,data:validade,categoria:categoria};
-    }).filter(Boolean).sort(function(a,b){return a.data-b.data;});
-
-    const vencidos=alertas.filter(x=>x.categoria==="vencido").length;
-    const ate30=alertas.filter(x=>x.categoria==="30").length;
-    const ate60=alertas.filter(x=>x.categoria==="60").length;
-
-    painel.style.display="block";
-    if(resumo){
-        resumo.innerHTML=(vencidos?'🔴 '+vencidos+' vencido(s) &nbsp; ':'')+
-            (ate30?'🟠 '+ate30+' até 30 dias &nbsp; ':'')+
-            (ate60?'🟡 '+ate60+' até 60 dias':'');
-        if(!alertas.length) resumo.innerHTML="🟢 Nenhum alerta";
-    }
-
-    if(!alertas.length){
-        area.innerHTML='<div class="vazio">🟢 Nenhuma mercadoria vencida ou com vencimento nos próximos 60 dias.</div>';
-        return;
-    }
-
-    area.innerHTML=alertas.map(function(a){
-        const item=a.item;
-        const cor=a.categoria==="vencido"?"🔴":(a.categoria==="30"?"🟠":"🟡");
-        const texto=a.categoria==="vencido"?"Vencido":(a.categoria==="30"?"Vence em até 30 dias":"Vence em até 60 dias");
-        return '<div class="alerta-validade-item">'+
-            '<div><strong>'+cor+' '+texto+'</strong></div>'+
-            '<div style="font-size:12px;line-height:1.65;margin-top:4px;">'+
-                '📋 <strong>'+escaparHtmlSolicitacao(item.prod||"—")+'</strong>'+
-                (item.codigo?' · '+escaparHtmlSolicitacao(item.codigo):'')+
-                '<br>📦 Container: C'+String(Number(item.num)||0).padStart(2,"0")+
-                ' &nbsp;|&nbsp; 🏷️ Lote: '+escaparHtmlSolicitacao(item.lote||"—")+
-                '<br>📅 Validade: <strong>'+a.data.toLocaleDateString("pt-BR")+'</strong>'+
-                ' &nbsp;|&nbsp; 🔢 Quantidade: '+Number(item.qtd||0).toLocaleString("pt-BR")+
-            '</div>'+
-        '</div>';
-    }).join("");
-}
-
-window.abrirModalTransferenciaContainer=abrirModalTransferenciaContainer;
-window.confirmarTransferenciaContainer=confirmarTransferenciaContainer;
-window.fecharModalTransferenciaContainer=fecharModalTransferenciaContainer;
-window.renderizarAlertasValidade=renderizarAlertasValidade;
-
-/* Atualiza os alertas quando o estoque mudar, sem criar armazenamento local. */
-const _mostrarEstoqueComAlertas=window.mostrarEstoque;
-if(typeof _mostrarEstoqueComAlertas==="function"){
-    window.mostrarEstoque=function(){
-        const r=_mostrarEstoqueComAlertas.apply(this,arguments);
-        try{renderizarAlertasValidade();}catch(e){console.warn("Alertas de validade:",e);}
-        return r;
-    };
-}
-
-/* Atualiza os painéis novos junto do indicador existente. */
-const _atualizarIndicadorAdminTransferencia=window.atualizarIndicadorAdmin;
-if(typeof _atualizarIndicadorAdminTransferencia==="function"){
-    window.atualizarIndicadorAdmin=function(){
-        const r=_atualizarIndicadorAdminTransferencia.apply(this,arguments);
-        try{
-            if(typeof renderizarSolicitacoesTransferenciaAdmin==="function" && usuarioEhAdmin()) renderizarSolicitacoesTransferenciaAdmin();
-            renderizarAlertasValidade();
-        }catch(e){console.warn("Atualização de painéis:",e);}
-        return r;
-    };
-}
-
-setInterval(function(){
-    if(typeof uidAtualMelhorias==="function" && uidAtualMelhorias()) renderizarAlertasValidade();
-},60000);
-</script>
 </html>
 <style id="ajuste-admin-igual-usuario-comum-final">
 /* ======================================================
