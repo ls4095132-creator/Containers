@@ -2800,7 +2800,7 @@ Entrar
 <div class="cabecalho-alertas-validade">
 <div>
 <h2 style="margin:0;">⚠️ Alertas de Validade</h2>
-<div class="texto-apoio-solicitacao">Mercadorias vencidas ou próximas do vencimento.</div>
+<div class="texto-apoio-solicitacao">Mercadorias vencidas ou com validade igual ou inferior a 30 dias.</div>
 </div>
 <div class="resumo-alertas-validade" id="resumo-alertas-validade"></div>
 </div>
@@ -12270,6 +12270,21 @@ document.addEventListener("DOMContentLoaded",function(){
 .mapa-container-numero{font-weight:700;font-size:14px}.mapa-container-status{font-size:11px;margin-top:5px}.mapa-container-qtd{font-size:11px;color:var(--texto-fraco);margin-top:5px}
 .mapa-container-mercadorias{margin-top:8px;display:flex;flex-direction:column;gap:5px}
 .mapa-mercadoria-linha{padding:6px 7px;border:1px solid var(--borda);border-radius:7px;background:var(--bg-input);font-size:10.5px;line-height:1.35;cursor:default}
+.mapa-mercadoria-linha.validade-alerta-30{
+  border:2px solid #ef4444 !important;
+  border-left:4px solid #ef4444 !important;
+  background:rgba(239,68,68,.10) !important;
+}
+.mapa-mercadoria-linha.validade-alerta-30 .mapa-mercadoria-nome{
+  color:#ef4444 !important;
+}
+.mapa-mercadoria-validade{
+  margin-top:4px;
+  color:#ef4444;
+  font-weight:700;
+  font-size:10px;
+}
+
 .mapa-mercadoria-topo{display:flex;align-items:center;justify-content:space-between;gap:5px}
 .mapa-mercadoria-nome{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mapa-mercadoria-info{color:var(--texto-fraco);margin-top:2px}
@@ -12486,9 +12501,40 @@ function renderizarMapaContainers(tipo){
         const it=obj.item, idx=obj.index;
         const nome=String(it.prod||'Sem nome');
         const pesoUnitario=Number(it.kg||0);
-        return '<div class="mapa-mercadoria-linha" onclick="event.stopPropagation();abrirDetalhesContainerMelhorias('+i+')">'+
+
+        /* Validade específica desta mercadoria.
+           A partir de 30 dias ou menos, o produto fica vermelho.
+           Vencidos também permanecem em vermelho. */
+        const validadeProduto=obterDataValidadeObjeto(it.validade);
+        const agoraProduto=new Date();
+        let diasParaVencer=null;
+        let alertaValidade30=false;
+        let textoValidade='';
+
+        if(validadeProduto){
+          const diffMs=validadeProduto.getTime()-agoraProduto.getTime();
+          diasParaVencer=Math.ceil(diffMs/(24*60*60*1000));
+          alertaValidade30=diasParaVencer<=30;
+
+          if(diasParaVencer<0){
+            textoValidade='🔴 VENCIDO — '+validadeProduto.toLocaleDateString('pt-BR');
+          }else if(diasParaVencer===0){
+            textoValidade='🔴 VENCE HOJE — '+validadeProduto.toLocaleDateString('pt-BR');
+          }else if(diasParaVencer<=30){
+            textoValidade='🔴 Vence em '+diasParaVencer+' dia(s) — '+validadeProduto.toLocaleDateString('pt-BR');
+          }
+        }
+
+        const classeValidade=alertaValidade30?' validade-alerta-30':'';
+        const linhaValidade=textoValidade
+          ? '<div class="mapa-mercadoria-validade">'+textoValidade+'</div>'
+          : '';
+
+        return '<div class="mapa-mercadoria-linha'+classeValidade+'" onclick="event.stopPropagation();abrirDetalhesContainerMelhorias('+i+')">'+
           '<div class="mapa-mercadoria-nome" title="'+nome.replace(/"/g,'&quot;')+'">'+nome+'</div>'+
-          '<div class="mapa-mercadoria-info">⚖️ '+pesoUnitario.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2})+' kg</div></div>';
+          '<div class="mapa-mercadoria-info">⚖️ '+pesoUnitario.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2})+' kg</div>'+
+          linhaValidade+
+          '</div>';
       }).join('')+'</div>';
     }else mercadorias='<div class="mapa-sem-mercadoria">Sem mercadoria cadastrada</div>';
     card.innerHTML=
