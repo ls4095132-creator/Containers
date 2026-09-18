@@ -267,6 +267,18 @@ input:focus, textarea:focus {
     }
 }
 
+
+.campo-container-registro{position:relative;}
+.campo-container-registro-linha{display:flex;align-items:stretch;gap:6px;}
+.campo-container-registro-linha input{flex:1;min-width:0;}
+.btn-lista-container-produtos{width:42px;min-width:42px;padding:0 8px;border:1px solid var(--borda-forte);border-radius:8px;background:var(--bg-painel-2);color:var(--texto);font-size:18px;line-height:1;}
+.btn-lista-container-produtos:hover{background:var(--azul-fraco);}
+.lista-produtos-container{position:absolute;top:100%;left:0;right:0;background:var(--bg-painel-2);border:1px solid var(--borda-forte);border-radius:8px;max-height:230px;overflow-y:auto;z-index:80;display:none;box-shadow:0 10px 24px rgba(0,0,0,.45);margin-top:4px;}
+.lista-produto-container-item{padding:9px 11px;border-bottom:1px solid var(--borda);cursor:pointer;font-size:12px;color:var(--texto);line-height:1.45;}
+.lista-produto-container-item:last-child{border-bottom:none;}
+.lista-produto-container-item:hover{background:var(--azul-fraco);}
+.lista-produto-container-vazio{padding:10px;color:var(--texto-fraco);font-size:12px;}
+.lista-produto-container-item strong{color:var(--texto);}
 .sugestoes-produto {
     position: absolute;
     top: 100%;
@@ -3008,13 +3020,14 @@ Containers ocupados: 0 / <span class="contador-max-inline">60</span>
 <button aria-label="Fechar" class="modal-fechar" onclick="fecharModalRegistroMercadoria()" type="button">✕</button>
 </div>
 <div class="modal-solicitacao-corpo">
+<input id="reg-item-existente-id" type="hidden" value=""/>
 <div class="linha-form modal-grid-solicitacao">
 <div class="campo"><label>📅 Data de Entrada:</label><input id="reg-data" type="date"/></div>
-<div class="campo"><label>📦 Container:</label><input id="reg-num" max="999" min="1" placeholder="Nº do container" type="number"/></div>
+<div class="campo campo-container-registro"><label>📦 Container:</label><div class="campo-container-registro-linha"><input id="reg-num" max="999" min="1" oninput="atualizarProdutosContainerRegistro()" onchange="atualizarProdutosContainerRegistro()" placeholder="Nº do container" type="number"/><button class="btn-lista-container-produtos" onclick="mostrarProdutosDoContainerRegistro(event)" title="Ver produtos deste container" type="button">▾</button></div><div class="lista-produtos-container" id="lista-produtos-container-registro"></div></div>
 <div class="campo"><label>🧾 Nº de Nota:</label><input id="reg-nf" placeholder="Número da NF-e" type="text"/></div>
 <div class="campo"><label>🏢 Nome do Fornecedor:</label><input id="reg-fornecedor" placeholder="Nome do fornecedor" type="text"/></div>
 <div class="campo"><label>🔢 Código do Produto:</label><input autocomplete="off" id="reg-codigo" oninput="localizarProdutoRegistroPorCodigo()" placeholder="Digite o código" type="text"/></div>
-<div class="campo campo-produto" style="position:relative;"><label>📋 Mercadoria:</label><input autocomplete="off" id="reg-prod" onblur="preencherCodigoRegistroProduto(); esconderSugestoesRegistroProduto()" oninput="mostrarSugestoesRegistroProduto()" placeholder="Digite nome ou código" type="text"/><div class="sugestoes-produto" id="sugestoes-registro-produto"></div></div>
+<div class="campo campo-produto" style="position:relative;"><label>📋 Mercadoria:</label><input autocomplete="off" id="reg-prod" onblur="preencherCodigoRegistroProduto(); esconderSugestoesRegistroProduto()" oninput="limparSelecaoProdutoContainerRegistro(); mostrarSugestoesRegistroProduto()" placeholder="Digite nome ou código" type="text"/><div class="sugestoes-produto" id="sugestoes-registro-produto"></div></div>
 <div class="campo"><label>🏷️ Lote:</label><input id="reg-lote" maxlength="25" placeholder="Número do lote" type="text"/></div>
 <div class="campo"><label>📅 Validade:</label><input id="reg-validade" type="month"/></div>
 <div class="campo"><label>🔢 Quantidade:</label><input id="reg-qtd" min="1" oninput="calcularPesoRegistro()" placeholder="Volumes" step="1" type="number"/></div>
@@ -6351,11 +6364,6 @@ const movimento={
 
 id:"HST-"+Date.now()+"-"+Math.random().toString(36).slice(2,8),
 
-// Mantém a identificação da mercadoria também no histórico.
-// Isso permite localizar o registro mesmo depois que o item sair do estoque.
-itemId:item.id || "",
-estoqueId:item.id || "",
-
 data:item.data,
 
 hora:item.hora,
@@ -6369,9 +6377,6 @@ fornecedor:item.fornecedor,
 nf:item.nf,
 
 prod:item.prod,
-produto:item.prod,
-
-codigo:item.codigo || "",
 
 lote:item.lote,
 
@@ -6382,9 +6387,6 @@ qtd:item.qtd,
 kg:item.kg,
 
 peso:item.peso,
-
-operador:operadorAtual(),
-usuario:operadorAtual(),
 
 detalhes:detalhes,
 
@@ -6749,6 +6751,7 @@ const kg = document.getElementById("kg").value;
 calcularPesoTotal();
 const peso = document.getElementById("peso").value;
 const editIndex = document.getElementById("edit-index").value;
+const itemExistenteId = document.getElementById("reg-item-existente-id")?.value || "";
 
 if(!data){ alert("Informe a data."); return; }
 if(!num){ alert("Informe o container."); return; }
@@ -6794,7 +6797,43 @@ const item={
     peso:Number(peso)
 };
 
-if(editIndex !== "") {
+if(itemExistenteId && editIndex === ""){
+    const indiceExistente=estoque.findIndex(function(item){
+        return item && String(item.id||"") === String(itemExistenteId) && Number(item.num) === Number(num);
+    });
+    const existente=indiceExistente>=0 ? estoque[indiceExistente] : null;
+    if(!existente){
+        alert("❌ A mercadoria selecionada no container não existe mais no estoque. Atualize a lista e tente novamente.");
+        return;
+    }
+
+    const quantidadeAdicionar=Number(qtd);
+    const pesoAdicionar=Number(peso);
+    const novoItem=Object.assign({}, existente, {
+        data:data,
+        hora:existente.hora || "",
+        num:Number(num),
+        fornecedor:fornecedor || existente.fornecedor || "",
+        nf:nf || existente.nf || "",
+        prod:prod || existente.prod || "",
+        codigo:codigo || existente.codigo || produtoCadastrado.codigo || "",
+        lote:lote || existente.lote || "",
+        validade:validade || existente.validade || "",
+        qtd:Number(existente.qtd||0) + quantidadeAdicionar,
+        kg:Number(existente.kg||kg),
+        peso:Number(existente.peso||0) + pesoAdicionar,
+        filial:existente.filial || ((usuarioLogadoAtual && usuarioLogadoAtual.filial) || "NÃO CADASTRADA")
+    });
+
+    if(usuarioEhAdmin()){
+        estoque[indiceExistente]=novoItem;
+        registrarMovimentacao("ENTRADA", novoItem, "Quantidade adicionada ao lote já existente no container. Saldo anterior: "+Number(existente.qtd||0)+" volume(s); quantidade adicionada: "+quantidadeAdicionar+" volume(s).");
+        alert("✅ Quantidade adicionada ao lote existente com sucesso!");
+    }else{
+        await solicitarAlteracaoAdmin("ALTERACAO", {itemId:existente.id, antigoItem:existente, novoItem:novoItem}, "O operador solicitou adicionar quantidade ao lote já existente no container.");
+        alert("📨 Solicitação enviada ao administrador. O lote só será alimentado após aprovação.");
+    }
+}else if(editIndex !== "") {
     const indice=Number(editIndex);
     const antigo=estoque[indice];
     if(!antigo){ alert("O item selecionado não existe mais no estoque."); return; }
@@ -9785,6 +9824,77 @@ function mostrarSugestoesRegistroProduto(){
 function esconderSugestoesRegistroProduto(){
     setTimeout(()=>{const c=document.getElementById("sugestoes-registro-produto");if(c)c.style.display="none";},150);
 }
+
+function limparSelecaoProdutoContainerRegistro(){
+    const id=document.getElementById("reg-item-existente-id");
+    if(id) id.value="";
+}
+
+function atualizarProdutosContainerRegistro(){
+    const num=Number(document.getElementById("reg-num")?.value||0);
+    const idSelecionado=document.getElementById("reg-item-existente-id");
+    if(idSelecionado && idSelecionado.value){
+        const itemSelecionado=estoque.find(function(item){return item && String(item.id||"")===String(idSelecionado.value);});
+        if(!itemSelecionado || Number(itemSelecionado.num)!==num) idSelecionado.value="";
+    }
+    const caixa=document.getElementById("lista-produtos-container-registro");
+    if(!caixa) return;
+    if(!num){
+        caixa.style.display="none";
+        return;
+    }
+    // A lista mostra somente mercadorias que já estão neste container.
+    const itens=estoque.filter(function(item){return item && Number(item.num)===num;});
+    caixa.innerHTML="";
+    if(!itens.length){
+        caixa.innerHTML='<div class="lista-produto-container-vazio">📭 Este container ainda não possui mercadorias cadastradas.</div>';
+        return;
+    }
+    itens.forEach(function(item){
+        const div=document.createElement("div");
+        div.className="lista-produto-container-item";
+        div.innerHTML='<strong>📦 '+escaparHtmlExterno(item.codigo ? item.codigo+" - "+(item.prod||"") : (item.prod||"Mercadoria"))+'</strong><br>🏷️ Lote: '+escaparHtmlExterno(item.lote||"—")+' &nbsp;|&nbsp; 📅 Validade: '+escaparHtmlExterno(item.validade ? formatarValidadeMesAno(item.validade) : "—")+'<br>🔢 Saldo atual: '+Number(item.qtd||0)+' &nbsp;|&nbsp; ⚖️ '+Number(item.kg||0).toLocaleString("pt-BR",{minimumFractionDigits:2})+' KG/volume';
+        div.onmousedown=function(e){e.preventDefault();selecionarProdutoExistenteContainerRegistro(item);};
+        caixa.appendChild(div);
+    });
+}
+
+function mostrarProdutosDoContainerRegistro(event){
+    if(event) event.preventDefault();
+    const caixa=document.getElementById("lista-produtos-container-registro");
+    const num=Number(document.getElementById("reg-num")?.value||0);
+    if(!caixa) return;
+    if(!num){
+        alert("Informe primeiro o número do container.");
+        return;
+    }
+    atualizarProdutosContainerRegistro();
+    caixa.style.display=caixa.style.display==="block"?"none":"block";
+}
+
+function selecionarProdutoExistenteContainerRegistro(item){
+    if(!item) return;
+    const set=function(id,value){const el=document.getElementById(id);if(el)el.value=value==null?"":value;};
+    set("reg-item-existente-id",item.id||"");
+    set("reg-codigo",item.codigo||"");
+    set("reg-prod",item.prod||"");
+    set("reg-fornecedor",item.fornecedor||"");
+    set("reg-nf",item.nf||"");
+    set("reg-lote",item.lote||"");
+    set("reg-validade",valorValidadeParaInput(item.validade||""));
+    set("reg-kg",item.kg||"");
+    set("reg-qtd","");
+    const peso=document.getElementById("reg-peso"); if(peso)peso.value="";
+    const caixa=document.getElementById("lista-produtos-container-registro"); if(caixa)caixa.style.display="none";
+    const resumo=document.getElementById("resumo-registro-mercadoria");
+    if(resumo) resumo.innerHTML='<span>📦 <strong>Lote existente selecionado.</strong> Os dados do produto foram preenchidos. Informe somente a quantidade que deseja acrescentar ao container.</span>';
+}
+
+function fecharListaProdutosContainerRegistro(){
+    const caixa=document.getElementById("lista-produtos-container-registro");
+    if(caixa) caixa.style.display="none";
+}
+
 function prepararTituloModalRegistroMercadoria(edicao){
     const titulo=document.getElementById("titulo-modal-registro");
     const apoio=document.querySelector("#modal-registro-mercadoria .texto-apoio-solicitacao");
@@ -9818,8 +9928,10 @@ function fecharModalRegistroMercadoria(){
     prepararTituloModalRegistroMercadoria(false);
 }
 function limparRegistroMercadoriaModal(){
-    ["reg-data","reg-num","reg-nf","reg-fornecedor","reg-codigo","reg-prod","reg-lote","reg-validade","reg-qtd","reg-kg","reg-peso"].forEach(id=>{const e=document.getElementById(id);if(e)e.value="";});
+    ["reg-data","reg-num","reg-nf","reg-fornecedor","reg-codigo","reg-prod","reg-lote","reg-validade","reg-qtd","reg-kg","reg-peso","reg-item-existente-id"].forEach(id=>{const e=document.getElementById(id);if(e)e.value="";});
     const c=document.getElementById("sugestoes-registro-produto");if(c)c.style.display="none";
+    const lista=document.getElementById("lista-produtos-container-registro");if(lista)lista.style.display="none";
+    const resumo=document.getElementById("resumo-registro-mercadoria");if(resumo)resumo.innerHTML="<span>📦 A mercadoria será contabilizada no container após aprovação.</span>";
 }
 async function confirmarRegistroMercadoriaModal(){
     preencherCodigoRegistroProduto(); calcularPesoRegistro();
@@ -12450,7 +12562,6 @@ document.addEventListener("DOMContentLoaded",function(){
 .historico-produto-conteudo{overflow:auto;padding:16px 18px;flex:1}.historico-produto-topo{padding:12px;border:1px solid var(--borda);border-radius:10px;background:var(--bg-painel-2)}
 .historico-produto-resumo{font-size:12px;color:var(--texto-fraco);margin-top:6px;line-height:1.7}.historico-produto-lista{margin-top:12px;display:flex;flex-direction:column;gap:9px}
 .historico-produto-item{border:1px solid var(--borda);border-radius:10px;padding:11px;background:var(--bg-input)}
-.historico-produto-item.tipo-saida{border-left:4px solid #ef4444}.historico-produto-item.tipo-transferencia{border-left:4px solid #2fb6ec}.historico-produto-item.tipo-entrada{border-left:4px solid #10b981}.historico-produto-item.tipo-alteracao{border-left:4px solid #f59e0b}.historico-produto-item.tipo-exclusao{border-left:4px solid #ef4444}
 .historico-produto-item-cab{display:flex;justify-content:space-between;gap:10px;align-items:center}.historico-produto-item-cab span{font-size:11px;color:var(--texto-fraco)}
 .historico-produto-detalhes{font-size:12px;line-height:1.65;margin-top:7px}.historico-produto-acoes{display:flex;justify-content:flex-end;margin-top:8px}
 .btn-perigo-historico{border:1px solid #ef4444!important;color:#ef4444!important}.historico-produto-rodape{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding:13px 18px;border-top:1px solid var(--borda)}
@@ -12626,43 +12737,26 @@ function normalizarTextoHistoricoProduto(v){
 
 function movimentoPertenceAoProdutoMelhorias(mov, referencia){
   if(!mov || !referencia) return false;
+  const codigoRef=normalizarTextoHistoricoProduto(referencia.codigo);
+  const loteRef=normalizarTextoHistoricoProduto(referencia.lote);
+  const prodRef=normalizarTextoHistoricoProduto(referencia.prod);
+  const idRef=normalizarTextoHistoricoProduto(referencia.id);
 
-  // O histórico antigo pode ter nomes de campos diferentes.
-  // Normalizamos todos eles para não perder registros já gravados no Firebase.
-  const valor=function(obj,campos){
-    for(let i=0;i<campos.length;i++){
-      const v=obj && obj[campos[i]];
-      if(v!==undefined && v!==null && String(v).trim()!=="") return v;
-    }
-    return "";
-  };
+  const codigo=normalizarTextoHistoricoProduto(mov.codigo);
+  const lote=normalizarTextoHistoricoProduto(mov.lote);
+  const prod=normalizarTextoHistoricoProduto(mov.prod);
+  const id=normalizarTextoHistoricoProduto(mov.itemId || mov.estoqueId);
 
-  const codigoRef=normalizarTextoHistoricoProduto(valor(referencia,["codigo","codigoProduto","codProduto"]));
-  const loteRef=normalizarTextoHistoricoProduto(valor(referencia,["lote","loteProduto"]));
-  const prodRef=normalizarTextoHistoricoProduto(valor(referencia,["prod","produto","nomeProduto","nome"]));
-  const idRef=normalizarTextoHistoricoProduto(valor(referencia,["id","itemId","estoqueId"]));
-
-  const codigo=normalizarTextoHistoricoProduto(valor(mov,["codigo","codigoProduto","codProduto","produtoCodigo","itemCodigo"]));
-  const lote=normalizarTextoHistoricoProduto(valor(mov,["lote","loteProduto"]));
-  const prod=normalizarTextoHistoricoProduto(valor(mov,["prod","produto","nomeProduto","nome"]));
-  const id=normalizarTextoHistoricoProduto(valor(mov,["itemId","estoqueId","idEstoque"]));
-
-  // 1) ID: é a referência mais precisa quando existe.
+  // O ID é a referência mais precisa quando existe.
   if(idRef && id && id===idRef) return true;
 
-  // 2) Código do produto: é a chave principal do histórico individual.
-  // Não exigimos o mesmo lote, porque o usuário quer enxergar ENTRADAS,
-  // SAÍDAS, ALTERAÇÕES e EXCLUSÕES do produto ao longo de toda a sua vida.
-  if(codigoRef && codigo && codigo===codigoRef) return true;
+  // Para acompanhar transferências, alterações e exclusões, usamos código + lote.
+  if(codigoRef && codigo && loteRef && lote && codigo===codigoRef && lote===loteRef) return true;
+  if(codigoRef && codigo && codigo===codigoRef && (!loteRef || !lote)) return true;
 
-  // 3) Compatibilidade com registros antigos sem código.
-  // Nesses casos, o nome do produto é usado como referência.
-  if(!codigoRef && prodRef && prod && prod===prodRef) return true;
-  if(codigoRef && !codigo && prodRef && prod && prod===prodRef) return true;
-
-  // 4) Último recurso para bases antigas: lote + produto.
-  if(loteRef && lote && prodRef && prod && lote===loteRef && prod===prodRef) return true;
-
+  // Compatibilidade com registros antigos que não possuem código.
+  if(!codigoRef && loteRef && lote && lote===loteRef && prodRef && prod===prodRef) return true;
+  if(!codigoRef && !loteRef && prodRef && prod===prodRef) return true;
   return false;
 }
 
@@ -12726,21 +12820,14 @@ function abrirHistoricoProdutoMelhorias(index){
   }else{
     html+='<div class="historico-produto-lista">';
     movimentos.forEach(function(mov){
-      let tipo=String(mov.tipo||'MOVIMENTAÇÃO').toUpperCase().trim();
-      // Compatibilidade com históricos gravados sem acento.
-      if(tipo==='ENTRADA') tipo='ENTRADA';
-      else if(tipo==='SAIDA') tipo='SAÍDA';
-      else if(tipo==='ALTERACAO') tipo='ALTERAÇÃO';
-      else if(tipo==='EXCLUSAO') tipo='EXCLUSÃO';
-      else if(tipo==='TRANSFERENCIA') tipo='TRANSFERÊNCIA';
-      const transferencia=tipo==='TRANSFERÊNCIA';
+      const tipo=String(mov.tipo||'MOVIMENTAÇÃO').toUpperCase();
+      const transferencia=tipo==='TRANSFERÊNCIA' || tipo==='TRANSFERENCIA';
       const saidaEstoque=tipo==='SAÍDA' && /transferência para estoque/i.test(String(mov.detalhes||''));
-      const classeHistorico=tipo==='ENTRADA'?'tipo-entrada':tipo==='SAÍDA'?'tipo-saida':tipo==='ALTERAÇÃO'?'tipo-alteracao':tipo==='EXCLUSÃO'?'tipo-exclusao':transferencia?'tipo-transferencia':'';
       const tr=transferencia?extrairTransferenciaHistoricoProduto(mov):{};
       let origem=tr.origem || (tipo==='TRANSFERÊNCIA'?'—':'');
       let destino=tr.destino || (tipo==='TRANSFERÊNCIA'?String(mov.num||'—'):'');
       const icone=typeof iconeMovimentacao==='function'?iconeMovimentacao(tipo):'📋';
-      html+='<div class="historico-produto-item '+classeHistorico+'">'+
+      html+='<div class="historico-produto-item">'+
         '<div class="historico-produto-item-cab">'+
           '<strong>'+icone+' '+esc(tipo)+(saidaEstoque?' • PARA ESTOQUE':'')+'</strong>'+
           '<span>'+esc(formatarDataHoraHistoricoProduto(mov))+'</span>'+
