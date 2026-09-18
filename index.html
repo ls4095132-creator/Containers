@@ -12902,13 +12902,56 @@ function renderizarCentralNotificacoes(){
   const areas=[document.getElementById('lista-notificacoes-individuais'),document.getElementById('lista-notificacoes-individuais-externo')].filter(Boolean);
   const contadores=document.querySelectorAll('#contador-notificacoes-individuais');
   if(!areas.length)return;
-  const naoLidas=notificacoesIndividuais.filter(n=>!n.lida).length;
-  contadores.forEach(c=>c.textContent=String(naoLidas));
-  const html=!notificacoesIndividuais.length?'<div class="vazio">📭 Nenhuma notificação.</div>':notificacoesIndividuais.slice(0,50).map(n=>'<div class="notificacao-individual '+(!n.lida?'nao-lida':'')+'"><strong>'+String(n.titulo||'Notificação')+'</strong><div>'+String(n.mensagem||'')+'</div><small>'+ (n.criadaEm?new Date(n.criadaEm).toLocaleString('pt-BR'):'') +'</small></div>').join('');
+
+  // Somente notificações ainda não lidas aparecem nesta aba.
+  // As notificações lidas continuam gravadas no Firebase, mas saem da central.
+  const naoLidas=notificacoesIndividuais.filter(n=>!n.lida);
+  contadores.forEach(c=>c.textContent=String(naoLidas.length));
+
+  const html=!naoLidas.length
+    ? '<div class="vazio">📭 Nenhuma notificação nova.</div>'
+    : naoLidas.slice(0,50).map(n=>
+        '<div class="notificacao-individual nao-lida" data-notificacao-id="'+String(n.id||'')+'">'+
+          '<div style="display:flex;align-items:center;gap:8px;">'+
+            '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:5px;background:#22c55e;color:#fff;font-weight:700;font-size:14px;flex:0 0 auto;">✓</span>'+
+            '<strong>'+String(n.titulo||'Notificação')+'</strong>'+
+          '</div>'+
+          '<div>'+String(n.mensagem||'')+'</div>'+
+          '<small>'+ (n.criadaEm?new Date(n.criadaEm).toLocaleString('pt-BR'):'') +'</small>'+
+        '</div>'
+      ).join('');
   areas.forEach(a=>a.innerHTML=html);
 }
 function toggleCentralNotificacoes(){const p=obterPainelCentralNotificacoes();if(!p)return;p.style.display=p.style.display==='none'?'block':'none';renderizarCentralNotificacoes();}
-async function marcarTodasNotificacoesLidas(){const uid=uidAtualMelhorias();if(!uid||!notificacoesIndividuais.length)return;const updates={};notificacoesIndividuais.forEach(n=>{if(n.id)updates[n.id+'/lida']=true;});try{await firebaseDB.ref('preferenciasUsuarios/'+uid+'/notificacoes').update(updates);}catch(e){console.warn('Não foi possível marcar notificações:',e);}}
+async function marcarTodasNotificacoesLidas(){
+  const uid=uidAtualMelhorias();
+  if(!uid || !notificacoesIndividuais.length)return;
+
+  const pendentes=notificacoesIndividuais.filter(n=>!n.lida && n.id);
+  if(!pendentes.length){
+    renderizarCentralNotificacoes();
+    return;
+  }
+
+  const updates={};
+  pendentes.forEach(n=>{ updates[n.id+'/lida']=true; });
+
+  try{
+    // Primeiro grava no Firebase para que o status permaneça lido neste dispositivo
+    // e nos próximos acessos.
+    await firebaseDB.ref('preferenciasUsuarios/'+uid+'/notificacoes').update(updates);
+
+    // Marca visualmente como lidas e remove imediatamente da central.
+    notificacoesIndividuais=notificacoesIndividuais.map(function(n){
+      if(n && updates[n.id+'/lida']===true) return Object.assign({},n,{lida:true});
+      return n;
+    });
+    renderizarCentralNotificacoes();
+  }catch(e){
+    console.warn('Não foi possível marcar notificações:',e);
+    alert('❌ Não foi possível marcar as notificações como lidas. Verifique o Firebase.');
+  }
+}
 
 async function confirmarExecucaoSolicitacao(id){
   const uid=uidAtualMelhorias(); if(!uid||!id)return;
