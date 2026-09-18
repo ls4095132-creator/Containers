@@ -4979,6 +4979,9 @@ function aplicarAlteracaoAprovada(sol){
     if(sol.tipo === "ENTRADA"){
         const novoItem={...dados.item};
         if(!novoItem.id) novoItem.id=gerarIdEstoque();
+        if(consolidarEntradaNoMesmoLote(novoItem, "Entrada aprovada pelo administrador. Operador: "+sol.operador)){
+            return "Entrada aprovada e quantidade adicionada ao lote existente no estoque.";
+        }
         estoque.push(novoItem);
         registrarMovimentacao("ENTRADA", novoItem, "Entrada aprovada pelo administrador. Operador: "+sol.operador);
         return "Nova entrada aprovada e adicionada ao estoque.";
@@ -6902,6 +6905,49 @@ campoPeso.value = total > 0 ? total.toFixed(2) : "";
 }
 
 
+function encontrarItemMesmoLoteNoContainer(itemReferencia){
+    if(!itemReferencia) return -1;
+    const num=Number(itemReferencia.num);
+    const loteRef=String(itemReferencia.lote||"").trim().toLowerCase();
+    const codigoRef=String(itemReferencia.codigo||"").trim().toLowerCase();
+    const prodRef=String(itemReferencia.prod||"").trim().toLowerCase();
+    if(!num || !loteRef) return -1;
+
+    return estoque.findIndex(function(item){
+        if(!item || Number(item.num)!==num) return false;
+        const lote=String(item.lote||"").trim().toLowerCase();
+        if(!lote || lote!==loteRef) return false;
+        const codigo=String(item.codigo||"").trim().toLowerCase();
+        const prod=String(item.prod||"").trim().toLowerCase();
+        if(codigoRef && codigo && codigo===codigoRef) return true;
+        return (!codigoRef || !codigo) && prod===prodRef;
+    });
+}
+
+function consolidarEntradaNoMesmoLote(item, detalhes){
+    const indice=encontrarItemMesmoLoteNoContainer(item);
+    if(indice<0) return false;
+
+    const existente=estoque[indice];
+    const quantidadeEntrada=Number(item.qtd||0);
+    const saldoAnterior=Number(existente.qtd||0);
+    existente.qtd=saldoAnterior+quantidadeEntrada;
+    existente.peso=Number(existente.kg||item.kg||0)*existente.qtd;
+    existente.data=item.data||existente.data;
+    existente.hora=item.hora||existente.hora||"";
+    if(item.fornecedor) existente.fornecedor=item.fornecedor;
+    if(item.nf) existente.nf=item.nf;
+    if(item.validade) existente.validade=item.validade;
+    if(!existente.codigo && item.codigo) existente.codigo=item.codigo;
+    if(!existente.kg && item.kg) existente.kg=Number(item.kg);
+    estoque[indice]=existente;
+
+    registrarMovimentacao("ENTRADA", item, (detalhes||"Entrada adicionada ao lote existente.")+
+        " Saldo anterior: "+saldoAnterior+" volume(s). Quantidade adicionada: "+quantidadeEntrada+
+        " volume(s). Novo saldo do lote: "+existente.qtd+" volume(s).");
+    return true;
+}
+
 async function adicionarItem(){
 
 const data = document.getElementById("data").value;
@@ -6977,9 +7023,13 @@ if(editIndex !== "") {
     }
 }else{
     if(usuarioEhAdmin()){
-        estoque.push(item);
-        registrarMovimentacao("ENTRADA", item, "Nova mercadoria recebida pelo administrador.");
-        alert("✅ Mercadoria registrada com sucesso!");
+        if(consolidarEntradaNoMesmoLote(item, "Nova mercadoria recebida pelo administrador.")){
+            alert("✅ Quantidade adicionada ao lote existente no container!");
+        }else{
+            estoque.push(item);
+            registrarMovimentacao("ENTRADA", item, "Nova mercadoria recebida pelo administrador.");
+            alert("✅ Mercadoria registrada com sucesso!");
+        }
     }else{
         await solicitarAlteracaoAdmin("ENTRADA", {item:item}, "O operador solicitou uma nova entrada no container.");
         alert("📨 Nova entrada enviada ao administrador. Ela aparecerá no painel para validação.");
