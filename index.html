@@ -12479,7 +12479,9 @@ function obterIndicesItensContainerMelhorias(numero){
 
 function abrirDetalhesContainerMelhorias(numero){
   const itens=obterIndicesItensContainerMelhorias(numero);
-  const podeAlterar=!!(usuarioLogadoAtual && String(usuarioLogadoAtual.tipo||'').toLowerCase()!=='externo');
+  const tipoUsuarioAtual=String(usuarioLogadoAtual && usuarioLogadoAtual.tipo || '').trim().toLowerCase();
+  const podeAlterar=!!(usuarioLogadoAtual && tipoUsuarioAtual!=='externo');
+  const podeVerHistoricoIndividual=(tipoUsuarioAtual==='admin' || tipoUsuarioAtual==='usuario' || tipoUsuarioAtual==='comum' || tipoUsuarioAtual==='usuario comum');
   let html='<div style="text-align:left;line-height:1.65"><strong>Container '+String(numero).padStart(2,'0')+'</strong><br>';
   if(!itens.length){ html+='<div class="vazio">⚪ Container vazio.</div>'; }
   else {
@@ -12490,6 +12492,9 @@ function abrirDetalhesContainerMelhorias(numero){
       const pesoUnitario=Number(it.kg||0);
       const pesoTotal=Number(it.peso||0);
       const acoes=podeAlterar?'<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap"><button class="btn-vis" type="button" onclick="editarItemContainer('+idx+');fecharDetalhesContainerMelhorias()">✏️ Editar</button><button class="btn-vis" type="button" onclick="excluirItem('+idx+');fecharDetalhesContainerMelhorias()">🗑️ Excluir</button><button class="btn-vis" type="button" onclick="abrirModalTransferenciaContainer('+idx+')">🔄 Transferir</button><button class="btn-vis" type="button" onclick="imprimirEtiquetaContainerMelhorias('+idx+')">🖨️ Imprimir Etiqueta</button></div>':'';
+      const botaoHistoricoIndividual=podeVerHistoricoIndividual
+        ? '<button type="button" title="Abrir histórico deste produto" onclick="fecharDetalhesContainerMelhorias();abrirHistoricoProdutoMelhorias('+idx+')" style="display:inline-block;margin-top:3px;padding:5px 10px;border:1px solid var(--borda);border-radius:7px;background:transparent;color:var(--texto);font:inherit;font-weight:700;cursor:pointer;max-width:100%;text-align:left;transition:background .15s,border-color .15s">'+nome+'</button>'
+        : '<span style="display:inline-block;margin-top:3px;font-weight:700;">'+nome+'</span>';
       html+=(i?' <hr>':'')+
         '<div style="font-size:14px">'+
         '📅 Data de entrada: '+esc(it.data||it.dataEntrada||it.entradaEm||'—')+'<br>'+
@@ -12497,8 +12502,7 @@ function abrirDetalhesContainerMelhorias(numero){
         '🏭 Fornecedor: '+esc(it.fornecedor||'—')+'<br>'+
         '🧾 Número da nota: '+esc(it.nf||it.notaFiscal||'—')+'<br>'+
         '🏷️ Código: '+esc(it.codigo||'—')+'<br>'+
-        '<div style="margin-top:4px;margin-bottom:4px">📋 <span style="font-weight:700">Produto:</span><br>'+
-        '<button type="button" title="Abrir histórico deste produto" onclick="fecharDetalhesContainerMelhorias();abrirHistoricoProdutoMelhorias('+idx+')" style="display:inline-block;margin-top:3px;padding:5px 10px;border:1px solid var(--borda);border-radius:7px;background:transparent;color:var(--texto);font:inherit;font-weight:700;cursor:pointer;max-width:100%;text-align:left;transition:background .15s,border-color .15s">'+nome+'</button></div>'+
+        '<div style="margin-top:4px;margin-bottom:4px">📋 <span style="font-weight:700">Produto:</span><br>'+botaoHistoricoIndividual+'</div>'+
         '🔖 Lote: '+esc(it.lote||'—')+'<br>'+
         '📅 Validade: '+(typeof formatarData==='function'&&it.validade?formatarData(it.validade):esc(it.validade||'—'))+'<br>'+
         '🔢 Quantidade: '+Number(it.qtd||0).toLocaleString('pt-BR')+'<br>'+
@@ -12655,6 +12659,11 @@ function obterHistoricoIndividualProdutoMelhorias(referencia){
 }
 
 function abrirHistoricoProdutoMelhorias(index){
+  const tipoUsuarioAtual=String(usuarioLogadoAtual && usuarioLogadoAtual.tipo || '').trim().toLowerCase();
+  if(tipoUsuarioAtual==='externo' || tipoUsuarioAtual==='usuario externo' || tipoUsuarioAtual==='usuário externo'){
+    alert('🔒 O histórico individual das mercadorias está disponível somente para o administrador e o usuário comum.');
+    return;
+  }
   const referencia=Array.isArray(estoque)?estoque[index]:null;
   if(!referencia){ alert('❌ Produto não encontrado no estoque atual.'); return; }
 
