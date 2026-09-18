@@ -4786,6 +4786,17 @@ function resumoSolicitacaoAlteracao(sol){
     const dados=sol.dados || {};
     if(sol.tipo === "ZERAR_CONTAINER") return "Container <strong>"+escaparHtmlAlteracao(dados.num)+"</strong> — "+((dados.itens || []).length)+" item(ns) serão removidos.";
     if(sol.tipo === "LIMPAR_HISTORICO") return "Solicitado pelo operador: apagar o histórico de movimentações.";
+    if(sol.tipo === "TRANSFERENCIA_ESTOQUE"){
+        const itemId=String(dados.itemId||""), quantidade=Number(dados.quantidade||0), indice=estoque.findIndex(function(item){return item && String(item.id||"")===itemId;});
+        if(indice<0) throw new Error("A mercadoria de origem não foi encontrada no estoque.");
+        if(!Number.isInteger(quantidade)||quantidade<=0) throw new Error("Quantidade inválida para transferência para estoque.");
+        const origemItem=estoque[indice], saldo=Number(origemItem.qtd||0); if(quantidade>saldo) throw new Error("A quantidade solicitada é maior que o saldo disponível.");
+        const registro={...origemItem}, restante=saldo-quantidade;
+        if(restante<=0) estoque.splice(indice,1); else {origemItem.qtd=restante;origemItem.peso=Number(origemItem.kg||0)*restante;estoque[indice]=origemItem;}
+        registrarMovimentacao("SAÍDA",registro,"Transferência para estoque sem destino informado, aprovada pelo administrador. Quantidade: "+quantidade+" volume(s). Operador: "+sol.operador+(dados.observacao?". Observação: "+dados.observacao:"."));
+        return "Transferência para estoque aprovada: "+quantidade+" volume(s) retirados do C"+String(registro.num).padStart(2,"0")+".";
+    }
+
     if(sol.tipo === "TRANSFERENCIA_CONTAINER"){
         const item=dados.item || {};
         return "Produto <strong>"+escaparHtmlAlteracao(item.prod || "—")+"</strong> — C"+String(dados.containerOrigem||item.num||"—").padStart(2,"0")+" → C"+String(dados.containerDestino||"—").padStart(2,"0")+" — Qtd: "+escaparHtmlAlteracao(dados.quantidade || "0");
@@ -6945,10 +6956,10 @@ ${item.codigo ? item.codigo+" - " : ""}${item.prod}
 
 <button
 class="btn-acao"
-onclick="editarItemContainer(${index})"
-title="Editar"
+onclick="abrirModalTransferirEstoque(${index})"
+title="Transferir para estoque"
 >
-✏️
+📦
 </button>
 
 <button
@@ -12491,7 +12502,7 @@ function abrirDetalhesContainerMelhorias(numero){
       const nome=esc(it.prod||'—');
       const pesoUnitario=Number(it.kg||0);
       const pesoTotal=Number(it.peso||0);
-      const acoes=podeAlterar?'<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap"><button class="btn-vis" type="button" onclick="editarItemContainer('+idx+');fecharDetalhesContainerMelhorias()">✏️ Editar</button><button class="btn-vis" type="button" onclick="excluirItem('+idx+');fecharDetalhesContainerMelhorias()">🗑️ Excluir</button><button class="btn-vis" type="button" onclick="abrirModalTransferenciaContainer('+idx+')">🔄 Transferir</button><button class="btn-vis" type="button" onclick="imprimirEtiquetaContainerMelhorias('+idx+')">🖨️ Imprimir Etiqueta</button></div>':'';
+      const acoes=podeAlterar?'<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap"><button class="btn-vis" type="button" onclick="abrirModalTransferirEstoque('+idx+')">📦 Transferir para estoque</button><button class="btn-vis" type="button" onclick="excluirItem('+idx+');fecharDetalhesContainerMelhorias()">🗑️ Excluir</button><button class="btn-vis" type="button" onclick="abrirModalTransferenciaContainer('+idx+')">🔄 Transferência de Container</button><button class="btn-vis" type="button" onclick="imprimirEtiquetaContainerMelhorias('+idx+')">🖨️ Imprimir Etiqueta</button></div>':'';
       const botaoHistoricoIndividual=podeVerHistoricoIndividual
         ? '<button type="button" title="Abrir histórico deste produto" onclick="fecharDetalhesContainerMelhorias();abrirHistoricoProdutoMelhorias('+idx+')" style="display:inline-block;margin-top:3px;padding:5px 10px;border:1px solid var(--borda);border-radius:7px;background:transparent;color:var(--texto);font:inherit;font-weight:700;cursor:pointer;max-width:100%;text-align:left;transition:background .15s,border-color .15s">'+nome+'</button>'
         : '<span style="display:inline-block;margin-top:3px;font-weight:700;">'+nome+'</span>';
@@ -12688,13 +12699,14 @@ function abrirHistoricoProdutoMelhorias(index){
     movimentos.forEach(function(mov){
       const tipo=String(mov.tipo||'MOVIMENTAÇÃO').toUpperCase();
       const transferencia=tipo==='TRANSFERÊNCIA' || tipo==='TRANSFERENCIA';
+      const saidaEstoque=tipo==='SAÍDA' && /transferência para estoque/i.test(String(mov.detalhes||''));
       const tr=transferencia?extrairTransferenciaHistoricoProduto(mov):{};
       let origem=tr.origem || (tipo==='TRANSFERÊNCIA'?'—':'');
       let destino=tr.destino || (tipo==='TRANSFERÊNCIA'?String(mov.num||'—'):'');
       const icone=typeof iconeMovimentacao==='function'?iconeMovimentacao(tipo):'📋';
       html+='<div class="historico-produto-item">'+
         '<div class="historico-produto-item-cab">'+
-          '<strong>'+icone+' '+esc(tipo)+'</strong>'+
+          '<strong>'+icone+' '+esc(tipo)+(saidaEstoque?' • PARA ESTOQUE':'')+'</strong>'+
           '<span>'+esc(formatarDataHoraHistoricoProduto(mov))+'</span>'+
         '</div>'+
         '<div class="historico-produto-detalhes">'+
@@ -13067,6 +13079,48 @@ setTimeout(ativarMelhoriasContainers,1200);
 function usuarioPodeTransferirContainer(){
     const tipo=String(usuarioLogadoAtual && usuarioLogadoAtual.tipo || "").toLowerCase();
     return tipo==="admin" || tipo==="comum" || tipo==="usuario" || tipo==="usuario comum" || tipo==="usuário comum";
+}
+
+
+function abrirModalTransferirEstoque(index){
+    const item=Array.isArray(estoque)?estoque[index]:null;
+    if(!item){ alert("❌ Mercadoria não encontrada."); return; }
+    const tipo=String(usuarioLogadoAtual && usuarioLogadoAtual.tipo || "").toLowerCase();
+    if(tipo!=="admin" && tipo!=="comum" && tipo!=="usuario" && tipo!=="usuário comum" && tipo!=="usuario comum"){
+        alert("❌ Apenas o administrador e o usuário comum podem transferir mercadoria para estoque."); return;
+    }
+    const saldo=Number(item.qtd||0);
+    if(saldo<=0){ alert("❌ Não há saldo disponível neste container."); return; }
+    const existente=document.getElementById("modal-transferir-estoque"); if(existente) existente.remove();
+    const modal=document.createElement("div"); modal.id="modal-transferir-estoque";
+    modal.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.68);z-index:100000;display:flex;align-items:center;justify-content:center;padding:18px;";
+    modal.innerHTML='<div class="modal-solicitacao-caixa" style="max-width:560px;width:100%;">'+
+      '<div class="modal-solicitacao-cabecalho"><div><h2 style="margin:0 0 4px;">📦 Transferir para estoque</h2><div class="texto-apoio-solicitacao">A saída será feita do container sem informar um destino.</div></div><button class="modal-fechar" type="button" onclick="fecharModalTransferirEstoque()">✕</button></div>'+
+      '<div class="modal-solicitacao-corpo"><div class="resumo-container-solicitacao">📋 <strong>Produto:</strong> '+escaparHtmlSolicitacao(item.prod||"—")+'<br>🔢 <strong>Código:</strong> '+escaparHtmlSolicitacao(item.codigo||"—")+'<br>📦 <strong>Container:</strong> C'+String(item.num||"—").padStart(2,"0")+'<br>🔢 <strong>Saldo disponível:</strong> '+saldo.toLocaleString("pt-BR")+' volume(s)</div>'+ 
+      '<div class="campo" style="margin-top:12px;"><label>🔢 Quantidade a transferir:</label><input id="transferir-estoque-quantidade" type="number" min="1" max="'+saldo+'" step="1" value="1" style="width:100%;"></div>'+ 
+      '<div class="campo" style="margin-top:10px;"><label>💬 Observação (opcional):</label><textarea id="transferir-estoque-observacao" rows="3" placeholder="Ex.: retirada para estoque geral."></textarea></div><input type="hidden" id="transferir-estoque-index" value="'+index+'"></div>'+ 
+      '<div class="modal-solicitacao-rodape"><button class="btn-cancelar" type="button" onclick="fecharModalTransferirEstoque()">❌ Cancelar</button><button class="btn-salvar" type="button" onclick="confirmarTransferirEstoque()">📦 Confirmar transferência</button></div></div>';
+    document.body.appendChild(modal); document.body.style.overflow="hidden"; modal.addEventListener("click",function(e){if(e.target===modal)fecharModalTransferirEstoque();});
+}
+function fecharModalTransferirEstoque(){const m=document.getElementById("modal-transferir-estoque");if(m)m.remove();document.body.style.overflow="";}
+async function confirmarTransferirEstoque(){
+    const index=Number(document.getElementById("transferir-estoque-index")?.value), quantidade=Number(document.getElementById("transferir-estoque-quantidade")?.value), observacao=String(document.getElementById("transferir-estoque-observacao")?.value||"").trim(), item=Array.isArray(estoque)?estoque[index]:null;
+    if(!item){alert("❌ Mercadoria não encontrada.");return;}
+    const tipo=String(usuarioLogadoAtual && usuarioLogadoAtual.tipo || "").toLowerCase(), permitido=["admin","comum","usuario","usuário comum","usuario comum"].includes(tipo);
+    if(!permitido){alert("❌ Perfil sem permissão.");return;}
+    const saldo=Number(item.qtd||0); if(!Number.isInteger(quantidade)||quantidade<=0){alert("❌ Informe uma quantidade inteira maior que zero.");return;} if(quantidade>saldo){alert("❌ A quantidade informada é maior que o saldo disponível.");return;}
+    if(!item.id){garantirIdsEstoque();if(!item.id){alert("❌ Não foi possível identificar a mercadoria.");return;}}
+    const dados={itemId:String(item.id),quantidade, item:{...item},containerOrigem:Number(item.num)||0,observacao,solicitadoEm:new Date().toISOString()};
+    try{
+      if(tipo==="admin"){
+        const registro={...item}, restante=saldo-quantidade;
+        if(restante<=0) estoque.splice(index,1); else {item.qtd=restante;item.peso=Number(item.kg||0)*restante;estoque[index]=item;}
+        registrarMovimentacao("SAÍDA",registro,"Transferência para estoque sem destino informado. Quantidade: "+quantidade+" volume(s). Operador: "+operadorAtual()+(observacao?". Observação: "+observacao:"."));
+        await salvarDados(); mostrarEstoque(); mostrarHistorico(); fecharModalTransferirEstoque(); if(typeof mostrarAvisoOperacaoVerde==="function")mostrarAvisoOperacaoVerde("Transferência para estoque realizada","C"+String(registro.num).padStart(2,"0")+" • "+quantidade+" volume(s)"); alert("✅ Transferência para estoque realizada."); return;
+      }
+      await solicitarAlteracaoAdmin("TRANSFERENCIA_ESTOQUE",dados,"Solicitação para transferir "+quantidade+" volume(s) do C"+String(item.num).padStart(2,"0")+" para estoque, sem destino informado."+(observacao?" "+observacao:""));
+      fecharModalTransferirEstoque(); if(typeof mostrarAvisoOperacaoVerde==="function")mostrarAvisoOperacaoVerde("Solicitação enviada","Transferência para estoque aguardando aprovação do administrador."); alert("📨 Solicitação enviada ao administrador. O saldo será alterado após a aprovação.");
+    }catch(e){console.error(e);alert("❌ Não foi possível processar a transferência.\n\n"+(e.message||e));}
 }
 
 function abrirModalTransferenciaContainer(index){
