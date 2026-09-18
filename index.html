@@ -6351,6 +6351,11 @@ const movimento={
 
 id:"HST-"+Date.now()+"-"+Math.random().toString(36).slice(2,8),
 
+// Mantém a identificação da mercadoria também no histórico.
+// Isso permite localizar o registro mesmo depois que o item sair do estoque.
+itemId:item.id || "",
+estoqueId:item.id || "",
+
 data:item.data,
 
 hora:item.hora,
@@ -6364,6 +6369,9 @@ fornecedor:item.fornecedor,
 nf:item.nf,
 
 prod:item.prod,
+produto:item.prod,
+
+codigo:item.codigo || "",
 
 lote:item.lote,
 
@@ -6374,6 +6382,9 @@ qtd:item.qtd,
 kg:item.kg,
 
 peso:item.peso,
+
+operador:operadorAtual(),
+usuario:operadorAtual(),
 
 detalhes:detalhes,
 
@@ -12439,6 +12450,7 @@ document.addEventListener("DOMContentLoaded",function(){
 .historico-produto-conteudo{overflow:auto;padding:16px 18px;flex:1}.historico-produto-topo{padding:12px;border:1px solid var(--borda);border-radius:10px;background:var(--bg-painel-2)}
 .historico-produto-resumo{font-size:12px;color:var(--texto-fraco);margin-top:6px;line-height:1.7}.historico-produto-lista{margin-top:12px;display:flex;flex-direction:column;gap:9px}
 .historico-produto-item{border:1px solid var(--borda);border-radius:10px;padding:11px;background:var(--bg-input)}
+.historico-produto-item.tipo-saida{border-left:4px solid #ef4444}.historico-produto-item.tipo-transferencia{border-left:4px solid #2fb6ec}.historico-produto-item.tipo-entrada{border-left:4px solid #10b981}.historico-produto-item.tipo-alteracao{border-left:4px solid #f59e0b}.historico-produto-item.tipo-exclusao{border-left:4px solid #ef4444}
 .historico-produto-item-cab{display:flex;justify-content:space-between;gap:10px;align-items:center}.historico-produto-item-cab span{font-size:11px;color:var(--texto-fraco)}
 .historico-produto-detalhes{font-size:12px;line-height:1.65;margin-top:7px}.historico-produto-acoes{display:flex;justify-content:flex-end;margin-top:8px}
 .btn-perigo-historico{border:1px solid #ef4444!important;color:#ef4444!important}.historico-produto-rodape{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding:13px 18px;border-top:1px solid var(--borda)}
@@ -12614,26 +12626,43 @@ function normalizarTextoHistoricoProduto(v){
 
 function movimentoPertenceAoProdutoMelhorias(mov, referencia){
   if(!mov || !referencia) return false;
-  const codigoRef=normalizarTextoHistoricoProduto(referencia.codigo);
-  const loteRef=normalizarTextoHistoricoProduto(referencia.lote);
-  const prodRef=normalizarTextoHistoricoProduto(referencia.prod);
-  const idRef=normalizarTextoHistoricoProduto(referencia.id);
 
-  const codigo=normalizarTextoHistoricoProduto(mov.codigo);
-  const lote=normalizarTextoHistoricoProduto(mov.lote);
-  const prod=normalizarTextoHistoricoProduto(mov.prod);
-  const id=normalizarTextoHistoricoProduto(mov.itemId || mov.estoqueId);
+  // O histórico antigo pode ter nomes de campos diferentes.
+  // Normalizamos todos eles para não perder registros já gravados no Firebase.
+  const valor=function(obj,campos){
+    for(let i=0;i<campos.length;i++){
+      const v=obj && obj[campos[i]];
+      if(v!==undefined && v!==null && String(v).trim()!=="") return v;
+    }
+    return "";
+  };
 
-  // O ID é a referência mais precisa quando existe.
+  const codigoRef=normalizarTextoHistoricoProduto(valor(referencia,["codigo","codigoProduto","codProduto"]));
+  const loteRef=normalizarTextoHistoricoProduto(valor(referencia,["lote","loteProduto"]));
+  const prodRef=normalizarTextoHistoricoProduto(valor(referencia,["prod","produto","nomeProduto","nome"]));
+  const idRef=normalizarTextoHistoricoProduto(valor(referencia,["id","itemId","estoqueId"]));
+
+  const codigo=normalizarTextoHistoricoProduto(valor(mov,["codigo","codigoProduto","codProduto","produtoCodigo","itemCodigo"]));
+  const lote=normalizarTextoHistoricoProduto(valor(mov,["lote","loteProduto"]));
+  const prod=normalizarTextoHistoricoProduto(valor(mov,["prod","produto","nomeProduto","nome"]));
+  const id=normalizarTextoHistoricoProduto(valor(mov,["itemId","estoqueId","idEstoque"]));
+
+  // 1) ID: é a referência mais precisa quando existe.
   if(idRef && id && id===idRef) return true;
 
-  // Para acompanhar transferências, alterações e exclusões, usamos código + lote.
-  if(codigoRef && codigo && loteRef && lote && codigo===codigoRef && lote===loteRef) return true;
-  if(codigoRef && codigo && codigo===codigoRef && (!loteRef || !lote)) return true;
+  // 2) Código do produto: é a chave principal do histórico individual.
+  // Não exigimos o mesmo lote, porque o usuário quer enxergar ENTRADAS,
+  // SAÍDAS, ALTERAÇÕES e EXCLUSÕES do produto ao longo de toda a sua vida.
+  if(codigoRef && codigo && codigo===codigoRef) return true;
 
-  // Compatibilidade com registros antigos que não possuem código.
-  if(!codigoRef && loteRef && lote && lote===loteRef && prodRef && prod===prodRef) return true;
-  if(!codigoRef && !loteRef && prodRef && prod===prodRef) return true;
+  // 3) Compatibilidade com registros antigos sem código.
+  // Nesses casos, o nome do produto é usado como referência.
+  if(!codigoRef && prodRef && prod && prod===prodRef) return true;
+  if(codigoRef && !codigo && prodRef && prod && prod===prodRef) return true;
+
+  // 4) Último recurso para bases antigas: lote + produto.
+  if(loteRef && lote && prodRef && prod && lote===loteRef && prod===prodRef) return true;
+
   return false;
 }
 
@@ -12697,14 +12726,21 @@ function abrirHistoricoProdutoMelhorias(index){
   }else{
     html+='<div class="historico-produto-lista">';
     movimentos.forEach(function(mov){
-      const tipo=String(mov.tipo||'MOVIMENTAÇÃO').toUpperCase();
-      const transferencia=tipo==='TRANSFERÊNCIA' || tipo==='TRANSFERENCIA';
+      let tipo=String(mov.tipo||'MOVIMENTAÇÃO').toUpperCase().trim();
+      // Compatibilidade com históricos gravados sem acento.
+      if(tipo==='ENTRADA') tipo='ENTRADA';
+      else if(tipo==='SAIDA') tipo='SAÍDA';
+      else if(tipo==='ALTERACAO') tipo='ALTERAÇÃO';
+      else if(tipo==='EXCLUSAO') tipo='EXCLUSÃO';
+      else if(tipo==='TRANSFERENCIA') tipo='TRANSFERÊNCIA';
+      const transferencia=tipo==='TRANSFERÊNCIA';
       const saidaEstoque=tipo==='SAÍDA' && /transferência para estoque/i.test(String(mov.detalhes||''));
+      const classeHistorico=tipo==='ENTRADA'?'tipo-entrada':tipo==='SAÍDA'?'tipo-saida':tipo==='ALTERAÇÃO'?'tipo-alteracao':tipo==='EXCLUSÃO'?'tipo-exclusao':transferencia?'tipo-transferencia':'';
       const tr=transferencia?extrairTransferenciaHistoricoProduto(mov):{};
       let origem=tr.origem || (tipo==='TRANSFERÊNCIA'?'—':'');
       let destino=tr.destino || (tipo==='TRANSFERÊNCIA'?String(mov.num||'—'):'');
       const icone=typeof iconeMovimentacao==='function'?iconeMovimentacao(tipo):'📋';
-      html+='<div class="historico-produto-item">'+
+      html+='<div class="historico-produto-item '+classeHistorico+'">'+
         '<div class="historico-produto-item-cab">'+
           '<strong>'+icone+' '+esc(tipo)+(saidaEstoque?' • PARA ESTOQUE':'')+'</strong>'+
           '<span>'+esc(formatarDataHoraHistoricoProduto(mov))+'</span>'+
