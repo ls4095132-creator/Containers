@@ -2605,9 +2605,9 @@ Entre com seu usuário e senha
 </div>
 <div class="erro-login" id="erro-login"></div>
 <div id="bloco-login-normal">
-<div class="campo-login">
-<label>👤 Usuário:</label>
-<input autocomplete="off" id="login-usuario" placeholder="Digite seu usuário" type="text"/>
+<div class="campo-login campo-login-usuario-persistente">
+<label>👤 Usuário: <span id="icone-cadeado-usuario-login" class="cadeado-usuario-login" title="Usuário fixado neste dispositivo">🔒</span></label>
+<input autocomplete="username" id="login-usuario" placeholder="Digite seu usuário" type="email"/>
 </div>
 <div class="campo-login">
 <label>🔒 Senha:</label>
@@ -2623,6 +2623,8 @@ Entrar
 </div>
 <div class="alternar-login" id="alternar-login" style="display:block;">
 <a onclick="abrirSolicitacaoNovoAcesso()">Solicitar novo acesso</a>
+<br>
+<a class="link-outro-usuario" onclick="logarOutroUsuario()">Logar outro usuário</a>
 </div>
 </div>
 <!-- SOLICITAÇÃO DE NOVO ACESSO -->
@@ -2943,6 +2945,7 @@ Containers ocupados: 0 / <span class="contador-max-inline">60</span>
 <option value="vazios">⚪ Vazios</option>
 </select>
 <button class="btn-vis btn-backup-onedrive" id="btn-backup-onedrive" onclick="fazerBackupExcelOneDrive()" type="button">💾 Backup OneDrive</button>
+<span id="indicador-usuarios-online" class="indicador-usuarios-online" style="display:none;"><span class="online-ponto"></span>👥 0 usuários online</span>
 </div>
 <div class="resumo-visualizacao" id="resumo-visualizacao-admin"></div>
 </div>
@@ -9119,6 +9122,7 @@ async function tratarEnvioLogin(){
         const email=emailNormalizado(usuarioParaEmail(usuarioDigitado));
         await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
         const cred=await comTimeoutFirebase(firebaseAuth.signInWithEmailAndPassword(email,senha),15000,"Tempo esgotado ao autenticar no Firebase.");
+        if(typeof window.salvarEmailLoginPersistente === "function") window.salvarEmailLoginPersistente(email);
         console.log("✅ Firebase Authentication: usuário autenticado",cred.user.uid);
         await verificarAutenticacao(cred.user);
     }catch(erro){
@@ -9141,6 +9145,14 @@ async function tratarEnvioLogin(){
 
 async function entrarNoApp(usuarioObjeto){
     usuarioLogadoAtual=usuarioObjeto;
+    if(typeof window.iniciarPresencaUsuario === "function" && usuarioObjeto && usuarioObjeto.uid){
+        window.iniciarPresencaUsuario(usuarioObjeto.uid);
+    }
+    if(usuarioObjeto && usuarioObjeto.tipo === "admin" && typeof window.iniciarMonitoramentoUsuariosOnline === "function"){
+        const indicadorOnline=document.getElementById("indicador-usuarios-online");
+        if(indicadorOnline) indicadorOnline.style.display="inline-flex";
+        window.iniciarMonitoramentoUsuariosOnline();
+    }
     await carregarConfiguracoesSistemaAplicacao();
     if(temaEscolhidoAntesDoLogin){
         await salvarTemaEscolhidoAposLogin(usuarioObjeto);
@@ -9212,6 +9224,9 @@ if(usuarioObjeto && usuarioObjeto.tipo === "externo"){
         app.style.display="block";
     }
     atualizarTelaUsuarioLogado();
+    if(usuarioObjeto && usuarioObjeto.tipo === "admin" && typeof window.iniciarMonitoramentoUsuariosOnline === "function"){
+        setTimeout(function(){ window.iniciarMonitoramentoUsuariosOnline(); },100);
+    }
     const painelAdminInicial=document.getElementById("painel-solicitacoes-admin-inicial");
     if(painelAdminInicial){
         painelAdminInicial.style.display=(usuarioObjeto && usuarioObjeto.tipo === "admin") ? "block" : "none";
@@ -9273,6 +9288,11 @@ window.atualizarSistemaSemDeslogar = atualizarSistemaSemDeslogar;
 
 async function sairDoSistema(){
     try{
+        if(typeof window.salvarEmailLoginPersistente === "function" && firebaseAuth.currentUser && firebaseAuth.currentUser.email){
+            window.salvarEmailLoginPersistente(firebaseAuth.currentUser.email);
+        }
+        if(typeof window.encerrarPresencaUsuario === "function") window.encerrarPresencaUsuario();
+        if(typeof window.encerrarMonitoramentoUsuariosOnline === "function") window.encerrarMonitoramentoUsuariosOnline();
         await firebaseAuth.signOut();
     }catch(erro){
         console.error("Erro ao sair do Firebase:", erro);
@@ -9296,9 +9316,10 @@ async function sairDoSistema(){
             login.style.display="flex";
         }
         const campo=document.getElementById("login-usuario");
-        if(campo){ campo.value=""; campo.focus(); }
         const senha=document.getElementById("login-senha");
         if(senha)senha.value="";
+        if(typeof window.aplicarEstadoUsuarioLogin === "function") window.aplicarEstadoUsuarioLogin();
+        if(campo)campo.focus();
         esconderErroLogin();
     }
 }
@@ -9412,6 +9433,7 @@ async function renderizarUsuariosCadastradosAdmin(){
     if(!area || !usuarioEhAdmin())return;
     try{await carregarPerfisUsuariosFirebase();}catch(e){console.error(e);}
     const usuarios=carregarUsuariosCadastrados();
+    if(typeof window.iniciarMonitoramentoUsuariosOnline === "function") window.iniciarMonitoramentoUsuariosOnline();
     if(!usuarios.length){area.innerHTML='<div class="vazio">Nenhum perfil encontrado no Firebase.</div>';return;}
     area.innerHTML=usuarios.map(function(item,index){
         const status=item.ativo === false ? "🚫 Bloqueado" : "✅ Ativo";
@@ -11355,6 +11377,7 @@ async function iniciarAutenticacao(){
                 login.classList.remove("login-oculta");
                 login.style.display="flex";
             }
+            if(typeof window.aplicarEstadoUsuarioLogin === "function") window.aplicarEstadoUsuarioLogin();
             document.body.classList.remove("auth-carregando");
             primeiraRespostaAuth=false;
             return;
@@ -12144,13 +12167,43 @@ body.tema-claro .toast-notificacao-web div{color:#334155;}
 }
 #app-principal .btn-registrar-mercadoria{display:inline-block;}
 #app-principal .btn-exportar-containers{display:inline-block;}
-/* Exportar Excel fica com o mesmo tamanho compacto de Registrar Mercadoria. */
-#app-principal .btn-exportar-containers{
+/* Exportar Excel fica compacto, lado a lado com Registrar Mercadoria. */
+#app-principal .painel-visualizacao .visualizacao-linha{
+    display:flex !important;
+    align-items:center !important;
+    gap:8px !important;
+    flex-wrap:wrap !important;
+}
+#app-principal .btn-registrar-mercadoria,
+#app-principal .btn-exportar-containers,
+#app-principal .btn-backup-onedrive{
+    width:auto !important;
+    max-width:max-content !important;
+    flex:0 0 auto !important;
     padding:7px 11px !important;
-    font-size:inherit !important;
+    font-size:12px !important;
     min-height:0 !important;
     line-height:normal !important;
     box-sizing:border-box !important;
+}
+#app-principal .indicador-usuarios-online{
+    margin:0 !important;
+    padding:7px 10px !important;
+    flex:0 0 auto !important;
+}
+@media(max-width:700px){
+    #app-principal .painel-visualizacao .visualizacao-linha{
+        display:flex !important;
+        flex-direction:column !important;
+        align-items:stretch !important;
+    }
+    #app-principal .btn-registrar-mercadoria,
+    #app-principal .btn-exportar-containers,
+    #app-principal .btn-backup-onedrive,
+    #app-principal .indicador-usuarios-online{
+        width:100% !important;
+        max-width:none !important;
+    }
 }
 @media(max-width:700px){
     #app-principal .btn-registrar-mercadoria,
@@ -13840,6 +13893,229 @@ body.tema-claro .toast-notificacao-web div{color:#334155;}
 </style>
 
 
+
+<style id="ajuste-login-usuario-fixo-online">
+/* ======================================================
+   LOGIN — USUÁRIO FIXO POR DISPOSITIVO + PRESENÇA ONLINE
+   Não usa localStorage. O e-mail fica em cookie do navegador.
+   ====================================================== */
+.campo-login-usuario-persistente label{
+    display:flex !important;
+    align-items:center;
+    justify-content:space-between;
+    gap:6px;
+}
+.cadeado-usuario-login{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:22px;
+    height:22px;
+    font-size:13px;
+    opacity:.9;
+}
+#login-usuario.usuario-fixado{
+    padding-right:34px !important;
+    cursor:not-allowed;
+    opacity:.92;
+}
+.link-outro-usuario{
+    display:inline-block;
+    margin-top:7px;
+    font-size:11px !important;
+}
+.indicador-usuarios-online{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    margin:8px 0 10px;
+    padding:7px 10px;
+    border:1px solid var(--borda-forte);
+    border-radius:8px;
+    background:var(--bg-painel-2);
+    color:var(--texto);
+    font-size:11.5px;
+    font-weight:600;
+}
+.indicador-usuarios-online .online-ponto{
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:#10b981;
+    box-shadow:0 0 0 3px rgba(16,185,129,.12);
+}
+</style>
+<script id="login-fixo-presenca-online">
+(function(){
+    "use strict";
+
+    const COOKIE_LOGIN="cc_usuario_login";
+    const COOKIE_DIAS=365;
+    let presencaConexaoRef=null;
+    let presencaUidAtual=null;
+    let monitorOnlineRef=null;
+    let monitorOnlineAtivo=false;
+
+    function definirCookieSeguro(nome,valor,dias){
+        try{
+            const maxAge=Math.max(1,Math.floor((dias||365)*86400));
+            const secure=location.protocol === "https:" ? "; Secure" : "";
+            document.cookie=nome+"="+encodeURIComponent(String(valor||""))+"; Max-Age="+maxAge+"; Path=/; SameSite=Lax"+secure;
+        }catch(e){ console.warn("Cookie de login:",e); }
+    }
+
+    function lerCookie(nome){
+        try{
+            const prefix=nome+"=";
+            const partes=document.cookie ? document.cookie.split("; ") : [];
+            for(let i=0;i<partes.length;i++){
+                if(partes[i].indexOf(prefix)===0) return decodeURIComponent(partes[i].slice(prefix.length));
+            }
+        }catch(e){ console.warn("Leitura do cookie de login:",e); }
+        return "";
+    }
+
+    function apagarCookie(nome){
+        try{
+            document.cookie=nome+"=; Max-Age=0; Path=/; SameSite=Lax"+(location.protocol === "https:" ? "; Secure" : "");
+        }catch(e){}
+    }
+
+    function salvarEmailLoginPersistente(email){
+        const valor=String(email||"").trim().toLowerCase();
+        if(valor) definirCookieSeguro(COOKIE_LOGIN,valor,COOKIE_DIAS);
+    }
+
+    function aplicarEstadoUsuarioLogin(){
+        const campo=document.getElementById("login-usuario");
+        const cadeado=document.getElementById("icone-cadeado-usuario-login");
+        if(!campo)return;
+        const email=lerCookie(COOKIE_LOGIN);
+        if(email){
+            campo.value=email;
+            campo.readOnly=true;
+            campo.classList.add("usuario-fixado");
+            campo.setAttribute("aria-readonly","true");
+            campo.title="Usuário fixado neste dispositivo. Use 'Logar outro usuário' para trocar.";
+            if(cadeado)cadeado.textContent="🔒";
+        }else{
+            campo.value="";
+            campo.readOnly=false;
+            campo.classList.remove("usuario-fixado");
+            campo.removeAttribute("aria-readonly");
+            campo.title="";
+            if(cadeado)cadeado.textContent="🔓";
+        }
+    }
+
+    window.logarOutroUsuario=function(){
+        apagarCookie(COOKIE_LOGIN);
+        const campo=document.getElementById("login-usuario");
+        const senha=document.getElementById("login-senha");
+        if(campo){
+            campo.readOnly=false;
+            campo.classList.remove("usuario-fixado");
+            campo.removeAttribute("aria-readonly");
+            campo.value="";
+            campo.focus();
+        }
+        if(senha)senha.value="";
+        const cadeado=document.getElementById("icone-cadeado-usuario-login");
+        if(cadeado)cadeado.textContent="🔓";
+        if(typeof esconderErroLogin === "function") esconderErroLogin();
+    };
+
+    window.salvarEmailLoginPersistente=salvarEmailLoginPersistente;
+    window.aplicarEstadoUsuarioLogin=aplicarEstadoUsuarioLogin;
+
+    /* --------------------------------------------------
+       PRESENÇA REAL-TIME — 1 usuário online por UID.
+       Cada aba/conexão possui uma chave própria. O painel
+       conta UIDs únicos, então duas abas do mesmo usuário
+       continuam aparecendo como 1 usuário online.
+       -------------------------------------------------- */
+    window.iniciarPresencaUsuario=function(uid){
+        try{
+            if(!uid || typeof firebaseDB === "undefined")return;
+            if(presencaUidAtual===String(uid) && presencaConexaoRef)return;
+            window.encerrarPresencaUsuario();
+
+            const uidTexto=String(uid);
+            const baseRef=firebaseDB.ref("presencaUsuarios/"+uidTexto);
+            const conexaoRef=baseRef.push();
+            presencaConexaoRef=conexaoRef;
+            presencaUidAtual=uidTexto;
+
+            const connectedRef=firebaseDB.ref(".info/connected");
+            connectedRef.on("value",function(snapshot){
+                if(snapshot.val() !== true)return;
+                conexaoRef.onDisconnect().remove().catch(function(e){
+                    console.warn("onDisconnect presença:",e);
+                });
+                conexaoRef.set({
+                    uid:uidTexto,
+                    conectadoEm:firebase.database.ServerValue.TIMESTAMP
+                }).catch(function(e){
+                    console.warn("Registro de presença:",e);
+                });
+            });
+            presencaConexaoRef._connectedRef=connectedRef;
+        }catch(e){
+            console.warn("Não foi possível iniciar presença online:",e);
+        }
+    };
+
+    window.encerrarPresencaUsuario=function(){
+        try{
+            if(presencaConexaoRef){
+                if(presencaConexaoRef._connectedRef){
+                    presencaConexaoRef._connectedRef.off("value");
+                }
+                presencaConexaoRef.onDisconnect().cancel().catch(function(){});
+                presencaConexaoRef.remove().catch(function(){});
+            }
+        }catch(e){}
+        presencaConexaoRef=null;
+        presencaUidAtual=null;
+    };
+
+    function atualizarIndicadorOnline(snapshot){
+        const area=document.getElementById("indicador-usuarios-online");
+        if(!area)return;
+        const dados=snapshot && snapshot.val ? (snapshot.val()||{}) : {};
+        const uids=Object.keys(dados).filter(function(uid){
+            return dados[uid] && typeof dados[uid] === "object" && Object.keys(dados[uid]).length>0;
+        });
+        const total=uids.length;
+        area.innerHTML='<span class="online-ponto"></span>👥 '+total+' usuário'+(total===1?'':'s')+' online';
+    }
+
+    window.iniciarMonitoramentoUsuariosOnline=function(){
+        if(monitorOnlineAtivo || typeof firebaseDB === "undefined")return;
+        const area=document.getElementById("indicador-usuarios-online");
+        if(!area)return;
+        monitorOnlineRef=firebaseDB.ref("presencaUsuarios");
+        monitorOnlineRef.on("value",atualizarIndicadorOnline,function(e){
+            console.warn("Leitura da presença online:",e);
+            area.innerHTML='<span class="online-ponto"></span>👥 Usuários online indisponível';
+        });
+        monitorOnlineAtivo=true;
+    };
+
+    window.encerrarMonitoramentoUsuariosOnline=function(){
+        if(monitorOnlineRef){
+            try{monitorOnlineRef.off("value",atualizarIndicadorOnline);}catch(e){}
+        }
+        monitorOnlineRef=null;
+        monitorOnlineAtivo=false;
+    };
+
+    document.addEventListener("DOMContentLoaded",function(){
+        aplicarEstadoUsuarioLogin();
+    });
+    if(document.readyState !== "loading") aplicarEstadoUsuarioLogin();
+})();
+</script>
 
 <script id="tema-login-inicializacao">
 (function(){
