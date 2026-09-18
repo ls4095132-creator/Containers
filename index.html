@@ -2605,9 +2605,9 @@ Entre com seu usuário e senha
 </div>
 <div class="erro-login" id="erro-login"></div>
 <div id="bloco-login-normal">
-<div class="campo-login campo-login-usuario-persistente">
-<label>👤 Usuário: <span id="icone-cadeado-usuario-login" class="cadeado-usuario-login" title="Usuário fixado neste dispositivo">🔒</span></label>
-<input autocomplete="username" id="login-usuario" placeholder="Digite seu usuário" type="email"/>
+<div class="campo-login">
+<label>👤 Usuário:</label>
+<input autocomplete="off" id="login-usuario" placeholder="Digite seu usuário" type="text"/>
 </div>
 <div class="campo-login">
 <label>🔒 Senha:</label>
@@ -2623,8 +2623,6 @@ Entrar
 </div>
 <div class="alternar-login" id="alternar-login" style="display:block;">
 <a onclick="abrirSolicitacaoNovoAcesso()">Solicitar novo acesso</a>
-<br>
-<a class="link-outro-usuario" onclick="logarOutroUsuario()">Logar outro usuário</a>
 </div>
 </div>
 <!-- SOLICITAÇÃO DE NOVO ACESSO -->
@@ -2945,7 +2943,6 @@ Containers ocupados: 0 / <span class="contador-max-inline">60</span>
 <option value="vazios">⚪ Vazios</option>
 </select>
 <button class="btn-vis btn-backup-onedrive" id="btn-backup-onedrive" onclick="fazerBackupExcelOneDrive()" type="button">💾 Backup OneDrive</button>
-<span id="indicador-usuarios-online" class="indicador-usuarios-online" style="display:none;"><span class="online-ponto"></span>👥 0 usuários online</span>
 </div>
 <div class="resumo-visualizacao" id="resumo-visualizacao-admin"></div>
 </div>
@@ -4786,6 +4783,10 @@ function resumoSolicitacaoAlteracao(sol){
     const dados=sol.dados || {};
     if(sol.tipo === "ZERAR_CONTAINER") return "Container <strong>"+escaparHtmlAlteracao(dados.num)+"</strong> — "+((dados.itens || []).length)+" item(ns) serão removidos.";
     if(sol.tipo === "LIMPAR_HISTORICO") return "Solicitado pelo operador: apagar o histórico de movimentações.";
+    if(sol.tipo === "TRANSFERIR_ESTOQUE"){
+        const itemEstoque=dados.item || {};
+        return "Produto <strong>"+escaparHtmlAlteracao(itemEstoque.prod || "—")+"</strong> — C"+String(itemEstoque.num||"—").padStart(2,"0")+" → Estoque (sem destino) — Qtd: "+escaparHtmlAlteracao(dados.quantidade || "0");
+    }
     if(sol.tipo === "TRANSFERENCIA_CONTAINER"){
         const item=dados.item || {};
         return "Produto <strong>"+escaparHtmlAlteracao(item.prod || "—")+"</strong> — C"+String(dados.containerOrigem||item.num||"—").padStart(2,"0")+" → C"+String(dados.containerDestino||"—").padStart(2,"0")+" — Qtd: "+escaparHtmlAlteracao(dados.quantidade || "0");
@@ -4796,6 +4797,11 @@ function resumoSolicitacaoAlteracao(sol){
 
 function aplicarAlteracaoAprovada(sol){
     const dados=sol.dados || {};
+
+    if(sol.tipo === "TRANSFERIR_ESTOQUE"){
+        const mensagem=executarTransferenciaParaEstoqueMelhorias(String(dados.itemId||""),Number(dados.quantidade||0),sol.operador,dados.observacao||"");
+        return mensagem.replace(" realizada", " aprovada e realizada");
+    }
 
     if(sol.tipo === "ENTRADA"){
         const novoItem={...dados.item};
@@ -7483,6 +7489,9 @@ return "🗑️";
 if(tipo==="CONTAINER ZERADO")
 return "🧹";
 
+if(String(tipo||"").toUpperCase().startsWith("SAÍDA"))
+return "📤";
+
 if(tipo==="TRANSFERÊNCIA" || tipo==="TRANSFERENCIA")
 return "🔄";
 
@@ -9122,7 +9131,6 @@ async function tratarEnvioLogin(){
         const email=emailNormalizado(usuarioParaEmail(usuarioDigitado));
         await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
         const cred=await comTimeoutFirebase(firebaseAuth.signInWithEmailAndPassword(email,senha),15000,"Tempo esgotado ao autenticar no Firebase.");
-        if(typeof window.salvarEmailLoginPersistente === "function") window.salvarEmailLoginPersistente(email);
         console.log("✅ Firebase Authentication: usuário autenticado",cred.user.uid);
         await verificarAutenticacao(cred.user);
     }catch(erro){
@@ -9145,14 +9153,6 @@ async function tratarEnvioLogin(){
 
 async function entrarNoApp(usuarioObjeto){
     usuarioLogadoAtual=usuarioObjeto;
-    if(typeof window.iniciarPresencaUsuario === "function" && usuarioObjeto && usuarioObjeto.uid){
-        window.iniciarPresencaUsuario(usuarioObjeto.uid);
-    }
-    if(usuarioObjeto && usuarioObjeto.tipo === "admin" && typeof window.iniciarMonitoramentoUsuariosOnline === "function"){
-        const indicadorOnline=document.getElementById("indicador-usuarios-online");
-        if(indicadorOnline) indicadorOnline.style.display="inline-flex";
-        window.iniciarMonitoramentoUsuariosOnline();
-    }
     await carregarConfiguracoesSistemaAplicacao();
     if(temaEscolhidoAntesDoLogin){
         await salvarTemaEscolhidoAposLogin(usuarioObjeto);
@@ -9224,9 +9224,6 @@ if(usuarioObjeto && usuarioObjeto.tipo === "externo"){
         app.style.display="block";
     }
     atualizarTelaUsuarioLogado();
-    if(usuarioObjeto && usuarioObjeto.tipo === "admin" && typeof window.iniciarMonitoramentoUsuariosOnline === "function"){
-        setTimeout(function(){ window.iniciarMonitoramentoUsuariosOnline(); },100);
-    }
     const painelAdminInicial=document.getElementById("painel-solicitacoes-admin-inicial");
     if(painelAdminInicial){
         painelAdminInicial.style.display=(usuarioObjeto && usuarioObjeto.tipo === "admin") ? "block" : "none";
@@ -9288,11 +9285,6 @@ window.atualizarSistemaSemDeslogar = atualizarSistemaSemDeslogar;
 
 async function sairDoSistema(){
     try{
-        if(typeof window.salvarEmailLoginPersistente === "function" && firebaseAuth.currentUser && firebaseAuth.currentUser.email){
-            window.salvarEmailLoginPersistente(firebaseAuth.currentUser.email);
-        }
-        if(typeof window.encerrarPresencaUsuario === "function") window.encerrarPresencaUsuario();
-        if(typeof window.encerrarMonitoramentoUsuariosOnline === "function") window.encerrarMonitoramentoUsuariosOnline();
         await firebaseAuth.signOut();
     }catch(erro){
         console.error("Erro ao sair do Firebase:", erro);
@@ -9316,10 +9308,9 @@ async function sairDoSistema(){
             login.style.display="flex";
         }
         const campo=document.getElementById("login-usuario");
+        if(campo){ campo.value=""; campo.focus(); }
         const senha=document.getElementById("login-senha");
         if(senha)senha.value="";
-        if(typeof window.aplicarEstadoUsuarioLogin === "function") window.aplicarEstadoUsuarioLogin();
-        if(campo)campo.focus();
         esconderErroLogin();
     }
 }
@@ -9433,7 +9424,6 @@ async function renderizarUsuariosCadastradosAdmin(){
     if(!area || !usuarioEhAdmin())return;
     try{await carregarPerfisUsuariosFirebase();}catch(e){console.error(e);}
     const usuarios=carregarUsuariosCadastrados();
-    if(typeof window.iniciarMonitoramentoUsuariosOnline === "function") window.iniciarMonitoramentoUsuariosOnline();
     if(!usuarios.length){area.innerHTML='<div class="vazio">Nenhum perfil encontrado no Firebase.</div>';return;}
     area.innerHTML=usuarios.map(function(item,index){
         const status=item.ativo === false ? "🚫 Bloqueado" : "✅ Ativo";
@@ -11377,7 +11367,6 @@ async function iniciarAutenticacao(){
                 login.classList.remove("login-oculta");
                 login.style.display="flex";
             }
-            if(typeof window.aplicarEstadoUsuarioLogin === "function") window.aplicarEstadoUsuarioLogin();
             document.body.classList.remove("auth-carregando");
             primeiraRespostaAuth=false;
             return;
@@ -12167,43 +12156,13 @@ body.tema-claro .toast-notificacao-web div{color:#334155;}
 }
 #app-principal .btn-registrar-mercadoria{display:inline-block;}
 #app-principal .btn-exportar-containers{display:inline-block;}
-/* Exportar Excel fica compacto, lado a lado com Registrar Mercadoria. */
-#app-principal .painel-visualizacao .visualizacao-linha{
-    display:flex !important;
-    align-items:center !important;
-    gap:8px !important;
-    flex-wrap:wrap !important;
-}
-#app-principal .btn-registrar-mercadoria,
-#app-principal .btn-exportar-containers,
-#app-principal .btn-backup-onedrive{
-    width:auto !important;
-    max-width:max-content !important;
-    flex:0 0 auto !important;
+/* Exportar Excel fica com o mesmo tamanho compacto de Registrar Mercadoria. */
+#app-principal .btn-exportar-containers{
     padding:7px 11px !important;
-    font-size:12px !important;
+    font-size:inherit !important;
     min-height:0 !important;
     line-height:normal !important;
     box-sizing:border-box !important;
-}
-#app-principal .indicador-usuarios-online{
-    margin:0 !important;
-    padding:7px 10px !important;
-    flex:0 0 auto !important;
-}
-@media(max-width:700px){
-    #app-principal .painel-visualizacao .visualizacao-linha{
-        display:flex !important;
-        flex-direction:column !important;
-        align-items:stretch !important;
-    }
-    #app-principal .btn-registrar-mercadoria,
-    #app-principal .btn-exportar-containers,
-    #app-principal .btn-backup-onedrive,
-    #app-principal .indicador-usuarios-online{
-        width:100% !important;
-        max-width:none !important;
-    }
 }
 @media(max-width:700px){
     #app-principal .btn-registrar-mercadoria,
@@ -12479,9 +12438,7 @@ function obterIndicesItensContainerMelhorias(numero){
 
 function abrirDetalhesContainerMelhorias(numero){
   const itens=obterIndicesItensContainerMelhorias(numero);
-  const tipoUsuarioAtual=String(usuarioLogadoAtual && usuarioLogadoAtual.tipo || '').trim().toLowerCase();
-  const podeAlterar=!!(usuarioLogadoAtual && tipoUsuarioAtual!=='externo');
-  const podeVerHistoricoIndividual=(tipoUsuarioAtual==='admin' || tipoUsuarioAtual==='usuario' || tipoUsuarioAtual==='comum' || tipoUsuarioAtual==='usuario comum');
+  const podeAlterar=!!(usuarioLogadoAtual && String(usuarioLogadoAtual.tipo||'').toLowerCase()!=='externo');
   let html='<div style="text-align:left;line-height:1.65"><strong>Container '+String(numero).padStart(2,'0')+'</strong><br>';
   if(!itens.length){ html+='<div class="vazio">⚪ Container vazio.</div>'; }
   else {
@@ -12491,10 +12448,7 @@ function abrirDetalhesContainerMelhorias(numero){
       const nome=esc(it.prod||'—');
       const pesoUnitario=Number(it.kg||0);
       const pesoTotal=Number(it.peso||0);
-      const acoes=podeAlterar?'<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap"><button class="btn-vis" type="button" onclick="editarItemContainer('+idx+');fecharDetalhesContainerMelhorias()">✏️ Editar</button><button class="btn-vis" type="button" onclick="excluirItem('+idx+');fecharDetalhesContainerMelhorias()">🗑️ Excluir</button><button class="btn-vis" type="button" onclick="abrirModalTransferenciaContainer('+idx+')">🔄 Transferir</button><button class="btn-vis" type="button" onclick="imprimirEtiquetaContainerMelhorias('+idx+')">🖨️ Imprimir Etiqueta</button></div>':'';
-      const botaoHistoricoIndividual=podeVerHistoricoIndividual
-        ? '<button type="button" title="Abrir histórico deste produto" onclick="fecharDetalhesContainerMelhorias();abrirHistoricoProdutoMelhorias('+idx+')" style="display:inline-block;margin-top:3px;padding:5px 10px;border:1px solid var(--borda);border-radius:7px;background:transparent;color:var(--texto);font:inherit;font-weight:700;cursor:pointer;max-width:100%;text-align:left;transition:background .15s,border-color .15s">'+nome+'</button>'
-        : '<span style="display:inline-block;margin-top:3px;font-weight:700;">'+nome+'</span>';
+      const acoes=podeAlterar?'<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap"><button class="btn-vis" type="button" onclick="abrirModalTransferenciaEstoqueMelhorias('+idx+')">📦 Transferir para estoque</button><button class="btn-vis" type="button" onclick="excluirItem('+idx+');fecharDetalhesContainerMelhorias()">🗑️ Excluir</button><button class="btn-vis" type="button" onclick="abrirModalTransferenciaContainer('+idx+')">🔄 Transferência de Container</button><button class="btn-vis" type="button" onclick="imprimirEtiquetaContainerMelhorias('+idx+')">🖨️ Imprimir Etiqueta</button></div>':'';
       html+=(i?' <hr>':'')+
         '<div style="font-size:14px">'+
         '📅 Data de entrada: '+esc(it.data||it.dataEntrada||it.entradaEm||'—')+'<br>'+
@@ -12502,7 +12456,8 @@ function abrirDetalhesContainerMelhorias(numero){
         '🏭 Fornecedor: '+esc(it.fornecedor||'—')+'<br>'+
         '🧾 Número da nota: '+esc(it.nf||it.notaFiscal||'—')+'<br>'+
         '🏷️ Código: '+esc(it.codigo||'—')+'<br>'+
-        '<div style="margin-top:4px;margin-bottom:4px">📋 <span style="font-weight:700">Produto:</span><br>'+botaoHistoricoIndividual+'</div>'+
+        '<div style="margin-top:4px;margin-bottom:4px">📋 <span style="font-weight:700">Produto:</span><br>'+
+        (String(usuarioLogadoAtual&&usuarioLogadoAtual.tipo||'').toLowerCase()==='externo' ? '<span style="display:inline-block;margin-top:3px;padding:5px 10px;font-weight:700;max-width:100%;text-align:left">'+nome+'</span>' : '<button type="button" title="Abrir histórico deste produto" onclick="fecharDetalhesContainerMelhorias();abrirHistoricoProdutoMelhorias('+idx+')" style="display:inline-block;margin-top:3px;padding:5px 10px;border:1px solid var(--borda);border-radius:7px;background:transparent;color:var(--texto);font:inherit;font-weight:700;cursor:pointer;max-width:100%;text-align:left;transition:background .15s,border-color .15s">'+nome+'</button>')+'</div>'+
         '🔖 Lote: '+esc(it.lote||'—')+'<br>'+
         '📅 Validade: '+(typeof formatarData==='function'&&it.validade?formatarData(it.validade):esc(it.validade||'—'))+'<br>'+
         '🔢 Quantidade: '+Number(it.qtd||0).toLocaleString('pt-BR')+'<br>'+
@@ -12619,6 +12574,8 @@ function movimentoPertenceAoProdutoMelhorias(mov, referencia){
   // Para acompanhar transferências, alterações e exclusões, usamos código + lote.
   if(codigoRef && codigo && loteRef && lote && codigo===codigoRef && lote===loteRef) return true;
   if(codigoRef && codigo && codigo===codigoRef && (!loteRef || !lote)) return true;
+  if(codigoRef && codigo && codigo===codigoRef && prodRef && prod===prodRef) return true;
+  if(prodRef && prod && prod===prodRef && loteRef && lote===loteRef) return true;
 
   // Compatibilidade com registros antigos que não possuem código.
   if(!codigoRef && loteRef && lote && lote===loteRef && prodRef && prod===prodRef) return true;
@@ -12659,9 +12616,9 @@ function obterHistoricoIndividualProdutoMelhorias(referencia){
 }
 
 function abrirHistoricoProdutoMelhorias(index){
-  const tipoUsuarioAtual=String(usuarioLogadoAtual && usuarioLogadoAtual.tipo || '').trim().toLowerCase();
-  if(tipoUsuarioAtual==='externo' || tipoUsuarioAtual==='usuario externo' || tipoUsuarioAtual==='usuário externo'){
-    alert('🔒 O histórico individual das mercadorias está disponível somente para o administrador e o usuário comum.');
+  const tipoUsuario=String(usuarioLogadoAtual&&usuarioLogadoAtual.tipo||"").toLowerCase();
+  if(tipoUsuario==="externo"){
+    alert("❌ O usuário externo não possui acesso ao histórico individual do produto.");
     return;
   }
   const referencia=Array.isArray(estoque)?estoque[index]:null;
@@ -12902,56 +12859,13 @@ function renderizarCentralNotificacoes(){
   const areas=[document.getElementById('lista-notificacoes-individuais'),document.getElementById('lista-notificacoes-individuais-externo')].filter(Boolean);
   const contadores=document.querySelectorAll('#contador-notificacoes-individuais');
   if(!areas.length)return;
-
-  // Somente notificações ainda não lidas aparecem nesta aba.
-  // As notificações lidas continuam gravadas no Firebase, mas saem da central.
-  const naoLidas=notificacoesIndividuais.filter(n=>!n.lida);
-  contadores.forEach(c=>c.textContent=String(naoLidas.length));
-
-  const html=!naoLidas.length
-    ? '<div class="vazio">📭 Nenhuma notificação nova.</div>'
-    : naoLidas.slice(0,50).map(n=>
-        '<div class="notificacao-individual nao-lida" data-notificacao-id="'+String(n.id||'')+'">'+
-          '<div style="display:flex;align-items:center;gap:8px;">'+
-            '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:5px;background:#22c55e;color:#fff;font-weight:700;font-size:14px;flex:0 0 auto;">✓</span>'+
-            '<strong>'+String(n.titulo||'Notificação')+'</strong>'+
-          '</div>'+
-          '<div>'+String(n.mensagem||'')+'</div>'+
-          '<small>'+ (n.criadaEm?new Date(n.criadaEm).toLocaleString('pt-BR'):'') +'</small>'+
-        '</div>'
-      ).join('');
+  const naoLidas=notificacoesIndividuais.filter(n=>!n.lida).length;
+  contadores.forEach(c=>c.textContent=String(naoLidas));
+  const html=!notificacoesIndividuais.length?'<div class="vazio">📭 Nenhuma notificação.</div>':notificacoesIndividuais.slice(0,50).map(n=>'<div class="notificacao-individual '+(!n.lida?'nao-lida':'')+'"><strong>'+String(n.titulo||'Notificação')+'</strong><div>'+String(n.mensagem||'')+'</div><small>'+ (n.criadaEm?new Date(n.criadaEm).toLocaleString('pt-BR'):'') +'</small></div>').join('');
   areas.forEach(a=>a.innerHTML=html);
 }
 function toggleCentralNotificacoes(){const p=obterPainelCentralNotificacoes();if(!p)return;p.style.display=p.style.display==='none'?'block':'none';renderizarCentralNotificacoes();}
-async function marcarTodasNotificacoesLidas(){
-  const uid=uidAtualMelhorias();
-  if(!uid || !notificacoesIndividuais.length)return;
-
-  const pendentes=notificacoesIndividuais.filter(n=>!n.lida && n.id);
-  if(!pendentes.length){
-    renderizarCentralNotificacoes();
-    return;
-  }
-
-  const updates={};
-  pendentes.forEach(n=>{ updates[n.id+'/lida']=true; });
-
-  try{
-    // Primeiro grava no Firebase para que o status permaneça lido neste dispositivo
-    // e nos próximos acessos.
-    await firebaseDB.ref('preferenciasUsuarios/'+uid+'/notificacoes').update(updates);
-
-    // Marca visualmente como lidas e remove imediatamente da central.
-    notificacoesIndividuais=notificacoesIndividuais.map(function(n){
-      if(n && updates[n.id+'/lida']===true) return Object.assign({},n,{lida:true});
-      return n;
-    });
-    renderizarCentralNotificacoes();
-  }catch(e){
-    console.warn('Não foi possível marcar notificações:',e);
-    alert('❌ Não foi possível marcar as notificações como lidas. Verifique o Firebase.');
-  }
-}
+async function marcarTodasNotificacoesLidas(){const uid=uidAtualMelhorias();if(!uid||!notificacoesIndividuais.length)return;const updates={};notificacoesIndividuais.forEach(n=>{if(n.id)updates[n.id+'/lida']=true;});try{await firebaseDB.ref('preferenciasUsuarios/'+uid+'/notificacoes').update(updates);}catch(e){console.warn('Não foi possível marcar notificações:',e);}}
 
 async function confirmarExecucaoSolicitacao(id){
   const uid=uidAtualMelhorias(); if(!uid||!id)return;
@@ -13067,6 +12981,49 @@ setTimeout(ativarMelhoriasContainers,1200);
 function usuarioPodeTransferirContainer(){
     const tipo=String(usuarioLogadoAtual && usuarioLogadoAtual.tipo || "").toLowerCase();
     return tipo==="admin" || tipo==="comum" || tipo==="usuario" || tipo==="usuario comum" || tipo==="usuário comum";
+}
+
+function executarTransferenciaParaEstoqueMelhorias(itemId, quantidade, operador, observacao){
+    const idItem=String(itemId||"");
+    const qtdSaida=Number(quantidade||0);
+    const indice=estoque.findIndex(function(item){ return item && String(item.id||"")===idItem; });
+    if(indice<0) throw new Error("A mercadoria de origem não foi encontrada no estoque.");
+    const item=estoque[indice];
+    const saldo=Number(item.qtd||0);
+    if(!Number.isInteger(qtdSaida) || qtdSaida<=0) throw new Error("Informe uma quantidade inteira maior que zero.");
+    if(qtdSaida>saldo) throw new Error("A quantidade informada é maior que o saldo disponível.");
+    const agora=new Date();
+    const movimento=Object.assign({},item,{id:"HST-"+Date.now()+"-"+Math.random().toString(36).slice(2,8),data:agora.toISOString().slice(0,10),hora:agora.toTimeString().slice(0,8),qtd:qtdSaida,peso:Number(item.kg||0)*qtdSaida,kg:Number(item.kg||0)});
+    const novaQuantidade=saldo-qtdSaida;
+    if(novaQuantidade<=0){ estoque.splice(indice,1); }
+    else { item.qtd=novaQuantidade; item.peso=Number(item.kg||0)*novaQuantidade; estoque[indice]=item; }
+    registrarMovimentacao("SAÍDA - TRANSFERIR PARA ESTOQUE",movimento,"Saída do Container para estoque, sem destino específico. Quantidade: "+qtdSaida+". Operador: "+(operador||"Registro do sistema")+(observacao?". Observação: "+observacao:""));
+    return "Saída de "+qtdSaida+" volume(s) do C"+String(item.num).padStart(2,"0")+" realizada para estoque, sem destino específico.";
+}
+
+function abrirModalTransferenciaEstoqueMelhorias(index){
+    const item=Array.isArray(estoque)?estoque[index]:null;
+    if(!item){alert("❌ Mercadoria não encontrada.");return;}
+    const tipo=String(usuarioLogadoAtual&&usuarioLogadoAtual.tipo||"").toLowerCase();
+    if(tipo==="externo"||!usuarioLogadoAtual){alert("❌ Este usuário não possui acesso a esta operação.");return;}
+    const existente=document.getElementById("modal-transferencia-estoque-melhorias"); if(existente) existente.remove();
+    const saldo=Number(item.qtd||0); if(saldo<=0){alert("❌ Não há saldo disponível neste container.");return;}
+    const modal=document.createElement("div"); modal.id="modal-transferencia-estoque-melhorias"; modal.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.68);z-index:100001;display:flex;align-items:center;justify-content:center;padding:18px;";
+    const esc=v=>typeof escaparHtmlSolicitacao==="function"?escaparHtmlSolicitacao(v):String(v==null?"":v).replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c];});
+    modal.innerHTML='<div class="modal-solicitacao-caixa" style="max-width:620px;width:100%;"><div class="modal-solicitacao-cabecalho"><div><h2 style="margin:0 0 4px;">📦 Transferir para Estoque</h2><div class="texto-apoio-solicitacao">O saldo será retirado do container e registrado como saída, sem destino específico.</div></div><button class="modal-fechar" type="button" onclick="fecharModalTransferenciaEstoqueMelhorias()">✕</button></div><div class="modal-solicitacao-corpo"><div class="resumo-container-solicitacao">📋 <strong>Produto:</strong> '+esc(item.prod||"—")+'<br>🔢 <strong>Código:</strong> '+esc(item.codigo||"—")+'<br>🏷️ <strong>Lote:</strong> '+esc(item.lote||"—")+'<br>📦 <strong>Container:</strong> C'+String(item.num||"—").padStart(2,"0")+'<br>🔢 <strong>Saldo disponível:</strong> '+saldo.toLocaleString("pt-BR")+' volume(s)</div><div class="linha-form" style="margin-top:12px;"><label>Quantidade a transferir para estoque:</label><input id="transferencia-estoque-quantidade" type="number" min="1" max="'+saldo+'" step="1" value="1"></div><div class="campo" style="margin-top:10px;"><label>💬 Observação (opcional):</label><textarea id="transferencia-estoque-observacao" rows="3" placeholder="Observação da saída, se necessário."></textarea></div><input type="hidden" id="transferencia-estoque-index" value="'+index+'"></div><div class="modal-solicitacao-rodape"><button class="btn-cancelar" type="button" onclick="fecharModalTransferenciaEstoqueMelhorias()">❌ Cancelar</button><button class="btn-salvar" type="button" onclick="confirmarTransferenciaEstoqueMelhorias()">📦 Confirmar saída para estoque</button></div></div>';
+    document.body.appendChild(modal); document.body.style.overflow="hidden"; modal.addEventListener("click",function(e){if(e.target===modal)fecharModalTransferenciaEstoqueMelhorias();});
+}
+function fecharModalTransferenciaEstoqueMelhorias(){const modal=document.getElementById("modal-transferencia-estoque-melhorias");if(modal)modal.remove();document.body.style.overflow="";}
+async function confirmarTransferenciaEstoqueMelhorias(){
+    const index=Number(document.getElementById("transferencia-estoque-index")?.value); const quantidade=Number(document.getElementById("transferencia-estoque-quantidade")?.value); const observacao=String(document.getElementById("transferencia-estoque-observacao")?.value||"").trim(); const item=Array.isArray(estoque)?estoque[index]:null;
+    if(!item){alert("❌ A mercadoria não foi encontrada.");return;} const tipo=String(usuarioLogadoAtual&&usuarioLogadoAtual.tipo||"").toLowerCase(); if(tipo==="externo"){alert("❌ Este usuário não possui acesso a esta operação.");return;}
+    if(!Number.isInteger(quantidade)||quantidade<=0||quantidade>Number(item.qtd||0)){alert("❌ Informe uma quantidade válida dentro do saldo disponível.");return;}
+    if(!item.id){garantirIdsEstoque();if(!item.id){alert("❌ Não foi possível identificar a mercadoria.");return;}}
+    try{
+      if(tipo==="admin"){const msg=executarTransferenciaParaEstoqueMelhorias(String(item.id),quantidade,operadorAtual(),observacao);await salvarDados();mostrarEstoque();mostrarHistorico();fecharModalTransferenciaEstoqueMelhorias();mostrarAvisoOperacaoVerde("Saída para estoque","C"+String(item.num).padStart(2,"0")+" • "+quantidade+" volume(s)");alert("✅ "+msg);return;}
+      const solicitacao={id:Date.now()+Math.floor(Math.random()*1000),tipo:"TRANSFERIR_ESTOQUE",descricao:observacao||"Transferência de saldo para estoque, sem destino específico.",dados:{itemId:String(item.id),quantidade:quantidade,observacao:observacao,item:Object.assign({},item)},operador:operadorAtual(),operadorUid:firebaseAuth.currentUser?firebaseAuth.currentUser.uid:"",filial:(usuarioLogadoAtual&&usuarioLogadoAtual.filial)||"NÃO CADASTRADA",data:new Date().toISOString(),status:"pendente"};
+      const lista=carregarSolicitacoesAlteracoes();lista.push(solicitacao);await salvarSolicitacoesAlteracoes(lista);fecharModalTransferenciaEstoqueMelhorias();mostrarAvisoOperacaoVerde("Solicitação de saída enviada","C"+String(item.num).padStart(2,"0")+" • "+quantidade+" volume(s) • Aguardando administrador.");alert("📨 Solicitação enviada ao administrador. A saída só será realizada após aprovação.");
+    }catch(e){console.error("Erro ao transferir para estoque:",e);alert("❌ Não foi possível realizar a saída.\n\n"+(e.message||e));}
 }
 
 function abrirModalTransferenciaContainer(index){
@@ -13333,6 +13290,9 @@ function toggleAlertasValidade(){
 window.toggleAlertasValidade=toggleAlertasValidade;
 
 window.abrirModalTransferenciaContainer=abrirModalTransferenciaContainer;
+window.abrirModalTransferenciaEstoqueMelhorias=abrirModalTransferenciaEstoqueMelhorias;
+window.fecharModalTransferenciaEstoqueMelhorias=fecharModalTransferenciaEstoqueMelhorias;
+window.confirmarTransferenciaEstoqueMelhorias=confirmarTransferenciaEstoqueMelhorias;
 window.abrirHistoricoProdutoMelhorias=abrirHistoricoProdutoMelhorias;
 window.fecharHistoricoProdutoMelhorias=fecharHistoricoProdutoMelhorias;
 window.excluirHistoricoProdutoLinhaMelhorias=excluirHistoricoProdutoLinhaMelhorias;
@@ -13945,229 +13905,6 @@ body.tema-claro .toast-notificacao-web div{color:#334155;}
 </style>
 
 
-
-<style id="ajuste-login-usuario-fixo-online">
-/* ======================================================
-   LOGIN — USUÁRIO FIXO POR DISPOSITIVO + PRESENÇA ONLINE
-   Não usa localStorage. O e-mail fica em cookie do navegador.
-   ====================================================== */
-.campo-login-usuario-persistente label{
-    display:flex !important;
-    align-items:center;
-    justify-content:space-between;
-    gap:6px;
-}
-.cadeado-usuario-login{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    width:22px;
-    height:22px;
-    font-size:13px;
-    opacity:.9;
-}
-#login-usuario.usuario-fixado{
-    padding-right:34px !important;
-    cursor:not-allowed;
-    opacity:.92;
-}
-.link-outro-usuario{
-    display:inline-block;
-    margin-top:7px;
-    font-size:11px !important;
-}
-.indicador-usuarios-online{
-    display:inline-flex;
-    align-items:center;
-    gap:7px;
-    margin:8px 0 10px;
-    padding:7px 10px;
-    border:1px solid var(--borda-forte);
-    border-radius:8px;
-    background:var(--bg-painel-2);
-    color:var(--texto);
-    font-size:11.5px;
-    font-weight:600;
-}
-.indicador-usuarios-online .online-ponto{
-    width:8px;
-    height:8px;
-    border-radius:50%;
-    background:#10b981;
-    box-shadow:0 0 0 3px rgba(16,185,129,.12);
-}
-</style>
-<script id="login-fixo-presenca-online">
-(function(){
-    "use strict";
-
-    const COOKIE_LOGIN="cc_usuario_login";
-    const COOKIE_DIAS=365;
-    let presencaConexaoRef=null;
-    let presencaUidAtual=null;
-    let monitorOnlineRef=null;
-    let monitorOnlineAtivo=false;
-
-    function definirCookieSeguro(nome,valor,dias){
-        try{
-            const maxAge=Math.max(1,Math.floor((dias||365)*86400));
-            const secure=location.protocol === "https:" ? "; Secure" : "";
-            document.cookie=nome+"="+encodeURIComponent(String(valor||""))+"; Max-Age="+maxAge+"; Path=/; SameSite=Lax"+secure;
-        }catch(e){ console.warn("Cookie de login:",e); }
-    }
-
-    function lerCookie(nome){
-        try{
-            const prefix=nome+"=";
-            const partes=document.cookie ? document.cookie.split("; ") : [];
-            for(let i=0;i<partes.length;i++){
-                if(partes[i].indexOf(prefix)===0) return decodeURIComponent(partes[i].slice(prefix.length));
-            }
-        }catch(e){ console.warn("Leitura do cookie de login:",e); }
-        return "";
-    }
-
-    function apagarCookie(nome){
-        try{
-            document.cookie=nome+"=; Max-Age=0; Path=/; SameSite=Lax"+(location.protocol === "https:" ? "; Secure" : "");
-        }catch(e){}
-    }
-
-    function salvarEmailLoginPersistente(email){
-        const valor=String(email||"").trim().toLowerCase();
-        if(valor) definirCookieSeguro(COOKIE_LOGIN,valor,COOKIE_DIAS);
-    }
-
-    function aplicarEstadoUsuarioLogin(){
-        const campo=document.getElementById("login-usuario");
-        const cadeado=document.getElementById("icone-cadeado-usuario-login");
-        if(!campo)return;
-        const email=lerCookie(COOKIE_LOGIN);
-        if(email){
-            campo.value=email;
-            campo.readOnly=true;
-            campo.classList.add("usuario-fixado");
-            campo.setAttribute("aria-readonly","true");
-            campo.title="Usuário fixado neste dispositivo. Use 'Logar outro usuário' para trocar.";
-            if(cadeado)cadeado.textContent="🔒";
-        }else{
-            campo.value="";
-            campo.readOnly=false;
-            campo.classList.remove("usuario-fixado");
-            campo.removeAttribute("aria-readonly");
-            campo.title="";
-            if(cadeado)cadeado.textContent="🔓";
-        }
-    }
-
-    window.logarOutroUsuario=function(){
-        apagarCookie(COOKIE_LOGIN);
-        const campo=document.getElementById("login-usuario");
-        const senha=document.getElementById("login-senha");
-        if(campo){
-            campo.readOnly=false;
-            campo.classList.remove("usuario-fixado");
-            campo.removeAttribute("aria-readonly");
-            campo.value="";
-            campo.focus();
-        }
-        if(senha)senha.value="";
-        const cadeado=document.getElementById("icone-cadeado-usuario-login");
-        if(cadeado)cadeado.textContent="🔓";
-        if(typeof esconderErroLogin === "function") esconderErroLogin();
-    };
-
-    window.salvarEmailLoginPersistente=salvarEmailLoginPersistente;
-    window.aplicarEstadoUsuarioLogin=aplicarEstadoUsuarioLogin;
-
-    /* --------------------------------------------------
-       PRESENÇA REAL-TIME — 1 usuário online por UID.
-       Cada aba/conexão possui uma chave própria. O painel
-       conta UIDs únicos, então duas abas do mesmo usuário
-       continuam aparecendo como 1 usuário online.
-       -------------------------------------------------- */
-    window.iniciarPresencaUsuario=function(uid){
-        try{
-            if(!uid || typeof firebaseDB === "undefined")return;
-            if(presencaUidAtual===String(uid) && presencaConexaoRef)return;
-            window.encerrarPresencaUsuario();
-
-            const uidTexto=String(uid);
-            const baseRef=firebaseDB.ref("presencaUsuarios/"+uidTexto);
-            const conexaoRef=baseRef.push();
-            presencaConexaoRef=conexaoRef;
-            presencaUidAtual=uidTexto;
-
-            const connectedRef=firebaseDB.ref(".info/connected");
-            connectedRef.on("value",function(snapshot){
-                if(snapshot.val() !== true)return;
-                conexaoRef.onDisconnect().remove().catch(function(e){
-                    console.warn("onDisconnect presença:",e);
-                });
-                conexaoRef.set({
-                    uid:uidTexto,
-                    conectadoEm:firebase.database.ServerValue.TIMESTAMP
-                }).catch(function(e){
-                    console.warn("Registro de presença:",e);
-                });
-            });
-            presencaConexaoRef._connectedRef=connectedRef;
-        }catch(e){
-            console.warn("Não foi possível iniciar presença online:",e);
-        }
-    };
-
-    window.encerrarPresencaUsuario=function(){
-        try{
-            if(presencaConexaoRef){
-                if(presencaConexaoRef._connectedRef){
-                    presencaConexaoRef._connectedRef.off("value");
-                }
-                presencaConexaoRef.onDisconnect().cancel().catch(function(){});
-                presencaConexaoRef.remove().catch(function(){});
-            }
-        }catch(e){}
-        presencaConexaoRef=null;
-        presencaUidAtual=null;
-    };
-
-    function atualizarIndicadorOnline(snapshot){
-        const area=document.getElementById("indicador-usuarios-online");
-        if(!area)return;
-        const dados=snapshot && snapshot.val ? (snapshot.val()||{}) : {};
-        const uids=Object.keys(dados).filter(function(uid){
-            return dados[uid] && typeof dados[uid] === "object" && Object.keys(dados[uid]).length>0;
-        });
-        const total=uids.length;
-        area.innerHTML='<span class="online-ponto"></span>👥 '+total+' usuário'+(total===1?'':'s')+' online';
-    }
-
-    window.iniciarMonitoramentoUsuariosOnline=function(){
-        if(monitorOnlineAtivo || typeof firebaseDB === "undefined")return;
-        const area=document.getElementById("indicador-usuarios-online");
-        if(!area)return;
-        monitorOnlineRef=firebaseDB.ref("presencaUsuarios");
-        monitorOnlineRef.on("value",atualizarIndicadorOnline,function(e){
-            console.warn("Leitura da presença online:",e);
-            area.innerHTML='<span class="online-ponto"></span>👥 Usuários online indisponível';
-        });
-        monitorOnlineAtivo=true;
-    };
-
-    window.encerrarMonitoramentoUsuariosOnline=function(){
-        if(monitorOnlineRef){
-            try{monitorOnlineRef.off("value",atualizarIndicadorOnline);}catch(e){}
-        }
-        monitorOnlineRef=null;
-        monitorOnlineAtivo=false;
-    };
-
-    document.addEventListener("DOMContentLoaded",function(){
-        aplicarEstadoUsuarioLogin();
-    });
-    if(document.readyState !== "loading") aplicarEstadoUsuarioLogin();
-})();
-</script>
 
 <script id="tema-login-inicializacao">
 (function(){
