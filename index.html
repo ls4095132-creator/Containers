@@ -4955,14 +4955,10 @@ function resumoSolicitacaoAlteracao(sol){
     if(sol.tipo === "ZERAR_CONTAINER") return "Container <strong>"+escaparHtmlAlteracao(dados.num)+"</strong> — "+((dados.itens || []).length)+" item(ns) serão removidos.";
     if(sol.tipo === "LIMPAR_HISTORICO") return "Solicitado pelo operador: apagar o histórico de movimentações.";
     if(sol.tipo === "TRANSFERENCIA_ESTOQUE"){
-        const itemId=String(dados.itemId||""), quantidade=Number(dados.quantidade||0), indice=estoque.findIndex(function(item){return item && String(item.id||"")===itemId;});
-        if(indice<0) throw new Error("A mercadoria de origem não foi encontrada no estoque.");
-        if(!Number.isInteger(quantidade)||quantidade<=0) throw new Error("Quantidade inválida para transferência para estoque.");
-        const origemItem=estoque[indice], saldo=Number(origemItem.qtd||0); if(quantidade>saldo) throw new Error("A quantidade solicitada é maior que o saldo disponível.");
-        const registro={...origemItem}, restante=saldo-quantidade;
-        if(restante<=0) estoque.splice(indice,1); else {origemItem.qtd=restante;origemItem.peso=Number(origemItem.kg||0)*restante;estoque[indice]=origemItem;}
-        registrarMovimentacao("SAÍDA",registro,"Transferência para estoque sem destino informado, aprovada pelo administrador. Quantidade: "+quantidade+" volume(s). Operador: "+sol.operador+(dados.observacao?". Observação: "+dados.observacao:"."));
-        return "Transferência para estoque aprovada: "+quantidade+" volume(s) retirados do C"+String(registro.num).padStart(2,"0")+".";
+        const itemId=String(dados.itemId||""), quantidade=Number(dados.quantidade||0);
+        const indice=estoque.findIndex(function(item){return item && String(item.id||"")===itemId;});
+        const origemItem=indice>=0 ? estoque[indice] : (dados.item || {});
+        return "Container <strong>C"+String(origemItem.num||dados.containerOrigem||"—").padStart(2,"0")+"</strong> — "+escaparHtmlAlteracao(origemItem.prod||"")+" — Qtd: "+escaparHtmlAlteracao(quantidade)+" volume(s) — saída para estoque, sem destino informado.";
     }
 
     if(sol.tipo === "TRANSFERENCIA_CONTAINER"){
@@ -5004,6 +5000,41 @@ function aplicarAlteracaoAprovada(sol){
         estoque.splice(indice,1);
         registrarMovimentacao("EXCLUSÃO", item, "Exclusão aprovada pelo administrador. Operador: "+sol.operador);
         return "Exclusão aprovada.";
+    }
+
+    if(sol.tipo === "TRANSFERENCIA_ESTOQUE"){
+        const itemId=String(dados.itemId || "");
+        const quantidade=Number(dados.quantidade || 0);
+        if(!itemId) throw new Error("A mercadoria de origem não foi identificada.");
+        if(!Number.isInteger(quantidade) || quantidade<=0) throw new Error("Quantidade inválida para transferência para estoque.");
+
+        const indice=estoque.findIndex(function(item){
+            return item && String(item.id || "")===itemId;
+        });
+        if(indice<0) throw new Error("A mercadoria de origem não foi encontrada no estoque.");
+
+        const origemItem=estoque[indice];
+        const saldo=Number(origemItem.qtd || 0);
+        if(quantidade>saldo) throw new Error("A quantidade solicitada é maior que o saldo disponível.");
+
+        const registro={...origemItem};
+        const restante=saldo-quantidade;
+
+        if(restante<=0){
+            estoque.splice(indice,1);
+        }else{
+            origemItem.qtd=restante;
+            origemItem.peso=Number(origemItem.kg || 0)*restante;
+            estoque[indice]=origemItem;
+        }
+
+        registrarMovimentacao(
+            "SAÍDA",
+            registro,
+            "Transferência para estoque sem destino informado, aprovada pelo administrador. Quantidade: "+quantidade+" volume(s). Operador: "+sol.operador+(dados.observacao?". Observação: "+dados.observacao:".")
+        );
+
+        return "Transferência para estoque aprovada: "+quantidade+" volume(s) retirados do C"+String(registro.num).padStart(2,"0")+".";
     }
 
     if(sol.tipo === "TRANSFERENCIA_CONTAINER"){
