@@ -5085,39 +5085,7 @@ function aplicarAlteracaoAprovada(sol){
     }
 
     if(tipoAlteracao === "TRANSFERENCIA_ESTOQUE"){
-        const itemId=String(dados.itemId || "");
-        const quantidade=Number(dados.quantidade || 0);
-        if(!itemId) throw new Error("A mercadoria de origem não foi identificada.");
-        if(!Number.isInteger(quantidade) || quantidade<=0) throw new Error("Quantidade inválida para transferência para estoque.");
-
-        const indice=estoque.findIndex(function(item){
-            return item && String(item.id || "")===itemId;
-        });
-        if(indice<0) throw new Error("A mercadoria de origem não foi encontrada no estoque.");
-
-        const origemItem=estoque[indice];
-        const saldo=Number(origemItem.qtd || 0);
-        if(quantidade>saldo) throw new Error("A quantidade solicitada é maior que o saldo disponível.");
-
-        const registro={...origemItem};
-        const restante=saldo-quantidade;
-
-        if(restante<=0){
-            estoque.splice(indice,1);
-        }else{
-            origemItem.qtd=restante;
-            origemItem.peso=Number(origemItem.kg || 0)*restante;
-            estoque[indice]=origemItem;
-        }
-
-        registrarMovimentacao(
-            "SAÍDA",
-            registro,
-            "Transferência para estoque sem destino informado, aprovada pelo administrador. Quantidade: "+quantidade+" volume(s). Operador: "+sol.operador+(dados.observacao?". Observação: "+dados.observacao:"."),
-            true
-        );
-
-        return "Transferência para estoque aprovada: "+quantidade+" volume(s) retirados do C"+String(registro.num).padStart(2,"0")+".";
+        throw new Error("TRANSFERENCIA_ESTOQUE deve ser processada exclusivamente pelo fluxo seguro de aprovação.");
     }
 
     if(tipoAlteracao === "TRANSFERENCIA_CONTAINER"){
@@ -5185,6 +5153,86 @@ function aplicarAlteracaoAprovada(sol){
 const aprovacoesAlteracoesEmProcessamento = new Set();
 
 
+
+async function assumirSolicitacaoAlteracaoParaProcessamento(id){
+    const chave=String(id);
+    let solicitacaoProcessada=null;
+
+    const ref=firebaseDB.ref("solicitacoesAlteracoes");
+    const resultado=await ref.transaction(function(atual){
+        const lista=normalizarListaFirebase(atual);
+
+        const indice=lista.findIndex(function(item){
+            return item && String(item.id)===chave;
+        });
+
+        if(indice<0) return;
+
+        const atualItem=lista[indice];
+        const status=String(atualItem.status||"").toLowerCase();
+
+        // Somente a primeira aba/dispositivo que encontrar PENDENTE pode assumir.
+        if(status!=="pendente") return;
+
+        const copia=JSON.parse(JSON.stringify(atualItem));
+        copia.status="processando";
+        copia.processamentoEm=new Date().toISOString();
+        copia.processamentoPor=usuarioLogadoAtual && usuarioLogadoAtual.usuario
+            ? usuarioLogadoAtual.usuario
+            : (firebaseAuth.currentUser && firebaseAuth.currentUser.email) || "";
+
+        lista[indice]=copia;
+        solicitacaoProcessada=copia;
+
+        return lista;
+    });
+
+    if(!resultado.committed || !solicitacaoProcessada){
+        return null;
+    }
+
+    solicitacoesAlteracoesCache=normalizarListaFirebase(resultado.snapshot.val());
+    return solicitacaoProcessada;
+}
+
+async function finalizarSolicitacaoTransferenciaEstoque(sol, estoqueProcessado){
+    const id=String(sol.id);
+
+    const ref=firebaseDB.ref("solicitacoesAlteracoes");
+    const resultado=await ref.transaction(function(atual){
+        const lista=normalizarListaFirebase(atual);
+        const indice=lista.findIndex(function(item){
+            return item && String(item.id)===id;
+        });
+
+        if(indice<0) return;
+
+        const item=lista[indice];
+        const status=String(item.status||"").toLowerCase();
+
+        // Só o processo que possui a solicitação em "processando" pode finalizá-la.
+        if(status!=="processando") return;
+
+        const copia=JSON.parse(JSON.stringify(item));
+        copia.status="aprovada";
+        copia.atendidoPor=usuarioLogadoAtual && usuarioLogadoAtual.usuario
+            ? usuarioLogadoAtual.usuario
+            : (firebaseAuth.currentUser && firebaseAuth.currentUser.email) || "";
+        copia.atendidoEm=new Date().toISOString();
+        copia.tipoNormalizado="TRANSFERENCIA_ESTOQUE";
+        copia.processamentoConcluidoEm=new Date().toISOString();
+
+        lista[indice]=copia;
+        return lista;
+    });
+
+    if(!resultado.committed){
+        throw new Error("A solicitação não pôde ser finalizada porque seu estado mudou durante o processamento.");
+    }
+
+    solicitacoesAlteracoesCache=normalizarListaFirebase(resultado.snapshot.val());
+}
+
 async function aplicarTransferenciaEstoqueAprovadaSegura(sol){
     const dados=sol.dados || {};
     const itemId=String(dados.itemId || "");
@@ -5192,27 +5240,36 @@ async function aplicarTransferenciaEstoqueAprovadaSegura(sol){
     const origem=Number(dados.containerOrigem || (dados.item || {}).num || 0);
 
     if(!itemId) throw new Error("A mercadoria de origem não foi identificada.");
-    if(!Number.isInteger(quantidade) || quantidade<=0) throw new Error("Quantidade inválida para transferência para estoque.");
+    if(!Number.isInteger(quantidade) || quantidade<=0){
+        throw new Error("Quantidade inválida para transferência para estoque.");
+    }
 
+    // A quantidade que será retirada é SEMPRE a quantidade registrada na solicitação.
     const refEstoque=firebaseDB.ref("estoque");
     let registroSaida=null;
 
     const resultado=await refEstoque.transaction(function(atual){
         const lista=normalizarListaFirebase(atual);
+
         const indice=lista.findIndex(function(item){
-            return item && String(item.id || "")===itemId;
+            return item && String(item.id||"")===itemId;
         });
 
         if(indice<0) return;
+
         const origemItem=lista[indice];
+
         if(Number(origemItem.num)!==origem) return;
 
-        const saldo=Number(origemItem.qtd || 0);
+        const saldo=Number(origemItem.qtd||0);
         if(!Number.isFinite(saldo) || saldo<quantidade) return;
 
-        registroSaida={...origemItem, qtd:quantidade, peso:Number(origemItem.kg||0)*quantidade};
-
         const restante=saldo-quantidade;
+
+        registroSaida=JSON.parse(JSON.stringify(origemItem));
+        registroSaida.qtd=quantidade;
+        registroSaida.peso=Number(registroSaida.kg||0)*quantidade;
+
         if(restante<=0){
             lista.splice(indice,1);
         }else{
@@ -5224,18 +5281,16 @@ async function aplicarTransferenciaEstoqueAprovadaSegura(sol){
         return lista;
     });
 
-    if(!resultado.committed){
-        throw new Error("Não foi possível aplicar a retirada. O saldo pode ter mudado ou outra aprovação já processou esta solicitação.");
+    if(!resultado.committed || !registroSaida){
+        throw new Error("Não foi possível descontar exatamente a quantidade solicitada. O saldo pode ter sido alterado por outra operação.");
     }
 
     estoque=normalizarListaFirebase(resultado.snapshot.val());
 
+    // Histórico só é alterado depois que a transação do estoque foi confirmada.
     registrarMovimentacao(
         "SAÍDA",
-        registroSaida || Object.assign({},dados.item||{},{
-            qtd:quantidade,
-            peso:Number((dados.item||{}).kg||0)*quantidade
-        }),
+        registroSaida,
         "Transferência para estoque sem destino informado, aprovada pelo administrador. Quantidade: "+
         quantidade+" volume(s). Operador: "+sol.operador+
         (dados.observacao?". Observação: "+dados.observacao:"."),
@@ -5243,72 +5298,119 @@ async function aplicarTransferenciaEstoqueAprovadaSegura(sol){
     );
 
     return "Transferência para estoque aprovada: "+quantidade+
-        " volume(s) retirados do C"+String((registroSaida && registroSaida.num)||origem).padStart(2,"0")+".";
+        " volume(s) retirados do C"+String(registroSaida.num||origem).padStart(2,"0")+".";
 }
 
+
 async function aprovarAlteracaoAdmin(id){
-    if(!usuarioEhAdmin()){ alert("Apenas o administrador pode aprovar alterações."); return; }
+    if(!usuarioEhAdmin()){
+        alert("Apenas o administrador pode aprovar alterações.");
+        return;
+    }
 
     const chaveAprovacao=String(id);
+
     if(aprovacoesAlteracoesEmProcessamento.has(chaveAprovacao)){
         alert("⏳ Esta solicitação já está sendo processada. Aguarde a conclusão.");
         return;
     }
 
-    const lista=carregarSolicitacoesAlteracoes();
-    const sol=lista.find(function(item){
-        return String(item.id)===chaveAprovacao &&
-               String(item.status||"").toLowerCase()==="pendente";
-    });
-    if(!sol)return;
-
     aprovacoesAlteracoesEmProcessamento.add(chaveAprovacao);
 
     try{
-        const tipoAlteracao=normalizarTipoAlteracaoAdmin(sol.tipo, sol);
+        const listaAtual=carregarSolicitacoesAlteracoes();
+        const existente=listaAtual.find(function(item){
+            return item && String(item.id)===chaveAprovacao;
+        });
+
+        if(!existente) return;
+
+        const tipoAlteracao=normalizarTipoAlteracaoAdmin(existente.tipo, existente);
 
         if(tipoAlteracao==="TRANSFERENCIA_ESTOQUE"){
-            // Recarrega a fonte de verdade antes da operação.
-            const snapEstoqueAtual=await firebaseDB.ref("estoque").once("value");
-            estoque=snapEstoqueAtual && snapEstoqueAtual.exists()
-                ? normalizarListaFirebase(snapEstoqueAtual.val())
-                : [];
+            // 1. PRIMEIRO: trava a solicitação no Firebase.
+            // Outra aba/dispositivo não conseguirá aprová-la novamente.
+            const sol=await assumirSolicitacaoAlteracaoParaProcessamento(chaveAprovacao);
 
-            const mensagem=await aplicarTransferenciaEstoqueAprovadaSegura(sol);
-
-            sol.status="aprovada";
-            sol.atendidoPor=usuarioLogadoAtual.usuario;
-            sol.atendidoEm=new Date().toISOString();
-            sol.tipoNormalizado=tipoAlteracao;
-
-            // Grava o estoque já processado + histórico + status em uma única atualização.
-            await firebaseDB.ref().update({
-                estoque:estoque,
-                historico:historico,
-                solicitacoesAlteracoes:lista
-            });
-
-            mostrarEstoque();
-            mostrarHistorico();
-            renderizarSolicitacoesAlteracoesAdmin();
-
-            if(sol.operadorUid && typeof registrarNotificacaoIndividual==="function"){
-                await registrarNotificacaoIndividual(sol.operadorUid,{
-                    tipo:"transferencia_estoque_aprovada",
-                    titulo:"🟢 Transferência para estoque aprovada",
-                    mensagem:"Sua transferência foi aprovada: C"+
-                        String(sol.dados.containerOrigem).padStart(2,"0")+
-                        " → estoque (sem destino informado) • "+
-                        Number(sol.dados.quantidade||0)+" volume(s).",
-                    solicitacaoId:String(sol.id)
-                });
+            if(!sol){
+                alert("⚠️ Esta solicitação já foi processada ou está sendo processada por outro dispositivo.");
+                return;
             }
 
-            alert("✅ "+mensagem);
+            try{
+                // 2. SEGUNDO: processa uma única retirada, por transação Firebase.
+                const mensagem=await aplicarTransferenciaEstoqueAprovadaSegura(sol);
+
+                // 3. TERCEIRO: finaliza a solicitação depois que o estoque foi confirmado.
+                await finalizarSolicitacaoTransferenciaEstoque(sol, estoque);
+
+                // 4. Histórico e tela local refletem exatamente o resultado confirmado.
+                await firebaseDB.ref("historico").set(historico);
+
+                mostrarEstoque();
+                mostrarHistorico();
+                renderizarSolicitacoesAlteracoesAdmin();
+
+                if(sol.operadorUid && typeof registrarNotificacaoIndividual==="function"){
+                    await registrarNotificacaoIndividual(sol.operadorUid,{
+                        tipo:"transferencia_estoque_aprovada",
+                        titulo:"🟢 Transferência para estoque aprovada",
+                        mensagem:"Sua transferência foi aprovada: C"+
+                            String(sol.dados.containerOrigem).padStart(2,"0")+
+                            " → estoque (sem destino informado) • "+
+                            Number(sol.dados.quantidade||0)+" volume(s).",
+                        solicitacaoId:String(sol.id)
+                    });
+                }
+
+                alert("✅ "+mensagem);
+            }catch(erroTransferencia){
+                // Se a retirada não foi concluída, devolvemos o estado da solicitação
+                // para PENDENTE. Nenhum saldo é alterado aqui.
+                try{
+                    const ref=firebaseDB.ref("solicitacoesAlteracoes");
+                    await ref.transaction(function(atual){
+                        const lista=normalizarListaFirebase(atual);
+                        const indice=lista.findIndex(function(item){
+                            return item && String(item.id)===chaveAprovacao;
+                        });
+                        if(indice<0) return;
+                        if(String(lista[indice].status||"").toLowerCase()!=="processando") return;
+
+                        const copia=JSON.parse(JSON.stringify(lista[indice]));
+                        copia.status="pendente";
+                        delete copia.processamentoEm;
+                        delete copia.processamentoPor;
+                        lista[indice]=copia;
+                        return lista;
+                    });
+                    solicitacoesAlteracoesCache=carregarSolicitacoesAlteracoes();
+                }catch(reverterSolicitacao){
+                    console.warn("Não foi possível devolver a solicitação para pendente:",reverterSolicitacao);
+                }
+
+                try{
+                    const snap=await firebaseDB.ref("estoque").once("value");
+                    estoque=snap && snap.exists() ? normalizarListaFirebase(snap.val()) : [];
+                    mostrarEstoque();
+                }catch(recarregarEstoque){
+                    console.warn("Não foi possível recarregar o estoque após falha:",recarregarEstoque);
+                }
+
+                throw erroTransferencia;
+            }
+
             return;
         }
 
-        // Demais tipos permanecem com a lógica existente.
+        // Todos os demais tipos continuam com o fluxo existente.
+        const lista=carregarSolicitacoesAlteracoes();
+        const sol=lista.find(function(item){
+            return String(item.id)===chaveAprovacao &&
+                   String(item.status||"").toLowerCase()==="pendente";
+        });
+        if(!sol)return;
+
         const solParaAplicar={...sol,tipo:tipoAlteracao};
         const mensagem=aplicarAlteracaoAprovada(solParaAplicar);
 
@@ -5319,6 +5421,7 @@ async function aprovarAlteracaoAdmin(id){
 
         await salvarSolicitacoesAlteracoes(lista);
         await salvarDados();
+
         mostrarEstoque();
         mostrarHistorico();
         renderizarSolicitacoesAlteracoesAdmin();
@@ -5336,17 +5439,9 @@ async function aprovarAlteracaoAdmin(id){
         }
 
         alert("✅ "+mensagem);
+
     }catch(erro){
         console.error("Erro ao aprovar alteração:",erro);
-        try{
-            const snapEstoque=await firebaseDB.ref("estoque").once("value");
-            estoque=snapEstoque && snapEstoque.exists()
-                ? normalizarListaFirebase(snapEstoque.val())
-                : [];
-            mostrarEstoque();
-        }catch(reversao){
-            console.warn("Não foi possível restaurar a visão do estoque:",reversao);
-        }
         alert("Não foi possível aprovar a alteração.\n\n"+(erro.message||erro));
     }finally{
         aprovacoesAlteracoesEmProcessamento.delete(chaveAprovacao);
