@@ -4067,6 +4067,23 @@ function usuarioEhAdmin(){
     return !!(usuarioLogadoAtual && usuarioLogadoAtual.tipo === "admin");
 }
 
+// Acrescenta UMA solicitação à fila usando transaction. Não regrava a lista inteira
+// a partir do cache local: um cache desatualizado poderia trazer de volta como
+// "pendente" uma solicitação que o administrador já aprovou, permitindo aprovar
+// (e descontar o estoque) uma segunda vez.
+async function adicionarSolicitacaoAlteracaoSegura(solicitacao){
+    const resultado=await firebaseDB.ref("solicitacoesAlteracoes").transaction(function(atual){
+        const lista=normalizarListaFirebase(atual);
+        const jaExiste=lista.some(function(item){ return item && String(item.id)===String(solicitacao.id); });
+        if(!jaExiste) lista.push(solicitacao);
+        return lista;
+    });
+    if(!resultado.committed){
+        throw new Error("Não foi possível registrar a solicitação. Tente novamente.");
+    }
+    solicitacoesAlteracoesCache=normalizarListaFirebase(resultado.snapshot.val());
+}
+
 async function solicitarAlteracaoAdmin(tipo, dados, descricao){
     if(!firebaseAuth.currentUser){ alert("Faça login novamente."); return; }
     const solicitacao={
@@ -4080,8 +4097,7 @@ async function solicitarAlteracaoAdmin(tipo, dados, descricao){
         data: new Date().toISOString(),
         status: "pendente"
     };
-    solicitacoesAlteracoesCache.push(solicitacao);
-    await salvarSolicitacoesAlteracoes(solicitacoesAlteracoesCache);
+    await adicionarSolicitacaoAlteracaoSegura(solicitacao);
     renderizarSolicitacoesAlteracoesAdmin();
 }
 
@@ -5287,6 +5303,10 @@ async function aplicarTransferenciaEstoqueAprovadaSegura(sol){
 
     estoque=normalizarListaFirebase(resultado.snapshot.val());
 
+    // A partir daqui o estoque JÁ foi descontado no Firebase. Essa marca impede
+    // que qualquer falha posterior devolva a solicitação para "pendente".
+    sol.baixaConfirmada=true;
+
     // Histórico só é alterado depois que a transação do estoque foi confirmada.
     registrarMovimentacao(
         "SAÍDA",
@@ -5342,31 +5362,66 @@ async function aprovarAlteracaoAdmin(id){
                 const mensagem=await aplicarTransferenciaEstoqueAprovadaSegura(sol);
 
                 // 3. TERCEIRO: finaliza a solicitação depois que o estoque foi confirmado.
-                await finalizarSolicitacaoTransferenciaEstoque(sol, estoque);
+                // O estoque já foi descontado: se a finalização falhar, tenta de novo,
+                // mas NUNCA devolve a solicitação para "pendente".
+                let solicitacaoFinalizada=false;
+                for(let tentativa=1; tentativa<=3 && !solicitacaoFinalizada; tentativa++){
+                    try{
+                        await finalizarSolicitacaoTransferenciaEstoque(sol, estoque);
+                        solicitacaoFinalizada=true;
+                    }catch(erroFinalizar){
+                        console.warn("Finalização da solicitação (tentativa "+tentativa+"):",erroFinalizar);
+                        await new Promise(function(resolve){ setTimeout(resolve,700*tentativa); });
+                    }
+                }
 
                 // 4. Histórico e tela local refletem exatamente o resultado confirmado.
-                await firebaseDB.ref("historico").set(historico);
+                let historicoGravado=true;
+                try{
+                    await firebaseDB.ref("historico").set(historico);
+                }catch(erroHistorico){
+                    historicoGravado=false;
+                    console.warn("Histórico não gravado após a transferência:",erroHistorico);
+                }
 
                 mostrarEstoque();
                 mostrarHistorico();
                 renderizarSolicitacoesAlteracoesAdmin();
 
                 if(sol.operadorUid && typeof registrarNotificacaoIndividual==="function"){
-                    await registrarNotificacaoIndividual(sol.operadorUid,{
-                        tipo:"transferencia_estoque_aprovada",
-                        titulo:"🟢 Transferência para estoque aprovada",
-                        mensagem:"Sua transferência foi aprovada: C"+
-                            String(sol.dados.containerOrigem).padStart(2,"0")+
-                            " → estoque (sem destino informado) • "+
-                            Number(sol.dados.quantidade||0)+" volume(s).",
-                        solicitacaoId:String(sol.id)
-                    });
+                    try{
+                        await registrarNotificacaoIndividual(sol.operadorUid,{
+                            tipo:"transferencia_estoque_aprovada",
+                            titulo:"🟢 Transferência para estoque aprovada",
+                            mensagem:"Sua transferência foi aprovada: C"+
+                                String(sol.dados.containerOrigem).padStart(2,"0")+
+                                " → estoque (sem destino informado) • "+
+                                Number(sol.dados.quantidade||0)+" volume(s).",
+                            solicitacaoId:String(sol.id)
+                        });
+                    }catch(erroNotificacao){
+                        console.warn("Notificação não enviada:",erroNotificacao);
+                    }
                 }
 
-                alert("✅ "+mensagem);
+                if(!solicitacaoFinalizada){
+                    alert("⚠️ O estoque JÁ foi descontado ("+Number(sol.dados.quantidade||0)+" volume(s)), mas a solicitação não pôde ser marcada como aprovada.\n\nNÃO aprove novamente. Atualize a página e confira o estoque.");
+                }else if(!historicoGravado){
+                    alert("✅ "+mensagem+"\n\n⚠️ O histórico não pôde ser gravado. O estoque foi descontado apenas uma vez.");
+                }else{
+                    alert("✅ "+mensagem);
+                }
             }catch(erroTransferencia){
-                // Se a retirada não foi concluída, devolvemos o estado da solicitação
-                // para PENDENTE. Nenhum saldo é alterado aqui.
+                // Se o estoque JÁ foi descontado, a solicitação jamais pode voltar
+                // para PENDENTE, senão uma nova aprovação descontaria de novo.
+                if(sol.baixaConfirmada===true){
+                    console.error("Falha após a baixa do estoque:",erroTransferencia);
+                    alert("⚠️ O estoque JÁ foi descontado, mas ocorreu um erro ao concluir a operação.\n\nNÃO aprove novamente. Atualize a página e confira o estoque e o histórico.");
+                    return;
+                }
+
+                // Se a retirada NÃO foi concluída, devolvemos o estado da solicitação
+                // para PENDENTE. Nenhum saldo foi alterado.
                 try{
                     const ref=firebaseDB.ref("solicitacoesAlteracoes");
                     await ref.transaction(function(atual){
@@ -13883,7 +13938,11 @@ function abrirModalTransferirEstoque(index){
     document.body.appendChild(modal); document.body.style.overflow="hidden"; modal.addEventListener("click",function(e){if(e.target===modal)fecharModalTransferirEstoque();});
 }
 function fecharModalTransferirEstoque(){const m=document.getElementById("modal-transferir-estoque");if(m)m.remove();document.body.style.overflow="";}
+let transferenciaEstoqueEmEnvio=false;
 async function confirmarTransferirEstoque(){
+    // Impede clique duplo: cada clique válido geraria uma solicitação e, depois de
+    // aprovadas, o estoque seria descontado uma vez por solicitação.
+    if(transferenciaEstoqueEmEnvio) return;
     const index=Number(document.getElementById("transferir-estoque-index")?.value), quantidade=Number(document.getElementById("transferir-estoque-quantidade")?.value), observacao=String(document.getElementById("transferir-estoque-observacao")?.value||"").trim(), item=Array.isArray(estoque)?estoque[index]:null;
     if(!item){alert("❌ Mercadoria não encontrada.");return;}
     const tipo=String(usuarioLogadoAtual && usuarioLogadoAtual.tipo || "").toLowerCase(), permitido=["admin","comum","usuario","usuário comum","usuario comum"].includes(tipo);
@@ -13899,9 +13958,12 @@ async function confirmarTransferirEstoque(){
         solicitadoEm:new Date().toISOString(),
         saldoAntes:saldo
     };
+    transferenciaEstoqueEmEnvio=true;
     try{
+      const botaoConfirmar=document.querySelector("#modal-transferir-estoque .btn-salvar");
+      if(botaoConfirmar){ botaoConfirmar.disabled=true; botaoConfirmar.textContent="⏳ Enviando..."; }
       if(tipo==="admin"){
-        const registro={...item}, restante=saldo-quantidade;
+        const registro={...item,qtd:quantidade,peso:Number(item.kg||0)*quantidade}, restante=saldo-quantidade;
         if(restante<=0) estoque.splice(index,1); else {item.qtd=restante;item.peso=Number(item.kg||0)*restante;estoque[index]=item;}
         registrarMovimentacao("SAÍDA",registro,"Transferência para estoque sem destino informado. Quantidade: "+quantidade+" volume(s). Operador: "+operadorAtual()+(observacao?". Observação: "+observacao:"."));
         await salvarDados(); mostrarEstoque(); mostrarHistorico(); fecharModalTransferirEstoque(); if(typeof mostrarAvisoOperacaoVerde==="function")mostrarAvisoOperacaoVerde("Transferência para estoque realizada","C"+String(registro.num).padStart(2,"0")+" • "+quantidade+" volume(s)"); alert("✅ Transferência para estoque realizada."); return;
@@ -13910,7 +13972,14 @@ async function confirmarTransferirEstoque(){
       // Solicitar não altera o estoque. A atualização visual vem somente
       // do listener do Firebase.
       fecharModalTransferirEstoque(); if(typeof mostrarAvisoOperacaoVerde==="function")mostrarAvisoOperacaoVerde("Solicitação enviada","Transferência para estoque aguardando aprovação do administrador."); alert("📨 Solicitação enviada ao administrador. O saldo será alterado após a aprovação.");
-    }catch(e){console.error(e);alert("❌ Não foi possível processar a transferência.\n\n"+(e.message||e));}
+    }catch(e){
+      console.error(e);
+      const botaoErro=document.querySelector("#modal-transferir-estoque .btn-salvar");
+      if(botaoErro){ botaoErro.disabled=false; botaoErro.textContent="📦 Confirmar transferência"; }
+      alert("❌ Não foi possível processar a transferência.\n\n"+(e.message||e));
+    }finally{
+      transferenciaEstoqueEmEnvio=false;
+    }
 }
 
 function abrirModalTransferenciaContainer(index){
@@ -14057,9 +14126,7 @@ async function confirmarTransferenciaContainer(){
             status:"pendente"
         };
 
-        const lista=carregarSolicitacoesAlteracoes();
-        lista.push(solicitacao);
-        await salvarSolicitacoesAlteracoes(lista);
+        await adicionarSolicitacaoAlteracaoSegura(solicitacao);
 
         fecharModalTransferenciaContainer();
         mostrarAvisoOperacaoVerde("Solicitação de transferência enviada","C"+String(origem).padStart(2,"0")+" → C"+String(destino).padStart(2,"0")+" • Aguardando administrador.");
