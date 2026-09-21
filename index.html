@@ -4945,7 +4945,7 @@ function textoTipoAlteracao(tipo){
         EXCLUSAO:"🗑️ Exclusão de item do container",
         ZERAR_CONTAINER:"🧹 Zerar container",
         LIMPAR_HISTORICO:"🧾 Limpeza do histórico",
-        TRANSFERENCIA_CONTAINER:"🔄 Transferência entre containers"
+        TRANSFERENCIA_ESTOQUE:"📦 Transferência para estoque", TRANSFERENCIA_CONTAINER:"🔄 Transferência entre containers"
     };
     return mapa[tipo] || "📋 Alteração";
 }
@@ -4955,11 +4955,10 @@ function resumoSolicitacaoAlteracao(sol){
     if(sol.tipo === "ZERAR_CONTAINER") return "Container <strong>"+escaparHtmlAlteracao(dados.num)+"</strong> — "+((dados.itens || []).length)+" item(ns) serão removidos.";
     if(sol.tipo === "LIMPAR_HISTORICO") return "Solicitado pelo operador: apagar o histórico de movimentações.";
     if(sol.tipo === "TRANSFERENCIA_ESTOQUE"){
-        const item=dados.item || {};
-        const quantidade=Number(dados.quantidade || 0);
-        const origem=Number(dados.containerOrigem || item.num || 0);
-        if(!Number.isInteger(quantidade) || quantidade<=0) return "Solicitação de transferência para estoque — quantidade inválida.";
-        return "Transferência para estoque: "+quantidade+" volume(s) retirados do C"+String(origem).padStart(2,"0")+" para estoque, sem destino informado."+(dados.observacao ? " Observação: "+escaparHtmlAlteracao(dados.observacao) : "");
+        const itemId=String(dados.itemId||""), quantidade=Number(dados.quantidade||0);
+        const indice=estoque.findIndex(function(item){return item && String(item.id||"")===itemId;});
+        const origemItem=indice>=0 ? estoque[indice] : (dados.item || {});
+        return "Container <strong>C"+String(origemItem.num||dados.containerOrigem||"—").padStart(2,"0")+"</strong> — "+escaparHtmlAlteracao(origemItem.prod||"")+" — Qtd: "+escaparHtmlAlteracao(quantidade)+" volume(s) — saída para estoque, sem destino informado.";
     }
 
     if(sol.tipo === "TRANSFERENCIA_CONTAINER"){
@@ -4970,10 +4969,54 @@ function resumoSolicitacaoAlteracao(sol){
     return "Container <strong>"+escaparHtmlAlteracao(item.num)+"</strong> — "+escaparHtmlAlteracao(item.prod || "")+(item.qtd != null ? " — Qtd: "+escaparHtmlAlteracao(item.qtd) : "");
 }
 
+function normalizarTipoAlteracaoAdmin(tipo, sol){
+    const original=String(tipo || "").trim();
+    const chave=original
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase()
+        .replace(/[\s-]+/g, "_");
+
+    const mapa={
+        "TRANSFERENCIA_ESTOQUE":"TRANSFERENCIA_ESTOQUE",
+        "TRANSFERIR_ESTOQUE":"TRANSFERENCIA_ESTOQUE",
+        "TRANSFERENCIA_PARA_ESTOQUE":"TRANSFERENCIA_ESTOQUE",
+        "TRANSFERIR_PARA_ESTOQUE":"TRANSFERENCIA_ESTOQUE",
+        "SAIDA_ESTOQUE":"TRANSFERENCIA_ESTOQUE",
+        "SAIDA_PARA_ESTOQUE":"TRANSFERENCIA_ESTOQUE",
+        "TRANSFERENCIA_ESTOQUE_SEM_DESTINO":"TRANSFERENCIA_ESTOQUE",
+        "TRANSFERENCIA_PARA_ESTOQUE_SEM_DESTINO":"TRANSFERENCIA_ESTOQUE",
+        "TRANSFERENCIA_CONTAINER":"TRANSFERENCIA_CONTAINER",
+        "TRANSFERENCIA_ENTRE_CONTAINERS":"TRANSFERENCIA_CONTAINER",
+        "ENTRADA":"ENTRADA",
+        "ALTERACAO":"ALTERACAO",
+        "EXCLUSAO":"EXCLUSAO",
+        "ZERAR_CONTAINER":"ZERAR_CONTAINER",
+        "LIMPAR_HISTORICO":"LIMPAR_HISTORICO"
+    };
+
+    if(mapa[chave]) return mapa[chave];
+
+    // Compatibilidade com solicitações antigas que foram gravadas antes
+    // da padronização do tipo de transferência para estoque.
+    const descricao=String((sol && sol.descricao) || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+    if((descricao.includes("transfer") || descricao.includes("retirar") || descricao.includes("saida")) &&
+       descricao.includes("estoque") &&
+       sol && sol.dados && sol.dados.itemId && Number(sol.dados.quantidade)>0){
+        return "TRANSFERENCIA_ESTOQUE";
+    }
+
+    return original;
+}
+
 function aplicarAlteracaoAprovada(sol){
     const dados=sol.dados || {};
+    const tipoAlteracao=normalizarTipoAlteracaoAdmin(sol.tipo, sol);
 
-    if(sol.tipo === "ENTRADA"){
+    if(tipoAlteracao === "ENTRADA"){
         const novoItem={...dados.item};
         if(!novoItem.id) novoItem.id=gerarIdEstoque();
         if(consolidarEntradaNoMesmoLote(novoItem, "Entrada aprovada pelo administrador. Operador: "+sol.operador)){
@@ -4984,7 +5027,7 @@ function aplicarAlteracaoAprovada(sol){
         return "Nova entrada aprovada e adicionada ao estoque.";
     }
 
-    if(sol.tipo === "ALTERACAO"){
+    if(tipoAlteracao === "ALTERACAO"){
         const indice=estoque.findIndex(function(item){ return item.id === dados.itemId; });
         if(indice < 0) throw new Error("O item do estoque não foi encontrado. A alteração não foi aplicada.");
         const novoItem={...dados.novoItem, id:dados.itemId};
@@ -4994,7 +5037,7 @@ function aplicarAlteracaoAprovada(sol){
         return "Alteração do container aprovada.";
     }
 
-    if(sol.tipo === "EXCLUSAO"){
+    if(tipoAlteracao === "EXCLUSAO"){
         const indice=estoque.findIndex(function(item){ return item.id === dados.itemId; });
         if(indice < 0) throw new Error("O item do estoque não foi encontrado. A exclusão não foi aplicada.");
         const item=estoque[indice];
@@ -5003,7 +5046,42 @@ function aplicarAlteracaoAprovada(sol){
         return "Exclusão aprovada.";
     }
 
-    if(sol.tipo === "TRANSFERENCIA_CONTAINER"){
+    if(tipoAlteracao === "TRANSFERENCIA_ESTOQUE"){
+        const itemId=String(dados.itemId || "");
+        const quantidade=Number(dados.quantidade || 0);
+        if(!itemId) throw new Error("A mercadoria de origem não foi identificada.");
+        if(!Number.isInteger(quantidade) || quantidade<=0) throw new Error("Quantidade inválida para transferência para estoque.");
+
+        const indice=estoque.findIndex(function(item){
+            return item && String(item.id || "")===itemId;
+        });
+        if(indice<0) throw new Error("A mercadoria de origem não foi encontrada no estoque.");
+
+        const origemItem=estoque[indice];
+        const saldo=Number(origemItem.qtd || 0);
+        if(quantidade>saldo) throw new Error("A quantidade solicitada é maior que o saldo disponível.");
+
+        const registro={...origemItem};
+        const restante=saldo-quantidade;
+
+        if(restante<=0){
+            estoque.splice(indice,1);
+        }else{
+            origemItem.qtd=restante;
+            origemItem.peso=Number(origemItem.kg || 0)*restante;
+            estoque[indice]=origemItem;
+        }
+
+        registrarMovimentacao(
+            "SAÍDA",
+            registro,
+            "Transferência para estoque sem destino informado, aprovada pelo administrador. Quantidade: "+quantidade+" volume(s). Operador: "+sol.operador+(dados.observacao?". Observação: "+dados.observacao:".")
+        );
+
+        return "Transferência para estoque aprovada: "+quantidade+" volume(s) retirados do C"+String(registro.num).padStart(2,"0")+".";
+    }
+
+    if(tipoAlteracao === "TRANSFERENCIA_CONTAINER"){
         const itemId=String(dados.itemId || "");
         const origem=Number(dados.containerOrigem || (dados.item||{}).num);
         const destino=Number(dados.containerDestino);
@@ -5046,7 +5124,7 @@ function aplicarAlteracaoAprovada(sol){
         return "Transferência aprovada: "+quantidade+" volume(s) do C"+String(origem).padStart(2,"0")+" para C"+String(destino).padStart(2,"0")+".";
     }
 
-    if(sol.tipo === "ZERAR_CONTAINER"){
+    if(tipoAlteracao === "ZERAR_CONTAINER"){
         const num=Number(dados.num);
         const itensAtuais=estoque.filter(function(item){ return Number(item.num)===num; });
         if(itensAtuais.length===0) return "O container já estava vazio.";
@@ -5057,7 +5135,7 @@ function aplicarAlteracaoAprovada(sol){
         return "Container "+num+" zerado com sucesso.";
     }
 
-    if(sol.tipo === "LIMPAR_HISTORICO"){
+    if(tipoAlteracao === "LIMPAR_HISTORICO"){
         historico=[];
         return "Histórico limpo com aprovação do administrador.";
     }
@@ -5065,22 +5143,41 @@ function aplicarAlteracaoAprovada(sol){
     throw new Error("Tipo de alteração desconhecido.");
 }
 
+const aprovacoesAlteracoesEmProcessamento = new Set();
+
 async function aprovarAlteracaoAdmin(id){
     if(!usuarioEhAdmin()){ alert("Apenas o administrador pode aprovar alterações."); return; }
+    const chaveAprovacao=String(id);
+    if(aprovacoesAlteracoesEmProcessamento.has(chaveAprovacao)){
+        alert("⏳ Esta solicitação já está sendo processada. Aguarde a conclusão.");
+        return;
+    }
+
     const lista=carregarSolicitacoesAlteracoes();
-    const sol=lista.find(function(item){ return item.id===id && item.status==="pendente"; });
+    const sol=lista.find(function(item){ return String(item.id)===chaveAprovacao && String(item.status||"").toLowerCase()==="pendente"; });
     if(!sol)return;
+
+    aprovacoesAlteracoesEmProcessamento.add(chaveAprovacao);
     try{
-        const mensagem=aplicarAlteracaoAprovada(sol);
+        const tipoAlteracao=normalizarTipoAlteracaoAdmin(sol.tipo, sol);
+        const solParaAplicar={...sol,tipo:tipoAlteracao};
+
+        const mensagem=aplicarAlteracaoAprovada(solParaAplicar);
+
+        // O estoque somente chega a este ponto depois da aplicação aprovada.
+        // Nunca alteramos o estoque ao criar uma solicitação pendente.
         sol.status="aprovada";
         sol.atendidoPor=usuarioLogadoAtual.usuario;
         sol.atendidoEm=new Date().toISOString();
+        sol.tipoNormalizado=tipoAlteracao;
+
         await salvarSolicitacoesAlteracoes(lista);
         await salvarDados();
         mostrarEstoque();
         mostrarHistorico();
         renderizarSolicitacoesAlteracoesAdmin();
-        if(sol.tipo==="TRANSFERENCIA_CONTAINER" && sol.operadorUid && typeof registrarNotificacaoIndividual==="function"){
+
+        if(tipoAlteracao==="TRANSFERENCIA_CONTAINER" && sol.operadorUid && typeof registrarNotificacaoIndividual==="function"){
             await registrarNotificacaoIndividual(sol.operadorUid,{
                 tipo:"transferencia_aprovada",
                 titulo:"🟢 Transferência aprovada",
@@ -5088,9 +5185,20 @@ async function aprovarAlteracaoAdmin(id){
                 solicitacaoId:String(sol.id)
             });
         }
+        if(tipoAlteracao==="TRANSFERENCIA_ESTOQUE" && sol.operadorUid && typeof registrarNotificacaoIndividual==="function"){
+            await registrarNotificacaoIndividual(sol.operadorUid,{
+                tipo:"transferencia_estoque_aprovada",
+                titulo:"🟢 Transferência para estoque aprovada",
+                mensagem:"Sua transferência foi aprovada: C"+String(sol.dados.containerOrigem).padStart(2,"0")+" → estoque (sem destino informado) • "+Number(sol.dados.quantidade||0)+" volume(s).",
+                solicitacaoId:String(sol.id)
+            });
+        }
         alert("✅ "+mensagem);
     }catch(erro){
-        alert("Não foi possível aprovar a alteração.\n\n"+erro.message);
+        console.error("Erro ao aprovar alteração:",erro);
+        alert("Não foi possível aprovar a alteração.\n\n"+(erro.message||erro));
+    }finally{
+        aprovacoesAlteracoesEmProcessamento.delete(chaveAprovacao);
     }
 }
 
@@ -13530,7 +13638,7 @@ async function confirmarTransferirEstoque(){
     if(!permitido){alert("❌ Perfil sem permissão.");return;}
     const saldo=Number(item.qtd||0); if(!Number.isInteger(quantidade)||quantidade<=0){alert("❌ Informe uma quantidade inteira maior que zero.");return;} if(quantidade>saldo){alert("❌ A quantidade informada é maior que o saldo disponível.");return;}
     if(!item.id){garantirIdsEstoque();if(!item.id){alert("❌ Não foi possível identificar a mercadoria.");return;}}
-    const dados={itemId:String(item.id),quantidade, item:{...item},containerOrigem:Number(item.num)||0,observacao,solicitadoEm:new Date().toISOString()};
+    const dados={itemId:String(item.id),quantidade, item:{...item},containerOrigem:Number(item.num)||0,observacao,solicitadoEm:new Date().toISOString(),saldoAntes:saldo};
     try{
       if(tipo==="admin"){
         const registro={...item}, restante=saldo-quantidade;
