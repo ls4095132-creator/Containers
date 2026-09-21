@@ -1470,19 +1470,54 @@ body.usuario-admin .painel-solicitacoes-comum{display:none!important;}
 <script>
 window.OneSignalDeferred = window.OneSignalDeferred || [];
 window.OneSignalDeferred.push(async function(OneSignal) {
-    await OneSignal.init({
-        appId: "37744162-3909-4b8c-b452-3e6932ac6ece",
-        serviceWorkerPath: "/Containers/OneSignalSDKWorker.js",
-        serviceWorkerParam: {
-            scope: "/Containers/"
-        },
-        autoResubscribe: true,
-        notifyButton: {
-            enable: false
+    try{
+        if("serviceWorker" in navigator){
+            const oneSignalWorkerUrl=new URL("./OneSignalSDKWorker.js",document.baseURI);
+            const oneSignalScope=new URL("./",document.baseURI);
+            await navigator.serviceWorker.register(oneSignalWorkerUrl,{scope:oneSignalScope.toString()});
         }
-    });
-    console.log("✅ OneSignal inicializado corretamente.");
+
+        await OneSignal.init({
+            appId: "37744162-3909-4b8c-b452-3e6932ac6ece",
+            serviceWorkerPath: "./OneSignalSDKWorker.js",
+            serviceWorkerParam: {
+                scope: "./"
+            },
+            autoResubscribe: true,
+            notifyButton: {
+                enable: false
+            }
+        });
+
+        console.log("✅ OneSignal inicializado corretamente.");
+    }catch(erro){
+        console.warn("⚠️ OneSignal não foi inicializado:",erro);
+    }
 });
+</script>
+<script id="correcao-service-workers-containers">
+(function(){
+    if(!("serviceWorker" in navigator)) return;
+
+    const base=new URL("./",document.baseURI);
+    const novoEscopoFcm=new URL("./fcm/",document.baseURI).toString();
+
+    navigator.serviceWorker.getRegistrations().then(function(registros){
+        return Promise.all(registros.map(function(reg){
+            const script=String(reg && reg.active && reg.active.scriptURL || "");
+            const scope=String(reg && reg.scope || "");
+
+            // Migração: remove somente o antigo FCM registrado com o mesmo escopo
+            // do OneSignal. O novo FCM será registrado com escopo isolado /fcm/.
+            if(scope===base.toString() && script.includes("firebase-messaging-sw.js")){
+                return reg.unregister().catch(function(){});
+            }
+            return null;
+        }));
+    }).catch(function(e){
+        console.warn("Service Worker: não foi possível concluir a migração de escopo.",e);
+    });
+})();
 </script>
 <style id="ajuste-layout-admin-esquerda-direita">
 /* ======================================================
@@ -5149,8 +5184,71 @@ function aplicarAlteracaoAprovada(sol){
 
 const aprovacoesAlteracoesEmProcessamento = new Set();
 
+
+async function aplicarTransferenciaEstoqueAprovadaSegura(sol){
+    const dados=sol.dados || {};
+    const itemId=String(dados.itemId || "");
+    const quantidade=Number(dados.quantidade || 0);
+    const origem=Number(dados.containerOrigem || (dados.item || {}).num || 0);
+
+    if(!itemId) throw new Error("A mercadoria de origem não foi identificada.");
+    if(!Number.isInteger(quantidade) || quantidade<=0) throw new Error("Quantidade inválida para transferência para estoque.");
+
+    const refEstoque=firebaseDB.ref("estoque");
+    let registroSaida=null;
+
+    const resultado=await refEstoque.transaction(function(atual){
+        const lista=normalizarListaFirebase(atual);
+        const indice=lista.findIndex(function(item){
+            return item && String(item.id || "")===itemId;
+        });
+
+        if(indice<0) return;
+        const origemItem=lista[indice];
+        if(Number(origemItem.num)!==origem) return;
+
+        const saldo=Number(origemItem.qtd || 0);
+        if(!Number.isFinite(saldo) || saldo<quantidade) return;
+
+        registroSaida={...origemItem, qtd:quantidade, peso:Number(origemItem.kg||0)*quantidade};
+
+        const restante=saldo-quantidade;
+        if(restante<=0){
+            lista.splice(indice,1);
+        }else{
+            origemItem.qtd=restante;
+            origemItem.peso=Number(origemItem.kg||0)*restante;
+            lista[indice]=origemItem;
+        }
+
+        return lista;
+    });
+
+    if(!resultado.committed){
+        throw new Error("Não foi possível aplicar a retirada. O saldo pode ter mudado ou outra aprovação já processou esta solicitação.");
+    }
+
+    estoque=normalizarListaFirebase(resultado.snapshot.val());
+
+    registrarMovimentacao(
+        "SAÍDA",
+        registroSaida || Object.assign({},dados.item||{},{
+            qtd:quantidade,
+            peso:Number((dados.item||{}).kg||0)*quantidade
+        }),
+        "Transferência para estoque sem destino informado, aprovada pelo administrador. Quantidade: "+
+        quantidade+" volume(s). Operador: "+sol.operador+
+        (dados.observacao?". Observação: "+dados.observacao:"."),
+        true
+    );
+
+    return "Transferência para estoque aprovada: "+quantidade+
+        " volume(s) retirados do C"+String((registroSaida && registroSaida.num)||origem).padStart(2,"0")+".";
+}
+
 async function aprovarAlteracaoAdmin(id){
     if(!usuarioEhAdmin()){ alert("Apenas o administrador pode aprovar alterações."); return; }
+
     const chaveAprovacao=String(id);
     if(aprovacoesAlteracoesEmProcessamento.has(chaveAprovacao)){
         alert("⏳ Esta solicitação já está sendo processada. Aguarde a conclusão.");
@@ -5158,45 +5256,69 @@ async function aprovarAlteracaoAdmin(id){
     }
 
     const lista=carregarSolicitacoesAlteracoes();
-    const sol=lista.find(function(item){ return String(item.id)===chaveAprovacao && String(item.status||"").toLowerCase()==="pendente"; });
+    const sol=lista.find(function(item){
+        return String(item.id)===chaveAprovacao &&
+               String(item.status||"").toLowerCase()==="pendente";
+    });
     if(!sol)return;
 
     aprovacoesAlteracoesEmProcessamento.add(chaveAprovacao);
+
     try{
         const tipoAlteracao=normalizarTipoAlteracaoAdmin(sol.tipo, sol);
-        const solParaAplicar={...sol,tipo:tipoAlteracao};
 
-        if(tipoAlteracao === "TRANSFERENCIA_ESTOQUE"){
+        if(tipoAlteracao==="TRANSFERENCIA_ESTOQUE"){
+            // Recarrega a fonte de verdade antes da operação.
             const snapEstoqueAtual=await firebaseDB.ref("estoque").once("value");
             estoque=snapEstoqueAtual && snapEstoqueAtual.exists()
                 ? normalizarListaFirebase(snapEstoqueAtual.val())
                 : [];
+
+            const mensagem=await aplicarTransferenciaEstoqueAprovadaSegura(sol);
+
+            sol.status="aprovada";
+            sol.atendidoPor=usuarioLogadoAtual.usuario;
+            sol.atendidoEm=new Date().toISOString();
+            sol.tipoNormalizado=tipoAlteracao;
+
+            // Grava o estoque já processado + histórico + status em uma única atualização.
+            await firebaseDB.ref().update({
+                estoque:estoque,
+                historico:historico,
+                solicitacoesAlteracoes:lista
+            });
+
+            mostrarEstoque();
+            mostrarHistorico();
+            renderizarSolicitacoesAlteracoesAdmin();
+
+            if(sol.operadorUid && typeof registrarNotificacaoIndividual==="function"){
+                await registrarNotificacaoIndividual(sol.operadorUid,{
+                    tipo:"transferencia_estoque_aprovada",
+                    titulo:"🟢 Transferência para estoque aprovada",
+                    mensagem:"Sua transferência foi aprovada: C"+
+                        String(sol.dados.containerOrigem).padStart(2,"0")+
+                        " → estoque (sem destino informado) • "+
+                        Number(sol.dados.quantidade||0)+" volume(s).",
+                    solicitacaoId:String(sol.id)
+                });
+            }
+
+            alert("✅ "+mensagem);
+            return;
         }
 
+        // Demais tipos permanecem com a lógica existente.
+        const solParaAplicar={...sol,tipo:tipoAlteracao};
         const mensagem=aplicarAlteracaoAprovada(solParaAplicar);
 
-        // O estoque somente chega a este ponto depois da aplicação aprovada.
-        // Nunca alteramos o estoque ao criar uma solicitação pendente.
         sol.status="aprovada";
         sol.atendidoPor=usuarioLogadoAtual.usuario;
         sol.atendidoEm=new Date().toISOString();
         sol.tipoNormalizado=tipoAlteracao;
 
-        if(tipoAlteracao === "TRANSFERENCIA_ESTOQUE"){
-            // Transferência para estoque é uma única operação lógica: estoque,
-            // histórico e status da solicitação precisam ser gravados juntos.
-            // Isso evita que o saldo seja baixado e, em seguida, um erro ao
-            // salvar a solicitação deixe a operação pendente para uma segunda
-            // baixa.
-            await firebaseDB.ref().update({
-                estoque: estoque,
-                historico: historico,
-                solicitacoesAlteracoes: lista
-            });
-        }else{
-            await salvarSolicitacoesAlteracoes(lista);
-            await salvarDados();
-        }
+        await salvarSolicitacoesAlteracoes(lista);
+        await salvarDados();
         mostrarEstoque();
         mostrarHistorico();
         renderizarSolicitacoesAlteracoesAdmin();
@@ -5205,31 +5327,25 @@ async function aprovarAlteracaoAdmin(id){
             await registrarNotificacaoIndividual(sol.operadorUid,{
                 tipo:"transferencia_aprovada",
                 titulo:"🟢 Transferência aprovada",
-                mensagem:"Sua transferência foi aprovada: C"+String(sol.dados.containerOrigem).padStart(2,"0")+" → C"+String(sol.dados.containerDestino).padStart(2,"0")+" • "+Number(sol.dados.quantidade||0)+" volume(s).",
+                mensagem:"Sua transferência foi aprovada: C"+
+                    String(sol.dados.containerOrigem).padStart(2,"0")+" → C"+
+                    String(sol.dados.containerDestino).padStart(2,"0")+" • "+
+                    Number(sol.dados.quantidade||0)+" volume(s).",
                 solicitacaoId:String(sol.id)
             });
         }
-        if(tipoAlteracao==="TRANSFERENCIA_ESTOQUE" && sol.operadorUid && typeof registrarNotificacaoIndividual==="function"){
-            await registrarNotificacaoIndividual(sol.operadorUid,{
-                tipo:"transferencia_estoque_aprovada",
-                titulo:"🟢 Transferência para estoque aprovada",
-                mensagem:"Sua transferência foi aprovada: C"+String(sol.dados.containerOrigem).padStart(2,"0")+" → estoque (sem destino informado) • "+Number(sol.dados.quantidade||0)+" volume(s).",
-                solicitacaoId:String(sol.id)
-            });
-        }
+
         alert("✅ "+mensagem);
     }catch(erro){
         console.error("Erro ao aprovar alteração:",erro);
-        // Se a gravação atômica falhar, restaura a visão local a partir do
-        // Firebase para que uma nova tentativa não faça uma segunda baixa.
         try{
-            if(typeof tipoAlteracao !== "undefined" && tipoAlteracao === "TRANSFERENCIA_ESTOQUE" && firebaseDB){
-                const snapEstoque=await firebaseDB.ref("estoque").once("value");
-                estoque=snapEstoque && snapEstoque.exists() ? normalizarListaFirebase(snapEstoque.val()) : [];
-                mostrarEstoque();
-            }
+            const snapEstoque=await firebaseDB.ref("estoque").once("value");
+            estoque=snapEstoque && snapEstoque.exists()
+                ? normalizarListaFirebase(snapEstoque.val())
+                : [];
+            mostrarEstoque();
         }catch(reversao){
-            console.warn("Não foi possível restaurar a visão do estoque após a falha:",reversao);
+            console.warn("Não foi possível restaurar a visão do estoque:",reversao);
         }
         alert("Não foi possível aprovar a alteração.\n\n"+(erro.message||erro));
     }finally{
@@ -12003,7 +12119,7 @@ async function inicializarNotificacoesWeb(){
     if(!("Notification" in window) || !("serviceWorker" in navigator)){ console.warn("Este navegador não suporta notificações push."); return; }
     if(typeof firebase === "undefined" || !firebase.messaging){ console.warn("Firebase Messaging não carregado."); return; }
     try{
-        notificacoesServiceWorker=await navigator.serviceWorker.register("./firebase-messaging-sw.js",{scope:"./"});
+        notificacoesServiceWorker=await navigator.serviceWorker.register("./firebase-messaging-sw.js",{scope:new URL("./fcm/",document.baseURI).toString()});
         notificacoesMessaging=firebase.messaging();
         notificacoesMessaging.onMessage(function(payload){
             const n=payload && payload.notification ? payload.notification : {};
@@ -12201,7 +12317,7 @@ async function obterRegistroServiceWorkerNotificacoes(){
 
     // Usa a raiz real da página, inclusive quando o GitHub Pages está em /Containers/.
     const url=new URL("firebase-messaging-sw.js",document.baseURI).toString();
-    registroServiceWorkerNotificacoes=await navigator.serviceWorker.register(url,{scope:new URL("./",document.baseURI).toString()});
+    registroServiceWorkerNotificacoes=await navigator.serviceWorker.register(url,{scope:new URL("./fcm/",document.baseURI).toString()});
     await navigator.serviceWorker.ready;
 
     return registroServiceWorkerNotificacoes;
@@ -13696,10 +13812,8 @@ async function confirmarTransferirEstoque(){
         await salvarDados(); mostrarEstoque(); mostrarHistorico(); fecharModalTransferirEstoque(); if(typeof mostrarAvisoOperacaoVerde==="function")mostrarAvisoOperacaoVerde("Transferência para estoque realizada","C"+String(registro.num).padStart(2,"0")+" • "+quantidade+" volume(s)"); alert("✅ Transferência para estoque realizada."); return;
       }
       await solicitarAlteracaoAdmin("TRANSFERENCIA_ESTOQUE",dados,"Solicitação para transferir "+quantidade+" volume(s) do C"+String(item.num).padStart(2,"0")+" para estoque, sem destino informado."+(observacao?" "+observacao:""));
-      // IMPORTANTE: esta rota termina aqui. Nenhuma operação de estoque,
-      // histórico ou SAÍDA é executada para usuário comum.
-      // Solicitar não altera o estoque. O listener do Firebase continua sendo
-      // a única fonte de atualização visual do saldo.
+      // Solicitar não altera o estoque. A atualização visual vem somente
+      // do listener do Firebase.
       fecharModalTransferirEstoque(); if(typeof mostrarAvisoOperacaoVerde==="function")mostrarAvisoOperacaoVerde("Solicitação enviada","Transferência para estoque aguardando aprovação do administrador."); alert("📨 Solicitação enviada ao administrador. O saldo será alterado após a aprovação.");
     }catch(e){console.error(e);alert("❌ Não foi possível processar a transferência.\n\n"+(e.message||e));}
 }
