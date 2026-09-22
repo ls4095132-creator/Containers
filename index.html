@@ -2991,11 +2991,11 @@ Entrar
   <div class="busca-global-cabecalho">
     <div>
       <strong>🔎 Busca Global</strong>
-      <span>Produto, código, lote, container, NF ou fornecedor</span>
+      <span>Produto, código, container, lote, NF ou fornecedor</span>
     </div>
   </div>
   <div class="busca-global-linha">
-    <input class="input-busca-global" id="busca-global-externo" type="search" autocomplete="off" spellcheck="false" placeholder="Ex.: MP000056, C49, lote 6243..., NF 12345 ou Cebola..." oninput="pesquisarGlobalSistema('externo')"/>
+    <input class="input-busca-global" id="busca-global-externo" type="search" autocomplete="off" spellcheck="false" placeholder="Ex.: MP000056, C49, lote 6243..., NF 12345, fornecedor ou Cebola..." oninput="pesquisarGlobalSistema('externo')"/>
     <button class="btn-vis btn-limpar-busca-global" type="button" onclick="limparBuscaGlobalSistema('externo')">✕ Limpar</button>
   </div>
   <div class="busca-global-resultados" id="resultado-busca-global-externo" aria-live="polite"></div>
@@ -3006,13 +3006,6 @@ Entrar
         e enviar solicitações de mercadoria.
         Não permite alterar, excluir ou cadastrar estoque.
     </div>
-<!-- PESQUISA -->
-<div class="painel-busca">
-<strong>
-            🔎 Pesquisar Containers:
-        </strong>
-<input class="input-busca" id="campo-busca-externo" oninput="filtrarEstoqueExterno()" placeholder="Produto, lote, container, NF ou fornecedor..." type="text"/>
-</div>
 <!-- CONTADOR -->
 <div class="contador" id="contador-externo">
         Containers ocupados: 0 / <span id="contador-max-containers">60</span>
@@ -3093,11 +3086,11 @@ Entrar
   <div class="busca-global-cabecalho">
     <div>
       <strong>🔎 Busca Global</strong>
-      <span>Produto, código, lote, container, NF ou fornecedor</span>
+      <span>Produto, código, container, lote, NF ou fornecedor</span>
     </div>
   </div>
   <div class="busca-global-linha">
-    <input class="input-busca-global" id="busca-global-principal" type="search" autocomplete="off" spellcheck="false" placeholder="Ex.: MP000056, C49, lote 6243..., NF 12345 ou Cebola..." oninput="pesquisarGlobalSistema('principal')"/>
+    <input class="input-busca-global" id="busca-global-principal" type="search" autocomplete="off" spellcheck="false" placeholder="Ex.: MP000056, C49, lote 6243..., NF 12345, fornecedor ou Cebola..." oninput="pesquisarGlobalSistema('principal')"/>
     <button class="btn-vis btn-limpar-busca-global" type="button" onclick="limparBuscaGlobalSistema('principal')">✕ Limpar</button>
   </div>
   <div class="busca-global-resultados" id="resultado-busca-global-principal" aria-live="polite"></div>
@@ -3304,13 +3297,6 @@ Entrar
 </div>
 </div> <!-- /layout-admin-operacional -->
 <div class="limpar-flutuacao-admin"></div>
-<!-- PESQUISA DOS CONTAINERS -->
-<div class="painel-busca">
-<strong style="color:#3b82f6;">
-🔎 Pesquisar Containers:
-</strong>
-<input class="input-busca" id="campo-busca" oninput="filtrarEstoque()" placeholder="Produto, lote, container, NF ou fornecedor..." type="text"/>
-</div>
 <!-- STATUS E CONTAINERS -->
 <h2>Status dos Containers</h2>
 <div class="contador" id="contador">
@@ -14516,9 +14502,17 @@ setTimeout(ativarMelhoriasContainers,1200);
         const nf=String(item && item.nf || "");
         const fornecedor=String(item && item.fornecedor || "");
         const validade=String(item && item.validade || "");
+        const qtd=String(item && item.qtd!=null ? item.qtd : "");
+        const kg=String(item && item.kg!=null ? item.kg : "");
+        const peso=String(item && (item.peso!=null ? item.peso : item.kgTotal) || "");
+        const data=String(item && item.data || "");
+        const hora=String(item && item.hora || "");
         return normalizarBuscaGlobal([
-            prod,codigo,lote,nf,fornecedor,validade,
-            numero,"container "+numero,"c"+numero,"nf "+nf,"lote "+lote,"fornecedor "+fornecedor
+            // Campos que já podiam ser pesquisados no antigo "Pesquisar Containers"
+            prod,codigo,lote,nf,fornecedor,validade,numero,
+            "container "+numero,"c"+numero,"nf "+nf,"lote "+lote,"fornecedor "+fornecedor,
+            // Campos adicionais do registro atual
+            qtd,kg,peso,data,hora
         ].join(" "));
     }
 
