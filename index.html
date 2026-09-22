@@ -2875,7 +2875,7 @@ Entrar
 <div id="app-externo" style="display:none;">
 <div class="barra-usuario">
 <span id="texto-usuario-externo"></span>
-<button class="btn-notificacao-web" id="btn-notificacoes-externo" onclick="ativarNotificacoesWeb()" type="button">🔔 Ativar</button>
+<button class="btn-notificacao-web" id="btn-notificacoes-externo" onclick="ativarNotificacoesWeb()" type="button" style="display:none;">🔔 Ativar</button>
 <button class="btn-central-notificacoes" type="button" onclick="toggleCentralNotificacoes()">🔔 <span id="contador-notificacoes-individuais">0</span></button>
 <button class="btn-atualizar-sistema" onclick="atualizarSistemaSemDeslogar()" type="button">🔄 Atualizar</button>
 <button class="btn-sair" onclick="sairDoSistema()" type="button">
@@ -2962,7 +2962,7 @@ Entrar
 <div id="app-principal" style="display:none;">
 <div class="barra-usuario">
 <span id="texto-usuario-logado"></span>
-<button class="btn-notificacao-web" id="btn-notificacoes-app" onclick="ativarNotificacoesWeb()" type="button">🔔 Ativar</button>
+<button class="btn-notificacao-web" id="btn-notificacoes-app" onclick="ativarNotificacoesWeb()" type="button" style="display:none;">🔔 Ativar</button>
 <button class="btn-central-notificacoes" id="btn-sino-admin" type="button" onclick="toggleCentralNotificacoesAdminOuUsuario()">🔔 <span id="contador-pendencias-sino-admin">0</span></button>
 <button class="btn-atualizar-sistema" onclick="atualizarSistemaSemDeslogar()" type="button">🔄 Atualizar</button>
 <button class="btn-historico btn-configuracao-admin" id="btn-abrir-configuracao" onclick="abrirConfiguracaoSistema()" style="display:none;" type="button">
@@ -2996,7 +2996,7 @@ Entrar
 <div id="conteudo-solicitacoes-comum">
 <div id="lista-solicitacoes-comum"><div class="vazio">📭 Nenhuma solicitação recebida.</div></div>
 <div style="margin-top:10px;font-size:11px;color:var(--texto-fraco);display:flex;justify-content:flex-end;">
-<button class="btn-notificacao-web" id="btn-notificacoes-comum" onclick="ativarNotificacoesWeb()" type="button">🔔 Ativar notificações</button>
+<button class="btn-notificacao-web" id="btn-notificacoes-comum" onclick="ativarNotificacoesWeb()" type="button" style="display:none;">🔔 Ativar notificações</button>
 </div>
 </div>
 </div>
@@ -13878,6 +13878,91 @@ setTimeout(ativarMelhoriasContainers,1200);
         }
     }
     requestAnimationFrame(atualizar);
+})();
+</script>
+
+<script id="notificacoes-status-tela-login">
+/* ======================================================
+   INDICADOR DE NOTIFICAÇÕES NA TELA DE LOGIN (ADITIVO)
+   Bloco novo e isolado — não altera nenhuma função, botão
+   ou linha já existente no arquivo.
+
+   Objetivo: mostrar (e permitir ativar) a permissão de
+   notificações do navegador mesmo fora do sistema, ou seja,
+   antes de fazer login. A vinculação da inscrição ao usuário
+   no Firebase/OneSignal continua acontecendo automaticamente
+   depois do login, exatamente como já funcionava antes
+   (função ativarNotificacoesAutomaticamenteAoEntrar).
+   ====================================================== */
+(function(){
+    function criarBotaoStatusLogin(){
+        if(document.getElementById("btn-notificacoes-login")) return;
+        const bloco=document.getElementById("bloco-login-normal");
+        const referencia=document.getElementById("alternar-login");
+        if(!bloco || !referencia) return;
+
+        const wrap=document.createElement("div");
+        wrap.style.textAlign="center";
+        wrap.style.margin="10px 0 4px";
+
+        const botao=document.createElement("button");
+        botao.type="button";
+        botao.id="btn-notificacoes-login";
+        botao.className="btn-notificacao-web";
+        botao.addEventListener("click", ativarPermissaoNotificacaoLogin);
+
+        wrap.appendChild(botao);
+        bloco.insertBefore(wrap, referencia);
+
+        atualizarBotaoNotificacoesLogin();
+    }
+
+    function atualizarBotaoNotificacoesLogin(){
+        const botao=document.getElementById("btn-notificacoes-login");
+        if(!botao || typeof Notification === "undefined") return;
+
+        if(Notification.permission === "granted"){
+            botao.textContent="🔔 Notificações ativas neste navegador";
+            botao.classList.add("ativo");
+            botao.disabled=true;
+        }else if(Notification.permission === "denied"){
+            botao.textContent="🔕 Notificações bloqueadas no navegador";
+            botao.classList.remove("ativo");
+            botao.disabled=true;
+        }else{
+            botao.textContent="🔔 Ativar notificações";
+            botao.classList.remove("ativo");
+            botao.disabled=false;
+        }
+    }
+
+    async function ativarPermissaoNotificacaoLogin(){
+        try{
+            if(typeof Notification === "undefined"){
+                alert("Este navegador não suporta notificações.");
+                return;
+            }
+            await Notification.requestPermission();
+        }catch(e){
+            console.warn("Permissão de notificação na tela de login:", e);
+        }finally{
+            atualizarBotaoNotificacoesLogin();
+        }
+    }
+
+    if(document.readyState === "loading"){
+        document.addEventListener("DOMContentLoaded", criarBotaoStatusLogin);
+    }else{
+        criarBotaoStatusLogin();
+    }
+
+    // Reavalia o status ao voltar para a aba (ex.: usuário liberou a
+    // permissão pelo cadeado do navegador e voltou para a página).
+    document.addEventListener("visibilitychange", function(){
+        if(!document.hidden) atualizarBotaoNotificacoesLogin();
+    });
+
+    window.atualizarBotaoNotificacoesLogin = atualizarBotaoNotificacoesLogin;
 })();
 </script>
 
