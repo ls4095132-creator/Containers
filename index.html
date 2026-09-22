@@ -2784,6 +2784,101 @@ body.usuario-admin #painel-solicitacoes-admin-inicial #lista-transferencias-admi
     .lista-container-registro{max-height:220px;}
 }
 </style>
+
+<style id="busca-global-e-sincronizacao">
+/* ======================================================
+   BUSCA GLOBAL + STATUS DE SINCRONIZAÇÃO — TODOS OS USUÁRIOS
+   Bloco aditivo: preserva as pesquisas e o layout existentes.
+   ====================================================== */
+.indicador-sincronizacao-firebase{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    white-space:nowrap;
+    padding:5px 8px;
+    border:1px solid var(--borda);
+    border-radius:7px;
+    background:var(--bg-painel-2);
+    color:var(--texto-fraco);
+    font-size:11px;
+    font-weight:700;
+    line-height:1;
+}
+.indicador-sincronizacao-firebase.sincronizado{
+    border-color:rgba(16,185,129,.55);
+    color:#34d399;
+}
+.indicador-sincronizacao-firebase.sincronizando{
+    border-color:rgba(245,158,11,.45);
+    color:#fbbf24;
+}
+.indicador-sincronizacao-firebase.sem-conexao{
+    border-color:rgba(239,68,68,.55);
+    color:#f87171;
+}
+.painel-busca-global{
+    background:var(--bg-painel);
+    border:1px solid var(--borda-forte);
+    border-radius:12px;
+    padding:12px 14px;
+    margin:0 0 16px;
+    box-shadow:0 4px 14px rgba(0,0,0,.22);
+}
+.busca-global-cabecalho{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:8px;
+}
+.busca-global-cabecalho strong{color:var(--azul);font-size:13px}
+.busca-global-cabecalho span{display:block;color:var(--texto-fraco);font-size:10.5px;margin-top:2px}
+.busca-global-linha{display:flex;align-items:center;gap:8px}
+.input-busca-global{
+    flex:1;
+    width:auto;
+    min-width:0;
+    margin:0;
+    padding:9px 10px;
+    font-size:13px;
+    background:var(--bg-input);
+    color:var(--texto);
+    border:1px solid var(--borda-forte);
+    border-radius:8px;
+}
+.btn-limpar-busca-global{white-space:nowrap;padding:8px 10px}
+.busca-global-resultados{display:none;margin-top:9px;border-top:1px solid var(--borda);padding-top:9px}
+.busca-global-resultados.visivel{display:block}
+.busca-global-resumo{font-size:11px;color:var(--texto-fraco);margin-bottom:7px}
+.busca-global-vazio{font-size:12px;color:var(--texto-fraco);padding:7px 2px}
+.busca-global-item{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:10px;
+    padding:9px 10px;
+    margin-bottom:6px;
+    background:var(--bg-painel-2);
+    border:1px solid var(--borda);
+    border-radius:8px;
+}
+.busca-global-item:last-child{margin-bottom:0}
+.busca-global-info{min-width:0;line-height:1.4}
+.busca-global-titulo{font-size:12px;font-weight:700;color:var(--texto);word-break:break-word}
+.busca-global-detalhe{font-size:10.5px;color:var(--texto-fraco);margin-top:2px;word-break:break-word}
+.busca-global-acoes{display:flex;gap:5px;flex-shrink:0}
+.busca-global-acoes button{padding:5px 8px;font-size:10.5px;white-space:nowrap}
+.busca-global-item.resultado-vencido{border-left:4px solid #ef4444}
+.busca-global-item.resultado-proximo{border-left:4px solid #f59e0b}
+@media(max-width:760px){
+    .indicador-sincronizacao-firebase{font-size:10px;padding:5px 6px}
+    .busca-global-linha{flex-direction:column;align-items:stretch}
+    .btn-limpar-busca-global{width:100%}
+    .busca-global-item{flex-direction:column}
+    .busca-global-acoes{width:100%}
+    .busca-global-acoes button{flex:1;width:auto}
+}
+</style>
 </head>
 <body class="auth-carregando">
 <!-- TELA DE CARREGAMENTO INICIAL -->
@@ -2875,6 +2970,7 @@ Entrar
 <div id="app-externo" style="display:none;">
 <div class="barra-usuario">
 <span id="texto-usuario-externo"></span>
+<span class="indicador-sincronizacao-firebase sincronizando" id="indicador-sincronizacao-externo" aria-live="polite">🟡 Sincronizando...</span>
 <button class="btn-notificacao-web" id="btn-notificacoes-externo" onclick="ativarNotificacoesWeb()" type="button" style="display:none;">🔔 Ativar</button>
 <button class="btn-central-notificacoes" type="button" onclick="toggleCentralNotificacoes()">🔔 <span id="contador-notificacoes-individuais">0</span></button>
 <button class="btn-atualizar-sistema" onclick="atualizarSistemaSemDeslogar()" type="button">🔄 Atualizar</button>
@@ -2891,6 +2987,19 @@ Entrar
   <div id="lista-notificacoes-individuais-externo"></div>
 </div>
 <h1>📦 Consulta de Saldo dos Containers</h1>
+<div class="painel-busca-global" id="painel-busca-global-externo">
+  <div class="busca-global-cabecalho">
+    <div>
+      <strong>🔎 Busca Global</strong>
+      <span>Produto, código, lote, container, NF ou fornecedor</span>
+    </div>
+  </div>
+  <div class="busca-global-linha">
+    <input class="input-busca-global" id="busca-global-externo" type="search" autocomplete="off" spellcheck="false" placeholder="Ex.: MP000056, C49, lote 6243..., NF 12345 ou Cebola..." oninput="pesquisarGlobalSistema('externo')"/>
+    <button class="btn-vis btn-limpar-busca-global" type="button" onclick="limparBuscaGlobalSistema('externo')">✕ Limpar</button>
+  </div>
+  <div class="busca-global-resultados" id="resultado-busca-global-externo" aria-live="polite"></div>
+</div>
 <div class="aviso-armazenamento">
         👁️ <strong>Modo consulta:</strong>
         este acesso permite consultar o saldo dos containers
@@ -2962,6 +3071,7 @@ Entrar
 <div id="app-principal" style="display:none;">
 <div class="barra-usuario">
 <span id="texto-usuario-logado"></span>
+<span class="indicador-sincronizacao-firebase sincronizando" id="indicador-sincronizacao-principal" aria-live="polite">🟡 Sincronizando...</span>
 <button class="btn-notificacao-web" id="btn-notificacoes-app" onclick="ativarNotificacoesWeb()" type="button" style="display:none;">🔔 Ativar</button>
 <button class="btn-central-notificacoes" id="btn-sino-admin" type="button" onclick="toggleCentralNotificacoesAdminOuUsuario()">🔔 <span id="contador-pendencias-sino-admin">0</span></button>
 <button class="btn-atualizar-sistema" onclick="atualizarSistemaSemDeslogar()" type="button">🔄 Atualizar</button>
@@ -2979,6 +3089,19 @@ Entrar
   <div id="lista-notificacoes-individuais"></div>
 </div>
 <h1>📦 Controle de Containers</h1>
+<div class="painel-busca-global" id="painel-busca-global-principal">
+  <div class="busca-global-cabecalho">
+    <div>
+      <strong>🔎 Busca Global</strong>
+      <span>Produto, código, lote, container, NF ou fornecedor</span>
+    </div>
+  </div>
+  <div class="busca-global-linha">
+    <input class="input-busca-global" id="busca-global-principal" type="search" autocomplete="off" spellcheck="false" placeholder="Ex.: MP000056, C49, lote 6243..., NF 12345 ou Cebola..." oninput="pesquisarGlobalSistema('principal')"/>
+    <button class="btn-vis btn-limpar-busca-global" type="button" onclick="limparBuscaGlobalSistema('principal')">✕ Limpar</button>
+  </div>
+  <div class="busca-global-resultados" id="resultado-busca-global-principal" aria-live="polite"></div>
+</div>
 
 <!-- ======================================================
      DASHBOARD INICIAL — ADMINISTRADOR
@@ -4069,7 +4192,9 @@ async function iniciarSincronizacaoFirebase(){
             renderizarSolicitacoesRecebidasComum();
         }
         console.log("☁️ Firebase: sincronização em tempo real ativa.");
+        if(typeof window.marcarSincronizacaoInicialConcluida === "function") window.marcarSincronizacaoInicialConcluida();
     }catch(error){
+        if(typeof window.atualizarStatusSincronizacao === "function") window.atualizarStatusSincronizacao("erro","Erro na sincronização com o Firebase.");
         desligarListenersFirebase();
         console.error("Erro na sincronização Firebase:",error);
     }
@@ -14061,7 +14186,7 @@ function renderizarMapaContainers(tipo){
   }
   if(resumo) resumo.innerHTML='Total: <strong>'+total+'</strong> &nbsp;|&nbsp; 🟢 Ocupados: <strong>'+ocupados.size+'</strong> &nbsp;|&nbsp; ⚪ Vazios: <strong>'+(total-ocupados.size)+'</strong> &nbsp;|&nbsp; 🔴 Vencidos/Atenção: <strong>'+vencidos.size+'</strong> &nbsp;|&nbsp; 🟠 Próximos: <strong>'+proximos.size+'</strong> &nbsp;|&nbsp; 🔵 Transferência: <strong>'+emTransferencia.size+'</strong> &nbsp;|&nbsp; 📦 Volumes: <strong>'+Number(qtdTotal).toLocaleString('pt-BR')+'</strong> &nbsp;|&nbsp; 👁️ Exibidos: <strong>'+exibidos+'</strong>';
 }
-function renderizarMapasTodos(){ if(document.getElementById('mapa-grade-principal')) renderizarMapaContainers('principal'); if(document.getElementById('mapa-grade-externo')) renderizarMapaContainers('externo'); if(typeof atualizarDashboardAdmin==='function') atualizarDashboardAdmin(); }
+function renderizarMapasTodos(){ if(document.getElementById('mapa-grade-principal')) renderizarMapaContainers('principal'); if(document.getElementById('mapa-grade-externo')) renderizarMapaContainers('externo'); if(typeof atualizarDashboardAdmin==='function') atualizarDashboardAdmin(); if(typeof window.pesquisarGlobalSistema==='function'){ const bp=document.getElementById('busca-global-principal'); const be=document.getElementById('busca-global-externo'); if(bp && bp.value) window.pesquisarGlobalSistema('principal'); if(be && be.value) window.pesquisarGlobalSistema('externo'); } }
 
 async function registrarNotificacaoIndividual(uid,dados){
   if(!uid) return;
@@ -14340,6 +14465,212 @@ setTimeout(ativarMelhoriasContainers,1200);
 })();
 </script>
 
+
+<script id="busca-global-e-status-sync-js">
+(function(){
+    "use strict";
+
+    let statusFirebaseRef=null;
+    let statusFirebaseListener=null;
+    let statusFirebaseAtivo=false;
+    let sincronizacaoInicialConcluida=false;
+
+    function escaparBuscaGlobal(valor){
+        return String(valor==null?"":valor).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+    }
+
+    function normalizarBuscaGlobal(valor){
+        return String(valor==null?"":valor)
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g,"")
+            .toLowerCase()
+            .trim();
+    }
+
+    function formatarValidadeBuscaGlobal(valor){
+        try{
+            if(typeof formatarValidadeMesAno === "function") return formatarValidadeMesAno(valor||"") || "—";
+        }catch(e){}
+        return String(valor||"—");
+    }
+
+    function statusValidadeBuscaGlobal(valor){
+        let d=null;
+        try{
+            if(typeof obterDataValidadeObjeto === "function") d=obterDataValidadeObjeto(valor);
+        }catch(e){ d=null; }
+        if(!d) return "";
+        const hoje=new Date();
+        hoje.setHours(0,0,0,0);
+        const dias=Math.ceil((d.getTime()-hoje.getTime())/(24*60*60*1000));
+        if(dias<0) return "vencido";
+        if(dias<=30) return "proximo";
+        return "normal";
+    }
+
+    function construirTextoBusca(item){
+        const numero=String(item && item.num!=null?item.num:"").trim();
+        const prod=String(item && item.prod || "");
+        const codigo=String(item && item.codigo || "");
+        const lote=String(item && item.lote || "");
+        const nf=String(item && item.nf || "");
+        const fornecedor=String(item && item.fornecedor || "");
+        const validade=String(item && item.validade || "");
+        return normalizarBuscaGlobal([
+            prod,codigo,lote,nf,fornecedor,validade,
+            numero,"container "+numero,"c"+numero,"nf "+nf,"lote "+lote,"fornecedor "+fornecedor
+        ].join(" "));
+    }
+
+    function pesquisarGlobalSistema(tipo){
+        const prefix=tipo==="externo"?"externo":"principal";
+        const campo=document.getElementById("busca-global-"+prefix);
+        const area=document.getElementById("resultado-busca-global-"+prefix);
+        if(!campo || !area)return;
+
+        const consulta=normalizarBuscaGlobal(campo.value);
+        if(!consulta){
+            area.classList.remove("visivel");
+            area.innerHTML="";
+            return;
+        }
+
+        const lista=Array.isArray(window.estoque)?window.estoque:(typeof estoque!=="undefined" && Array.isArray(estoque)?estoque:[]);
+        const resultados=lista.filter(function(item){
+            return construirTextoBusca(item).includes(consulta);
+        });
+
+        const ordenados=resultados.slice().sort(function(a,b){
+            const qa=construirTextoBusca(a), qb=construirTextoBusca(b);
+            const ea=qa.indexOf(consulta), eb=qb.indexOf(consulta);
+            return ea-eb;
+        });
+
+        area.classList.add("visivel");
+        if(!ordenados.length){
+            area.innerHTML='<div class="busca-global-vazio">🔎 Nenhum resultado encontrado para <strong>'+escaparBuscaGlobal(campo.value)+'</strong>.</div>';
+            return;
+        }
+
+        const maxResultados=30;
+        const exibidos=ordenados.slice(0,maxResultados);
+        const htmlResumo='<div class="busca-global-resumo">'+ordenados.length+' resultado(s) encontrado(s)'+(ordenados.length>maxResultados?' — mostrando os primeiros '+maxResultados+'.':'')+'</div>';
+        const htmlItens=exibidos.map(function(item){
+            const numero=String(item.num==null?"":item.num).trim();
+            const numeroFormatado=numero?String(numero).padStart(2,"0"):"—";
+            const validade=statusValidadeBuscaGlobal(item.validade);
+            const classe=validade==="vencido"?" resultado-vencido":(validade==="proximo"?" resultado-proximo":"");
+            const nome=escaparBuscaGlobal(item.prod||"Produto sem nome");
+            const codigo=item.codigo?"🔢 "+escaparBuscaGlobal(item.codigo)+" • ":"";
+            const qtd=Number(item.qtd||0).toLocaleString("pt-BR");
+            const peso=Number(item.peso||0).toLocaleString("pt-BR",{minimumFractionDigits:0,maximumFractionDigits:2});
+            const containerNum=Number(numero||0);
+            return '<div class="busca-global-item'+classe+'">'+
+                '<div class="busca-global-info">'+
+                  '<div class="busca-global-titulo">'+codigo+nome+'</div>'+
+                  '<div class="busca-global-detalhe">📦 Container '+numeroFormatado+' &nbsp;|&nbsp; 🏷️ Lote: '+escaparBuscaGlobal(item.lote||"—")+' &nbsp;|&nbsp; 📅 Validade: '+escaparBuscaGlobal(formatarValidadeBuscaGlobal(item.validade))+'</div>'+
+                  '<div class="busca-global-detalhe">🔢 Quantidade: '+qtd+' &nbsp;|&nbsp; ⚖️ Peso: '+peso+' kg &nbsp;|&nbsp; 🧾 NF: '+escaparBuscaGlobal(item.nf||"—")+'</div>'+
+                  '<div class="busca-global-detalhe">🏢 Fornecedor: '+escaparBuscaGlobal(item.fornecedor||"—")+'</div>'+
+                '</div>'+
+                '<div class="busca-global-acoes">'+
+                  (containerNum>0 && typeof abrirDetalhesContainerMelhorias==="function" ? '<button class="btn-vis" type="button" onclick="abrirDetalhesContainerMelhorias('+containerNum+')">📦 Abrir</button>' : '')+
+                '</div>'+
+              '</div>';
+        }).join("");
+        area.innerHTML=htmlResumo+htmlItens;
+    }
+
+    function limparBuscaGlobalSistema(tipo){
+        const prefix=tipo==="externo"?"externo":"principal";
+        const campo=document.getElementById("busca-global-"+prefix);
+        const area=document.getElementById("resultado-busca-global-"+prefix);
+        if(campo){campo.value="";campo.focus();}
+        if(area){area.classList.remove("visivel");area.innerHTML="";}
+    }
+
+    window.pesquisarGlobalSistema=pesquisarGlobalSistema;
+    window.limparBuscaGlobalSistema=limparBuscaGlobalSistema;
+
+    function atualizarStatusSincronizacao(estado,detalhe){
+        const elementos=[
+            document.getElementById("indicador-sincronizacao-principal"),
+            document.getElementById("indicador-sincronizacao-externo")
+        ].filter(Boolean);
+        let classe="sincronizando", texto="🟡 Sincronizando...";
+        if(estado==="ok"){
+            classe="sincronizado";
+            texto="🟢 Sistema sincronizado";
+        }else if(estado==="off"){
+            classe="sem-conexao";
+            texto="🔴 Sem conexão";
+        }else if(estado==="erro"){
+            classe="sem-conexao";
+            texto="🔴 Sem conexão com o Firebase";
+        }else if(estado==="navegador-off"){
+            classe="sem-conexao";
+            texto="🔴 Sem internet";
+        }
+        elementos.forEach(function(el){
+            el.classList.remove("sincronizado","sincronizando","sem-conexao");
+            el.classList.add(classe);
+            el.textContent=texto;
+            el.title=detalhe||texto.replace(/^[^ ]+ /,"");
+        });
+    }
+
+    function iniciarIndicadorSincronizacao(){
+        if(statusFirebaseAtivo || typeof firebaseDB === "undefined")return;
+        statusFirebaseAtivo=true;
+        atualizarStatusSincronizacao("sync","Conectando ao Firebase...");
+        try{
+            statusFirebaseRef=firebaseDB.ref(".info/connected");
+            statusFirebaseListener=function(snapshot){
+                const conectado=snapshot && snapshot.val && snapshot.val()===true;
+                if(!navigator.onLine){
+                    atualizarStatusSincronizacao("navegador-off","Sem conexão com a internet.");
+                    return;
+                }
+                if(conectado){
+                    if(sincronizacaoInicialConcluida){
+                        atualizarStatusSincronizacao("ok","Conectado e sincronizado com o Firebase.");
+                    }else{
+                        atualizarStatusSincronizacao("sync","Conectado ao Firebase. Sincronizando dados...");
+                    }
+                }else{
+                    atualizarStatusSincronizacao("off","O navegador não está conectado ao Firebase.");
+                }
+            };
+            statusFirebaseRef.on("value",statusFirebaseListener,function(){
+                atualizarStatusSincronizacao("erro","Não foi possível verificar a conexão com o Firebase.");
+            });
+        }catch(e){
+            atualizarStatusSincronizacao("erro","Não foi possível iniciar o monitoramento da conexão.");
+        }
+        window.addEventListener("online",function(){
+            atualizarStatusSincronizacao("sync","Internet disponível. Reconectando ao Firebase...");
+        });
+        window.addEventListener("offline",function(){
+            atualizarStatusSincronizacao("navegador-off","Sem conexão com a internet.");
+        });
+    }
+
+    function marcarSincronizacaoInicialConcluida(){
+        sincronizacaoInicialConcluida=true;
+        if(navigator.onLine) atualizarStatusSincronizacao("ok","Dados e listeners do sistema sincronizados com o Firebase.");
+        else atualizarStatusSincronizacao("navegador-off","Sem conexão com a internet.");
+    }
+
+    window.iniciarIndicadorSincronizacao=iniciarIndicadorSincronizacao;
+    window.marcarSincronizacaoInicialConcluida=marcarSincronizacaoInicialConcluida;
+    window.atualizarStatusSincronizacao=atualizarStatusSincronizacao;
+
+    if(document.readyState==="loading"){
+        document.addEventListener("DOMContentLoaded",iniciarIndicadorSincronizacao,{once:true});
+    }else{
+        iniciarIndicadorSincronizacao();
+    }
+})();
+</script>
 </body>
 
 <style id="estilo-transferencia-validade">
