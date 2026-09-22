@@ -13448,7 +13448,7 @@ document.addEventListener("DOMContentLoaded",function(){
 .mapa-container-card.ocupado{border-left:4px solid #22c55e}.mapa-container-card.vazio{border-left:4px solid #94a3b8}.mapa-container-card.atencao{border-left:4px solid #ef4444}
 .mapa-container-card.em-transferencia{border-left:4px solid #3b82f6 !important}
 .mapa-container-card.proximo-vencimento{border-left:4px solid #f59e0b !important}
-.mapa-container-tooltip{position:absolute;left:50%;right:auto;bottom:calc(100% + 8px);top:auto;transform:translate(-50%,6px);width:min(260px,calc(100vw - 20px));max-width:260px;padding:10px 12px;border:1px solid var(--borda-forte);border-radius:9px;background:var(--bg-painel);color:var(--texto);box-shadow:0 10px 28px rgba(0,0,0,.35);font-size:11px;line-height:1.5;text-align:left;opacity:0;pointer-events:none;transition:opacity .15s,transform .15s;z-index:1000;white-space:normal;overflow-wrap:anywhere}
+.mapa-container-tooltip{position:absolute;left:50%;right:auto;bottom:calc(100% + 8px);top:auto;transform:translate(-50%,0);width:min(260px,calc(100vw - 20px));max-width:260px;padding:10px 12px;border:1px solid var(--borda-forte);border-radius:9px;background:var(--bg-painel);color:var(--texto);box-shadow:0 10px 28px rgba(0,0,0,.35);font-size:11px;line-height:1.5;text-align:left;opacity:0;pointer-events:none;transition:opacity .08s ease;z-index:1000;white-space:normal;overflow-wrap:anywhere}
 .mapa-container-card:hover .mapa-container-tooltip{opacity:1;transform:translate(-50%,0)}
 @media(max-width:700px){.mapa-container-tooltip{display:none}}
 .central-pendencias{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
@@ -14173,13 +14173,20 @@ async function confirmarExecucaoSolicitacao(id){
   try{const snap=await ref.once('value');if(!snap.exists())return;const p=snap.val()||{};if(String(p.solicitanteUid||'')!==uid){alert('❌ Esta solicitação não pertence ao usuário atual.');return;}if(String(p.status||'').toLowerCase()!=='atendido'){alert('⚠️ Esta solicitação ainda não está pronta para confirmação.');return;}if(p.confirmadoPeloSolicitante){alert('✅ Esta solicitação já foi confirmada.');return;}if(!confirm('Confirmar que a execução/retirada da mercadoria foi realizada?'))return;await ref.update({confirmadoPeloSolicitante:true,confirmadoEm:new Date().toISOString(),confirmadoPorUid:uid});await registrarNotificacaoIndividual(uid,{tipo:'confirmacao',titulo:'✅ Execução confirmada',mensagem:'Sua confirmação da solicitação '+id+' foi registrada.'});alert('✅ Confirmação registrada.');}catch(e){console.error(e);alert('❌ Não foi possível confirmar a solicitação. Verifique as regras do Firebase.');}
 }
 
-// Re-renderização leve: não altera o estoque nem o fluxo atual.
+// Inicialização das melhorias.
+// Evita reconstruir o mapa em intervalos curtos, pois isso recriava os
+// cartões enquanto o mouse estava sobre um container e fazia o tooltip
+// desaparecer/reaparecer. O mapa continua sendo atualizado pelas rotinas
+// normais do sistema quando há alteração real de dados, filtro ou ação.
 function ativarMelhoriasContainers(){
-  carregarFavoritosContainers().finally(()=>renderizarMapasTodos());
+  carregarFavoritosContainers();
   iniciarNotificacoesIndividuais();
-  renderizarMapasTodos();
 }
-if(window.setInterval){setInterval(function(){if(uidAtualMelhorias()){ativarMelhoriasContainers();}},3000);}
+if(window.setInterval){
+  setInterval(function(){
+    if(uidAtualMelhorias()) iniciarNotificacoesIndividuais();
+  },3000);
+}
 
 // Acrescenta a confirmação aos históricos sem substituir as funções existentes.
 const renderizarHistoricoSolicitacoesComumMelhoriasOriginal=window.renderizarHistoricoSolicitacoesComum;
