@@ -1173,8 +1173,6 @@ button:disabled {
 
 </style>
 <!-- FIREBASE: conexão do sistema -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
@@ -2925,7 +2923,7 @@ Entrar
 <!-- CONTAINERS -->
 <div class="painel mapa-containers-painel" id="painel-mapa-containers-externo">
   <div class="mapa-cabecalho">
-    <div><h2>🗺️ Mapa dos Containers</h2><div class="mapa-legenda">🟢 Ocupado &nbsp; ⚪ Vazio &nbsp; 🔴 Atenção</div></div>
+    <div><h2>🗺️ Mapa dos Containers</h2><div class="mapa-legenda">🟢 Ocupado &nbsp; ⚪ Vazio &nbsp; 🔴 Vencido/Atenção &nbsp; 🟠 Próximo do vencimento &nbsp; 🔵 Em transferência</div></div>
     <button class="btn-vis" type="button" onclick="renderizarMapaContainers('externo')">🔄 Atualizar mapa</button>
   </div>
   <div class="mapa-resumo" id="mapa-resumo-externo"></div>
@@ -3166,7 +3164,7 @@ Containers ocupados: 0 / <span class="contador-max-inline">60</span>
   <div class="mapa-cabecalho">
     <div>
       <h2>🗺️ Mapa dos Containers</h2>
-      <div class="mapa-legenda">🟢 Ocupado &nbsp; ⚪ Vazio &nbsp; 🔴 Atenção</div>
+      <div class="mapa-legenda">🟢 Ocupado &nbsp; ⚪ Vazio &nbsp; 🔴 Vencido/Atenção &nbsp; 🟠 Próximo do vencimento &nbsp; 🔵 Em transferência</div>
     </div>
     <button class="btn-vis" type="button" onclick="renderizarMapaContainers('principal')">🔄 Atualizar mapa</button>
   </div>
@@ -8676,7 +8674,7 @@ function valorValidadeParaInput(valor){
     return "";
 }
 
-function exportarParaExcel(opcoes){
+function exportarParaExcel(){
 
     // Relatório completo de todos os containers configurados.
     // Inclui validade e indicação de lote vencido no estoque atual.
@@ -8764,11 +8762,6 @@ function exportarParaExcel(opcoes){
     const cabecalhosRelatorioContainers=["Data","Tipo","Container","Fornecedor","Nota Fiscal","Código","Produto","Lote","Validade","Lote vencido em estoque","Quantidade","Peso KG"];
     window.ultimoRelatorioContainers={headers:cabecalhosRelatorioContainers,rows:rows.slice(),geradoEm:new Date()};
 
-    // Para Word/PDF/Compartilhar, apenas prepara os dados sem baixar um Excel extra.
-    if(opcoes && opcoes.apenasDados){
-        return window.ultimoRelatorioContainers;
-    }
-
     exportarTabelaExcel(
         cabecalhosRelatorioContainers,
         rows,
@@ -8795,7 +8788,6 @@ function exportarParaExcel(opcoes){
         const menu=document.getElementById('exportar-containers-menu');
         if(menu) menu.classList.remove('aberto');
     }
-
     window.acaoExportarContainers=function(event){
         if(event) event.stopPropagation();
         if(!document.body.classList.contains('usuario-admin')){
@@ -8807,233 +8799,55 @@ function exportarParaExcel(opcoes){
     };
 
     function prepararRelatorio(){
-        return exportarParaExcel({apenasDados:true}) || window.ultimoRelatorioContainers || null;
+        exportarParaExcel();
+        return window.ultimoRelatorioContainers||null;
     }
 
     function escaparHtmlRelatorio(v){
         return String(v===null||v===undefined?'':v)
-            .replace(/&/g,'&amp;')
-            .replace(/</g,'&lt;')
-            .replace(/>/g,'&gt;')
-            .replace(/"/g,'&quot;')
-            .replace(/'/g,'&#39;');
-    }
-
-    // Relatório A4 horizontal, compacto e pronto para Word/PDF/envio.
-    function gerarHtmlRelatorioA4(rel){
-        const linhas=rel.rows.map(function(row){
-            return '<tr>'+rel.headers.map(function(_,i){
-                return '<td>'+escaparHtmlRelatorio(row[i])+'</td>';
-            }).join('')+'</tr>';
-        }).join('');
-
-        return '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">' +
-        '<title>Controle de Containers</title><style>' +
-        '@page{size:A4 landscape;margin:8mm}' +
-        'body{font-family:Arial,Segoe UI,sans-serif;font-size:7pt;margin:0;color:#111}' +
-        '.pagina{width:100%}' +
-        'h1{text-align:center;font-size:15pt;margin:0 0 3px}' +
-        '.info{text-align:center;font-size:7pt;color:#555;margin:0 0 7px}' +
-        'table{border-collapse:collapse;width:100%;table-layout:fixed}' +
-        'th,td{border:0.5px solid #777;padding:2px 3px;text-align:left;vertical-align:middle;line-height:1.15;word-wrap:break-word;overflow-wrap:anywhere}' +
-        'th{background:#e8eef5;font-size:6.5pt;font-weight:700}' +
-        'td{font-size:6.5pt}' +
-        'th:nth-child(1){width:7%}th:nth-child(2){width:7%}th:nth-child(3){width:5%}' +
-        'th:nth-child(4){width:10%}th:nth-child(5){width:9%}th:nth-child(6){width:7%}' +
-        'th:nth-child(7){width:17%}th:nth-child(8){width:9%}th:nth-child(9){width:7%}' +
-        'th:nth-child(10){width:8%}th:nth-child(11){width:7%}th:nth-child(12){width:7%}' +
-        'tr{page-break-inside:avoid}' +
-        '</style></head><body><div class="pagina">' +
-        '<h1>Controle de Containers</h1>' +
-        '<div class="info">Relatório gerado em '+escaparHtmlRelatorio(rel.geradoEm.toLocaleString('pt-BR'))+'</div>' +
-        '<table><thead><tr>'+rel.headers.map(function(h){
-            return '<th>'+escaparHtmlRelatorio(h)+'</th>';
-        }).join('')+'</tr></thead><tbody>'+linhas+'</tbody></table>' +
-        '</div></body></html>';
-    }
-
-    function baixarBlob(blob,nome){
-        const url=URL.createObjectURL(blob);
-        const link=document.createElement('a');
-        link.href=url;
-        link.download=nome;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        setTimeout(function(){URL.revokeObjectURL(url);},3000);
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+            .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
 
     function abrirWord(){
         const rel=prepararRelatorio();
         if(!rel) return;
-
-        // DOC compatível com Word, configurado em A4 horizontal e compacto.
-        let html=gerarHtmlRelatorioA4(rel);
-        html=html.replace(
-            '<style>',
-            '<style>@page Section1{size:29.7cm 21cm;mso-page-orientation:landscape;margin:0.8cm;}div.Section1{page:Section1;}'
-        );
-        html=html.replace(
-            '<body><div class="pagina">',
-            '<body><div class="Section1"><div class="pagina">'
-        );
-        html=html.replace(
-            '</div></body></html>',
-            '</div></div></body></html>'
-        );
-
+        const linhas=rel.rows.map(function(row){
+            return '<tr>'+rel.headers.map(function(_,i){return '<td>'+escaparHtmlRelatorio(row[i])+'</td>';}).join('')+'</tr>';
+        }).join('');
+        const html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Relatório de Containers</title><style>body{font-family:Arial,sans-serif;font-size:10pt;margin:25px}h1{text-align:center;font-size:18pt}p{font-size:9pt;color:#555}table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:5px;text-align:left}th{background:#e8eef5}</style></head><body><h1>Controle de Containers</h1><p>Relatório gerado em '+escaparHtmlRelatorio(rel.geradoEm.toLocaleString('pt-BR'))+'</p><table><thead><tr>'+rel.headers.map(function(h){return '<th>'+escaparHtmlRelatorio(h)+'</th>';}).join('')+'</tr></thead><tbody>'+linhas+'</tbody></table></body></html>';
         const blob=new Blob([html],{type:'application/msword;charset=utf-8'});
-        baixarBlob(blob,'controle_containers_A4.doc');
-    }
-
-    function montarPdfA4(rel){
-        if(!(window.jspdf && window.jspdf.jsPDF)) return null;
-
-        const jsPDF=window.jspdf.jsPDF;
-        const doc=new jsPDF({
-            orientation:'landscape',
-            unit:'mm',
-            format:'a4',
-            compress:true
-        });
-
-        doc.setFont('helvetica','bold');
-        doc.setFontSize(13);
-        doc.text('Controle de Containers',148.5,9,{align:'center'});
-        doc.setFont('helvetica','normal');
-        doc.setFontSize(6.5);
-        doc.text(
-            'Relatório gerado em '+rel.geradoEm.toLocaleString('pt-BR'),
-            148.5,14,{align:'center'}
-        );
-
-        const body=rel.rows.map(function(row){
-            return rel.headers.map(function(_,i){
-                return String(row[i]===null||row[i]===undefined?'':row[i]);
-            });
-        });
-
-        if(typeof doc.autoTable!=='function') return null;
-
-        doc.autoTable({
-            head:[rel.headers],
-            body:body,
-            startY:17,
-            margin:{top:17,left:6,right:6,bottom:8},
-            theme:'grid',
-            styles:{
-                font:'helvetica',
-                fontSize:5.4,
-                cellPadding:1.1,
-                lineWidth:0.15,
-                overflow:'linebreak',
-                valign:'middle'
-            },
-            headStyles:{
-                fontSize:5.4,
-                fontStyle:'bold',
-                fillColor:[232,238,245],
-                textColor:[20,30,40],
-                lineWidth:0.15
-            },
-            columnStyles:{
-                0:{cellWidth:16},1:{cellWidth:16},2:{cellWidth:12},3:{cellWidth:28},
-                4:{cellWidth:23},5:{cellWidth:18},6:{cellWidth:45},7:{cellWidth:23},
-                8:{cellWidth:17},9:{cellWidth:24},10:{cellWidth:18},11:{cellWidth:18}
-            },
-            didDrawPage:function(){
-                doc.setFontSize(5.5);
-                doc.setFont('helvetica','normal');
-                doc.text(
-                    'Página '+doc.internal.getNumberOfPages(),
-                    291,205,{align:'right'}
-                );
-            }
-        });
-
-        return doc;
+        const url=URL.createObjectURL(blob), link=document.createElement('a');
+        link.href=url;link.download='controle_containers.doc';document.body.appendChild(link);link.click();link.remove();
+        setTimeout(function(){URL.revokeObjectURL(url);},2000);
     }
 
     function abrirPdf(){
         const rel=prepararRelatorio();
         if(!rel) return;
-
-        const doc=montarPdfA4(rel);
-
-        if(doc){
-            doc.save('controle_containers_A4.pdf');
-            return;
-        }
-
-        // Fallback: abre o relatório já configurado em A4 para "Salvar como PDF".
+        const linhas=rel.rows.map(function(row){return '<tr>'+rel.headers.map(function(_,i){return '<td>'+escaparHtmlRelatorio(row[i])+'</td>';}).join('')+'</tr>';}).join('');
+        const html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Relatório de Containers</title><style>@page{size:A4 landscape;margin:10mm}body{font-family:Arial,sans-serif;font-size:8pt;margin:0}h1{font-size:16pt;margin:0 0 4px}p{font-size:8pt;margin:0 0 10px;color:#555}table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:3px 4px;text-align:left}th{background:#e8eef5;font-size:7.5pt}td{font-size:7.5pt}</style></head><body><h1>Controle de Containers</h1><p>Relatório gerado em '+escaparHtmlRelatorio(rel.geradoEm.toLocaleString('pt-BR'))+'</p><table><thead><tr>'+rel.headers.map(function(h){return '<th>'+escaparHtmlRelatorio(h)+'</th>';}).join('')+'</tr></thead><tbody>'+linhas+'</tbody></table><script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>';
         const win=window.open('','_blank');
-        if(!win){
-            alert('Permita pop-ups do sistema para gerar o PDF.');
-            return;
-        }
-        const html=gerarHtmlRelatorioA4(rel).replace(
-            '</body>',
-            '<script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body>'
-        );
-        win.document.open();
-        win.document.write(html);
-        win.document.close();
-    }
-
-    function gerarPdfBlobA4(rel){
-        const doc=montarPdfA4(rel);
-        return doc ? doc.output('blob') : null;
+        if(!win){alert('Permita pop-ups do sistema para gerar o PDF.');return;}
+        win.document.open();win.document.write(html);win.document.close();
     }
 
     async function compartilharRelatorio(){
-        const rel=prepararRelatorio();
-        if(!rel) return;
-
+        // Gera o Excel atual e usa o compartilhamento nativo do dispositivo.
+        exportarParaExcel();
+        const arquivo=window.ultimoArquivoExportacaoContainers;
+        if(!arquivo) return;
         try{
-            // Compartilhar usa exatamente o mesmo relatório A4 compacto do PDF.
-            const pdfBlob=gerarPdfBlobA4(rel);
-
-            if(pdfBlob){
-                const file=new File(
-                    [pdfBlob],
-                    'controle_containers_A4.pdf',
-                    {type:'application/pdf'}
-                );
-
-                if(navigator.share && (!navigator.canShare || navigator.canShare({files:[file]}))){
-                    await navigator.share({
-                        title:'Relatório de Containers',
-                        text:'Relatório de Containers — A4 compacto.',
-                        files:[file]
-                    });
-                    return;
-                }
-
-                // Desktop sem Web Share: deixa o PDF A4 pronto para anexar.
-                baixarBlob(pdfBlob,'controle_containers_A4.pdf');
-                alert('O compartilhamento nativo não está disponível neste navegador. O PDF A4 compacto foi baixado e está pronto para envio.');
-                return;
-            }
-
-            // Fallback caso a biblioteca PDF não esteja disponível.
-            const html=gerarHtmlRelatorioA4(rel);
-            const blob=new Blob([html],{type:'text/html;charset=utf-8'});
-            const file=new File([blob],'controle_containers_A4.html',{type:'text/html'});
-
+            const file=new File([arquivo.blob],arquivo.nome,{type:arquivo.blob.type});
             if(navigator.share && (!navigator.canShare || navigator.canShare({files:[file]}))){
-                await navigator.share({
-                    title:'Relatório de Containers',
-                    text:'Relatório A4 compacto.',
-                    files:[file]
-                });
+                await navigator.share({title:'Relatório de Containers',text:'Relatório atualizado dos containers.',files:[file]});
             }else{
-                baixarBlob(blob,'controle_containers_A4.html');
-                alert('O PDF não pôde ser criado neste momento. O relatório A4 compacto foi preparado e baixado para envio manual.');
+                alert('O compartilhamento nativo de arquivos não está disponível neste navegador. O relatório Excel foi baixado e pode ser anexado ao aplicativo desejado.');
             }
         }catch(e){
             if(e && e.name==='AbortError') return;
             console.warn('Compartilhamento do relatório:',e);
-            alert('Não foi possível concluir o compartilhamento. Tente novamente.');
+            alert('Não foi possível abrir o compartilhamento nativo neste dispositivo. O arquivo Excel foi gerado para envio manual.');
         }
     }
 
@@ -9056,6 +8870,7 @@ function exportarParaExcel(opcoes){
     });
 })();
 
+// ======================================================
 // BACKUP COMPLETO EM EXCEL — ONE DRIVE (PASTA LOCAL)
 // ======================================================
 // O arquivo é criado diretamente a partir do Firebase.
@@ -13498,6 +13313,16 @@ document.addEventListener("DOMContentLoaded",function(){
 .mapa-container-card{position:relative;border:1px solid var(--borda);background:var(--bg-painel-2);border-radius:10px;padding:11px;cursor:pointer;min-height:82px;transition:transform .12s,border-color .12s}
 .mapa-container-card:hover{transform:translateY(-1px);border-color:var(--azul)}
 .mapa-container-card.ocupado{border-left:4px solid #22c55e}.mapa-container-card.vazio{border-left:4px solid #94a3b8}.mapa-container-card.atencao{border-left:4px solid #ef4444}
+.mapa-container-card.em-transferencia{border-left:4px solid #3b82f6 !important}
+.mapa-container-card.proximo-vencimento{border-left:4px solid #f59e0b !important}
+.mapa-container-tooltip{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translate(-50%,6px);width:min(260px,calc(100vw - 30px));padding:10px 12px;border:1px solid var(--borda-forte);border-radius:9px;background:var(--bg-painel);color:var(--texto);box-shadow:0 10px 28px rgba(0,0,0,.35);font-size:11px;line-height:1.5;text-align:left;opacity:0;pointer-events:none;transition:opacity .15s,transform .15s;z-index:30;white-space:normal}
+.mapa-container-card:hover .mapa-container-tooltip{opacity:1;transform:translate(-50%,0)}
+@media(max-width:700px){.mapa-container-tooltip{display:none}}
+.central-pendencias{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.central-pendencias-grupo{border:1px solid var(--borda);border-radius:9px;padding:9px 11px;background:var(--bg-painel-2)}
+.central-pendencias-grupo.urgente{border-left:4px solid #ef4444}.central-pendencias-grupo.atencao{border-left:4px solid #f59e0b}.central-pendencias-grupo.informativo{border-left:4px solid #3b82f6}
+.central-pendencias-titulo{font-weight:700;font-size:12px;margin-bottom:5px}.central-pendencias-lista{display:flex;flex-wrap:wrap;gap:5px}.central-pendencia-item{font-size:11px;padding:4px 7px;border-radius:6px;background:var(--bg-input);border:1px solid var(--borda)}
+
 .mapa-container-numero{font-weight:700;font-size:14px}.mapa-container-status{font-size:11px;margin-top:5px}.mapa-container-qtd{font-size:11px;color:var(--texto-fraco);margin-top:5px}
 .mapa-container-mercadorias{margin-top:8px;display:flex;flex-direction:column;gap:5px}
 .mapa-mercadoria-linha{padding:6px 7px;border:1px solid var(--borda);border-radius:7px;background:var(--bg-input);font-size:10.5px;line-height:1.35;cursor:default}
@@ -13987,15 +13812,39 @@ function containerPassaFiltrosMapa(tipo,numero){
 function renderizarMapaContainers(tipo){
   const grade=document.getElementById('mapa-grade-'+tipo), resumo=document.getElementById('mapa-resumo-'+tipo); if(!grade) return;
   const total=Math.max(1,Number(quantidadeContainersSistema)||60), lista=Array.isArray(estoque)?estoque:[];
-  const ocupados=new Set(), atencao=new Set(); let qtdTotal=0, exibidos=0;
-  lista.forEach(it=>{const n=normalizarNumeroContainerMelhorias(it&&it.num);if(!n)return;ocupados.add(n);qtdTotal+=Number(it.qtd)||0;if(Number(it.qtd)<0||Number(it.peso)<0)atencao.add(n);});
+  const ocupados=new Set(), vencidos=new Set(), proximos=new Set(), emTransferencia=new Set(); let qtdTotal=0, exibidos=0;
+
+  lista.forEach(it=>{
+    const n=normalizarNumeroContainerMelhorias(it&&it.num); if(!n)return;
+    ocupados.add(n); qtdTotal+=Number(it.qtd)||0;
+    const validade=obterDataValidadeObjeto(it.validade);
+    if(validade){
+      const dias=Math.ceil((validade.getTime()-new Date().getTime())/(24*60*60*1000));
+      if(dias<0) vencidos.add(n); else if(dias<=30) proximos.add(n);
+    }
+  });
+
+  // Solicitações de transferência pendentes já ficam carregadas no cache atual.
+  (Array.isArray(solicitacoesAlteracoesCache)?solicitacoesAlteracoesCache:[]).forEach(function(sol){
+    if(!sol || String(sol.status||'').toLowerCase()!=='pendente') return;
+    if(String(sol.tipo||'').toUpperCase()!=='TRANSFERENCIA_CONTAINER' && String(sol.tipo||'').toUpperCase()!=='TRANSFERENCIA_ESTOQUE') return;
+    const d=sol.dados||{};
+    const origem=normalizarNumeroContainerMelhorias(d.containerOrigem || (d.item&&d.item.num));
+    const destino=normalizarNumeroContainerMelhorias(d.containerDestino);
+    if(origem) emTransferencia.add(origem);
+    if(destino) emTransferencia.add(destino);
+  });
+
   grade.innerHTML='';
   for(let i=1;i<=total;i++){
     if(!containerPassaFiltrosMapa(tipo,i)) continue;
     exibidos++;
-    const itens=obterIndicesItensContainerMelhorias(i), occ=itens.length>0, prob=atencao.has(i);
-    const cls=prob?'atencao':(occ?'ocupado':'vazio');
-    const status=prob?'🔴 Atenção':(occ?'🟢 Ocupado':'⚪ Vazio');
+    const itens=obterIndicesItensContainerMelhorias(i), occ=itens.length>0;
+    const estaTransferindo=emTransferencia.has(i);
+    const temVencido=vencidos.has(i);
+    const temProximo=proximos.has(i) && !temVencido;
+    const cls=estaTransferindo?'em-transferencia':(temVencido?'atencao':(temProximo?'proximo-vencimento':(occ?'ocupado':'vazio')));
+    const status=estaTransferindo?'🔵 Em transferência':(temVencido?'🔴 Vencido/Atenção':(temProximo?'🟠 Próximo do vencimento':(occ?'🟢 Ocupado':'⚪ Vazio')));
     const q=itens.reduce((a,x)=>a+(Number(x.item.qtd)||0),0);
     const peso=itens.reduce((a,x)=>a+(Number(x.item.peso)||0),0);
     const card=document.createElement('div'); card.className='mapa-container-card '+cls;
@@ -14003,52 +13852,40 @@ function renderizarMapaContainers(tipo){
     let mercadorias='';
     if(itens.length){
       mercadorias='<div class="mapa-container-mercadorias">'+itens.map(obj=>{
-        const it=obj.item, idx=obj.index;
+        const it=obj.item;
         const nome=String(it.prod||'Sem nome');
         const pesoUnitario=Number(it.kg||0);
-
-        /* Validade específica desta mercadoria.
-           A partir de 30 dias ou menos, o produto fica vermelho.
-           Vencidos também permanecem em vermelho. */
         const validadeProduto=obterDataValidadeObjeto(it.validade);
         const agoraProduto=new Date();
-        let diasParaVencer=null;
-        let alertaValidade30=false;
-        let textoValidade='';
-
+        let diasParaVencer=null, alertaValidade30=false, textoValidade='';
         if(validadeProduto){
           const diffMs=validadeProduto.getTime()-agoraProduto.getTime();
-          diasParaVencer=Math.ceil(diffMs/(24*60*60*1000));
-          alertaValidade30=diasParaVencer<=30;
-
-          if(diasParaVencer<0){
-            textoValidade='🔴 VENCIDO — '+formatarValidadeMesAno(it.validade);
-          }else if(diasParaVencer===0){
-            textoValidade='🔴 VENCE HOJE — '+formatarValidadeMesAno(it.validade);
-          }else if(diasParaVencer<=30){
-            textoValidade='🔴 Vence em '+diasParaVencer+' dia(s) — '+formatarValidadeMesAno(it.validade);
-          }
+          diasParaVencer=Math.ceil(diffMs/(24*60*60*1000)); alertaValidade30=diasParaVencer<=30;
+          if(diasParaVencer<0) textoValidade='🔴 VENCIDO — '+formatarValidadeMesAno(it.validade);
+          else if(diasParaVencer===0) textoValidade='🔴 VENCE HOJE — '+formatarValidadeMesAno(it.validade);
+          else if(diasParaVencer<=30) textoValidade='🟠 Vence em '+diasParaVencer+' dia(s) — '+formatarValidadeMesAno(it.validade);
         }
-
         const classeValidade=alertaValidade30?' validade-alerta-30':'';
-        const linhaValidade=textoValidade
-          ? '<div class="mapa-mercadoria-validade">'+textoValidade+'</div>'
-          : '';
-
-        return '<div class="mapa-mercadoria-linha'+classeValidade+'" title="Clique no produto para abrir os detalhes do container">'+
+        const linhaValidade=textoValidade ? '<div class="mapa-mercadoria-validade">'+textoValidade+'</div>' : '';
+        return '<div class="mapa-mercadoria-linha'+classeValidade+'" title="Clique no container para abrir os detalhes e o histórico individual do produto">'+
           '<div class="mapa-mercadoria-nome" title="'+nome.replace(/"/g,'&quot;')+'">'+nome+'</div>'+
-          '<div class="mapa-mercadoria-info">⚖️ '+pesoUnitario.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2})+' kg</div>'+
-          linhaValidade+
-          '</div>';
+          '<div class="mapa-mercadoria-info">⚖️ '+pesoUnitario.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2})+' kg</div>'+linhaValidade+'</div>';
       }).join('')+'</div>';
     }else mercadorias='<div class="mapa-sem-mercadoria">Sem mercadoria cadastrada</div>';
-    card.innerHTML=
-      '<div class="mapa-container-numero">📦 Container '+String(i).padStart(2,'0')+'</div>'+
-      '<div class="mapa-container-status">'+status+'</div>'+ 
-      mercadorias;
+
+    const tooltipItens=itens.length ? itens.map(function(obj){
+      const it=obj.item||{}; return '• '+String(it.prod||'Sem nome')+' — '+Number(it.qtd||0).toLocaleString('pt-BR')+' vol.';
+    }).join('<br>') : 'Sem mercadoria cadastrada';
+    const tooltipEstado=estaTransferindo?'🔵 Em transferência':(temVencido?'🔴 Há produto vencido':(temProximo?'🟠 Há produto vencendo em até 30 dias':status));
+    const tooltip='<div class="mapa-container-tooltip"><strong>📦 Container '+String(i).padStart(2,'0')+'</strong><br>'+
+      tooltipEstado+'<br><strong>Mercadorias:</strong><br>'+tooltipItens+'<br><strong>📦 Volumes:</strong> '+Number(q).toLocaleString('pt-BR')+
+      '<br><strong>⚖️ Peso:</strong> '+Number(peso).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2})+' kg'+
+      '<br><span style="color:var(--texto-fraco);">Clique para abrir o conteúdo completo.</span></div>';
+
+    card.innerHTML='<div class="mapa-container-numero">📦 Container '+String(i).padStart(2,'0')+'</div>'+'<div class="mapa-container-status">'+status+'</div>'+mercadorias+tooltip;
     grade.appendChild(card);
   }
-  if(resumo) resumo.innerHTML='Total: <strong>'+total+'</strong> &nbsp;|&nbsp; 🟢 Ocupados: <strong>'+ocupados.size+'</strong> &nbsp;|&nbsp; ⚪ Vazios: <strong>'+(total-ocupados.size)+'</strong> &nbsp;|&nbsp; 🔴 Atenção: <strong>'+atencao.size+'</strong> &nbsp;|&nbsp; 📦 Volumes: <strong>'+Number(qtdTotal).toLocaleString('pt-BR')+'</strong> &nbsp;|&nbsp; 👁️ Exibidos: <strong>'+exibidos+'</strong>';
+  if(resumo) resumo.innerHTML='Total: <strong>'+total+'</strong> &nbsp;|&nbsp; 🟢 Ocupados: <strong>'+ocupados.size+'</strong> &nbsp;|&nbsp; ⚪ Vazios: <strong>'+(total-ocupados.size)+'</strong> &nbsp;|&nbsp; 🔴 Vencidos/Atenção: <strong>'+vencidos.size+'</strong> &nbsp;|&nbsp; 🟠 Próximos: <strong>'+proximos.size+'</strong> &nbsp;|&nbsp; 🔵 Transferência: <strong>'+emTransferencia.size+'</strong> &nbsp;|&nbsp; 📦 Volumes: <strong>'+Number(qtdTotal).toLocaleString('pt-BR')+'</strong> &nbsp;|&nbsp; 👁️ Exibidos: <strong>'+exibidos+'</strong>';
 }
 function renderizarMapasTodos(){ if(document.getElementById('mapa-grade-principal')) renderizarMapaContainers('principal'); if(document.getElementById('mapa-grade-externo')) renderizarMapaContainers('externo'); }
 
@@ -14076,24 +13913,54 @@ function renderizarCentralNotificacoes(){
   const contadores=document.querySelectorAll('#contador-notificacoes-individuais');
   if(!areas.length)return;
 
-  // Somente notificações ainda não lidas aparecem nesta aba.
-  // As notificações lidas continuam gravadas no Firebase, mas saem da central.
   const naoLidas=notificacoesIndividuais.filter(n=>!n.lida);
   contadores.forEach(c=>c.textContent=String(naoLidas.length));
 
-  const html=!naoLidas.length
-    ? '<div class="vazio">📭 Nenhuma notificação nova.</div>'
-    : naoLidas.slice(0,50).map(n=>
-        '<div class="notificacao-individual nao-lida" data-notificacao-id="'+String(n.id||'')+'">'+
-          '<div style="display:flex;align-items:center;gap:8px;">'+
-            '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:5px;background:#22c55e;color:#fff;font-weight:700;font-size:14px;flex:0 0 auto;">✓</span>'+
-            '<strong>'+String(n.titulo||'Notificação')+'</strong>'+
-          '</div>'+
-          '<div>'+String(n.mensagem||'')+'</div>'+
-          '<small>'+ (n.criadaEm?new Date(n.criadaEm).toLocaleString('pt-BR'):'') +'</small>'+
-        '</div>'
-      ).join('');
-  areas.forEach(a=>a.innerHTML=html);
+  // Central de pendências: usa os dados que o sistema já mantém em memória/Firebase.
+  const admin=usuarioEhAdmin();
+  const vencidos=[], proximos=[], transferencias=[], solicitacoes=[];
+  const agora=new Date();
+  (Array.isArray(estoque)?estoque:[]).forEach(function(it){
+    const d=obterDataValidadeObjeto(it&&it.validade); if(!d)return;
+    const dias=Math.ceil((d.getTime()-agora.getTime())/(24*60*60*1000));
+    if(dias<0) vencidos.push(it); else if(dias<=30) proximos.push(it);
+  });
+  if(admin){
+    (Array.isArray(solicitacoesAlteracoesCache)?solicitacoesAlteracoesCache:[]).forEach(function(s){
+      if(!s || String(s.status||'').toLowerCase()!=='pendente')return;
+      const tipo=String(s.tipo||'').toUpperCase();
+      if(tipo==='TRANSFERENCIA_CONTAINER' || tipo==='TRANSFERENCIA_ESTOQUE') transferencias.push(s);
+      else solicitacoes.push(s);
+    });
+    (Array.isArray(solicitacoesMercadoriaAdminCache)?solicitacoesMercadoriaAdminCache:[]).forEach(function(s){if(s&&String(s.status||'pendente').toLowerCase()==='pendente')solicitacoes.push(s);});
+    (Array.isArray(solicitacoesAcessoCache)?solicitacoesAcessoCache:[]).forEach(function(s){if(s&&String(s.status||'pendente').toLowerCase()==='pendente')solicitacoes.push(s);});
+  }
+
+  const limite=function(arr){return arr.slice(0,8);};
+  const nomes=function(arr,fn){return limite(arr).map(fn).join('') || '<span class="central-pendencia-item">Nenhuma</span>';};
+  let pendencias='';
+  pendencias+='<div class="central-pendencias">';
+  pendencias+='<div class="central-pendencias-grupo urgente"><div class="central-pendencias-titulo">🔴 Urgente</div><div class="central-pendencias-lista">';
+  pendencias+=nomes(vencidos,function(it){return '<span class="central-pendencia-item">📦 C'+String(it.num||'—').padStart(2,'0')+' • '+String(it.prod||'Produto')+' — vencido</span>';});
+  pendencias+=nomes(transferencias,function(s){const d=s.dados||{};return '<span class="central-pendencia-item">🔄 C'+String(d.containerOrigem||d.item?.num||'—').padStart(2,'0')+(d.containerDestino?' → C'+String(d.containerDestino).padStart(2,'0'):'')+'</span>';});
+  pendencias+=nomes(solicitacoes,function(s){return '<span class="central-pendencia-item">📋 '+String(s.descricao||s.produto||s.tipo||'Solicitação pendente')+'</span>';});
+  pendencias+='</div></div>';
+  pendencias+='<div class="central-pendencias-grupo atencao"><div class="central-pendencias-titulo">🟠 Atenção</div><div class="central-pendencias-lista">';
+  pendencias+=nomes(proximos,function(it){return '<span class="central-pendencia-item">⏳ C'+String(it.num||'—').padStart(2,'0')+' • '+String(it.prod||'Produto')+' — vence em até 30 dias</span>';});
+  pendencias+='<span class="central-pendencia-item">📦 Containers quase completos: configure a capacidade por container para ativar este indicador.</span>';
+  pendencias+='</div></div>';
+  pendencias+='<div class="central-pendencias-grupo informativo"><div class="central-pendencias-titulo">🔵 Informativo</div><div class="central-pendencias-lista">';
+  const informativas=naoLidas.filter(function(n){return !['transferencia','solicitacao','validade'].includes(String(n.tipo||'').toLowerCase());});
+  pendencias+=nomes(informativas,function(n){return '<span class="central-pendencia-item">ℹ️ '+String(n.titulo||'Notificação')+'</span>';});
+  pendencias+='</div></div></div>';
+
+  const htmlNotif=!naoLidas.length ? '' : '<div style="margin-top:6px;font-weight:700;font-size:12px;">🔔 Notificações novas</div>'+naoLidas.slice(0,50).map(n=>
+    '<div class="notificacao-individual nao-lida" data-notificacao-id="'+String(n.id||'')+'">'+
+      '<div style="display:flex;align-items:center;gap:8px;"><span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:5px;background:#22c55e;color:#fff;font-weight:700;font-size:14px;flex:0 0 auto;">✓</span><strong>'+String(n.titulo||'Notificação')+'</strong></div>'+
+      '<div>'+String(n.mensagem||'')+'</div><small>'+ (n.criadaEm?new Date(n.criadaEm).toLocaleString('pt-BR'):'') +'</small></div>'
+  ).join('');
+  const html=pendencias+htmlNotif;
+  areas.forEach(a=>a.innerHTML=html || '<div class="vazio">📭 Nenhuma pendência ou notificação nova.</div>');
 }
 function toggleCentralNotificacoes(){const p=obterPainelCentralNotificacoes();if(!p)return;p.style.display=p.style.display==='none'?'block':'none';renderizarCentralNotificacoes();}
 async function marcarTodasNotificacoesLidas(){
