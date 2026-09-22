@@ -2979,6 +2979,63 @@ Entrar
   <div id="lista-notificacoes-individuais"></div>
 </div>
 <h1>📦 Controle de Containers</h1>
+
+<!-- ======================================================
+     DASHBOARD INICIAL — ADMINISTRADOR
+     Fica acima do registro e do mapa, sem alterar os fluxos atuais.
+     ====================================================== -->
+<section class="dashboard-admin-inicial" id="dashboard-admin-inicial" aria-label="Resumo do sistema">
+  <div class="dashboard-admin-cabecalho">
+    <div>
+      <h2>📊 Visão Geral</h2>
+      <div class="dashboard-admin-subtitulo">Resumo rápido do estoque, containers e pendências.</div>
+    </div>
+    <button class="btn-vis" type="button" onclick="atualizarDashboardAdmin()">🔄 Atualizar resumo</button>
+  </div>
+  <div class="dashboard-admin-cards">
+    <div class="dashboard-card dashboard-card-containers">
+      <div class="dashboard-card-icone">📦</div>
+      <div><div class="dashboard-card-valor" id="dashboard-total-containers">60</div><div class="dashboard-card-label">Containers</div></div>
+      <div class="dashboard-card-detalhe" id="dashboard-containers-detalhe">0 ocupados • 0 vazios</div>
+    </div>
+    <div class="dashboard-card dashboard-card-volumes">
+      <div class="dashboard-card-icone">🔢</div>
+      <div><div class="dashboard-card-valor" id="dashboard-total-volumes">0</div><div class="dashboard-card-label">Volumes em estoque</div></div>
+      <div class="dashboard-card-detalhe">Quantidade total registrada</div>
+    </div>
+    <div class="dashboard-card dashboard-card-peso">
+      <div class="dashboard-card-icone">⚖️</div>
+      <div><div class="dashboard-card-valor" id="dashboard-peso-total">0 kg</div><div class="dashboard-card-label">Peso em estoque</div></div>
+      <div class="dashboard-card-detalhe">Peso total armazenado</div>
+    </div>
+    <div class="dashboard-card dashboard-card-validade">
+      <div class="dashboard-card-icone">🔴</div>
+      <div><div class="dashboard-card-valor" id="dashboard-vencidos">0</div><div class="dashboard-card-label">Produtos vencidos</div></div>
+      <div class="dashboard-card-detalhe">Itens com validade ultrapassada</div>
+    </div>
+    <div class="dashboard-card dashboard-card-proximos">
+      <div class="dashboard-card-icone">🟠</div>
+      <div><div class="dashboard-card-valor" id="dashboard-proximos">0</div><div class="dashboard-card-label">Próximos do vencimento</div></div>
+      <div class="dashboard-card-detalhe">Até 30 dias</div>
+    </div>
+    <div class="dashboard-card dashboard-card-pendencias">
+      <div class="dashboard-card-icone">🚨</div>
+      <div><div class="dashboard-card-valor" id="dashboard-pendencias">0</div><div class="dashboard-card-label">Pendências</div></div>
+      <div class="dashboard-card-detalhe" id="dashboard-pendencias-detalhe">Aguardando aprovação</div>
+    </div>
+    <div class="dashboard-card dashboard-card-entradas">
+      <div class="dashboard-card-icone">📥</div>
+      <div><div class="dashboard-card-valor" id="dashboard-entradas-hoje">0</div><div class="dashboard-card-label">Entradas hoje</div></div>
+      <div class="dashboard-card-detalhe">Movimentações de entrada</div>
+    </div>
+    <div class="dashboard-card dashboard-card-saidas">
+      <div class="dashboard-card-icone">📤</div>
+      <div><div class="dashboard-card-valor" id="dashboard-saidas-hoje">0</div><div class="dashboard-card-label">Saídas hoje</div></div>
+      <div class="dashboard-card-detalhe">Movimentações de saída</div>
+    </div>
+  </div>
+</section>
+
 <div class="layout-admin-operacional" id="layout-admin-operacional">
 <!-- PAINEL DE USUÁRIOS REMOVIDO DA TELA INICIAL: agora fica em Configuração -->
 <!-- SOLICITAÇÕES RECEBIDAS — USUÁRIO COMUM (SOMENTE VISUALIZAÇÃO) -->
@@ -7517,6 +7574,80 @@ document.getElementById(
 // MOSTRAR ESTOQUE
 // ======================================================
 
+function atualizarDashboardAdmin(){
+  const painel=document.getElementById('dashboard-admin-inicial');
+  if(!painel || !usuarioEhAdmin()) return;
+
+  const total=Math.max(1,Number(quantidadeContainersSistema)||60);
+  const lista=Array.isArray(estoque)?estoque:[];
+  const ocupados=new Set();
+  let volumes=0, peso=0, vencidos=0, proximos=0;
+  const agora=new Date();
+
+  lista.forEach(function(item){
+    const numero=normalizarNumeroContainerMelhorias(item&&item.num);
+    if(numero) ocupados.add(numero);
+    volumes += Number(item&&item.qtd)||0;
+    peso += Number(item&&item.peso)||0;
+
+    const validade=obterDataValidadeObjeto(item&&item.validade);
+    if(validade){
+      const dias=Math.ceil((validade.getTime()-agora.getTime())/(24*60*60*1000));
+      if(dias<0) vencidos++;
+      else if(dias<=30) proximos++;
+    }
+  });
+
+  let pendencias=0;
+  let transferenciasPendentes=0;
+  let solicitacoesPendentes=0;
+  let acessosPendentes=0;
+
+  (Array.isArray(solicitacoesAlteracoesCache)?solicitacoesAlteracoesCache:[]).forEach(function(item){
+    if(item && String(item.status||'').toLowerCase()==='pendente'){
+      pendencias++;
+      const tipo=String(item.tipo||'').toUpperCase();
+      if(tipo==='TRANSFERENCIA_CONTAINER' || tipo==='TRANSFERENCIA_ESTOQUE') transferenciasPendentes++;
+    }
+  });
+  (Array.isArray(solicitacoesMercadoriaAdminCache)?solicitacoesMercadoriaAdminCache:[]).forEach(function(item){
+    if(item && String(item.status||'pendente').toLowerCase()==='pendente'){pendencias++;solicitacoesPendentes++;}
+  });
+  (Array.isArray(solicitacoesAcessoCache)?solicitacoesAcessoCache:[]).forEach(function(item){
+    if(item && String(item.status||'pendente').toLowerCase()==='pendente'){pendencias++;acessosPendentes++;}
+  });
+
+  const hoje=new Date();
+  const chaveHoje=String(hoje.getFullYear())+'-'+String(hoje.getMonth()+1).padStart(2,'0')+'-'+String(hoje.getDate()).padStart(2,'0');
+  let entradasHoje=0, saidasHoje=0;
+  (Array.isArray(historico)?historico:[]).forEach(function(m){
+    if(!m)return;
+    const raw=m.data || m.dataHora || m.timestamp || '';
+    const dataTexto=String(raw).slice(0,10);
+    let ehHoje=dataTexto===chaveHoje;
+    if(!ehHoje && raw){
+      const d=new Date(raw);
+      if(!Number.isNaN(d.getTime())) ehHoje=d.getFullYear()===hoje.getFullYear() && d.getMonth()===hoje.getMonth() && d.getDate()===hoje.getDate();
+    }
+    if(!ehHoje)return;
+    const tipo=String(m.tipo||m.acao||'').toUpperCase();
+    if(tipo.includes('ENTRADA')) entradasHoje++;
+    if(tipo.includes('SAIDA') || tipo.includes('SAÍDA')) saidasHoje++;
+  });
+
+  const setText=function(id,value){const el=document.getElementById(id);if(el)el.textContent=value;};
+  setText('dashboard-total-containers',String(total));
+  setText('dashboard-containers-detalhe',ocupados.size+' ocupados • '+Math.max(0,total-ocupados.size)+' vazios');
+  setText('dashboard-total-volumes',volumes.toLocaleString('pt-BR'));
+  setText('dashboard-peso-total',peso.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:2})+' kg');
+  setText('dashboard-vencidos',String(vencidos));
+  setText('dashboard-proximos',String(proximos));
+  setText('dashboard-pendencias',String(pendencias));
+  setText('dashboard-pendencias-detalhe',transferenciasPendentes+' transferências • '+solicitacoesPendentes+' solicitações • '+acessosPendentes+' acessos');
+  setText('dashboard-entradas-hoje',String(entradasHoje));
+  setText('dashboard-saidas-hoje',String(saidasHoje));
+}
+
 function mostrarEstoque(){
     // Verifica se a primeira área existe na tela. Se não existir, não executa o código.
     if (!document.getElementById("dados-1")) return;
@@ -7656,6 +7787,8 @@ atualizarContador();
 filtrarEstoque();
 
 aplicarFiltrosContainers('admin');
+
+atualizarDashboardAdmin();
 
 }
 
@@ -13887,7 +14020,7 @@ function renderizarMapaContainers(tipo){
   }
   if(resumo) resumo.innerHTML='Total: <strong>'+total+'</strong> &nbsp;|&nbsp; 🟢 Ocupados: <strong>'+ocupados.size+'</strong> &nbsp;|&nbsp; ⚪ Vazios: <strong>'+(total-ocupados.size)+'</strong> &nbsp;|&nbsp; 🔴 Vencidos/Atenção: <strong>'+vencidos.size+'</strong> &nbsp;|&nbsp; 🟠 Próximos: <strong>'+proximos.size+'</strong> &nbsp;|&nbsp; 🔵 Transferência: <strong>'+emTransferencia.size+'</strong> &nbsp;|&nbsp; 📦 Volumes: <strong>'+Number(qtdTotal).toLocaleString('pt-BR')+'</strong> &nbsp;|&nbsp; 👁️ Exibidos: <strong>'+exibidos+'</strong>';
 }
-function renderizarMapasTodos(){ if(document.getElementById('mapa-grade-principal')) renderizarMapaContainers('principal'); if(document.getElementById('mapa-grade-externo')) renderizarMapaContainers('externo'); }
+function renderizarMapasTodos(){ if(document.getElementById('mapa-grade-principal')) renderizarMapaContainers('principal'); if(document.getElementById('mapa-grade-externo')) renderizarMapaContainers('externo'); if(typeof atualizarDashboardAdmin==='function') atualizarDashboardAdmin(); }
 
 async function registrarNotificacaoIndividual(uid,dados){
   if(!uid) return;
@@ -15185,6 +15318,58 @@ body.tema-claro .toast-notificacao-web div{color:#334155;}
     background:#10b981;
     box-shadow:0 0 0 3px rgba(16,185,129,.12);
 }
+
+/* ======================================================
+   DASHBOARD INICIAL — SOMENTE ADMIN
+   ====================================================== */
+.dashboard-admin-inicial{
+  display:none;
+  margin:0 0 14px 0;
+  padding:14px;
+  border:1px solid var(--borda);
+  border-radius:12px;
+  background:var(--painel);
+  box-shadow:0 4px 14px rgba(0,0,0,.08);
+}
+body.usuario-admin .dashboard-admin-inicial{display:block;}
+.dashboard-admin-cabecalho{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  margin-bottom:10px;
+}
+.dashboard-admin-cabecalho h2{margin:0;font-size:18px;}
+.dashboard-admin-subtitulo{font-size:11px;color:var(--texto-fraco);margin-top:3px;}
+.dashboard-admin-cards{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:9px;
+}
+.dashboard-card{
+  position:relative;min-height:76px;padding:11px 11px 9px 42px;
+  border:1px solid var(--borda);border-radius:10px;background:var(--fundo);
+  box-sizing:border-box;overflow:hidden;
+}
+.dashboard-card-icone{
+  position:absolute;left:11px;top:12px;font-size:20px;line-height:1;
+}
+.dashboard-card-valor{font-size:21px;font-weight:800;line-height:1.1;color:var(--texto);}
+.dashboard-card-label{font-size:11px;font-weight:700;margin-top:2px;color:var(--texto);}
+.dashboard-card-detalhe{font-size:9px;color:var(--texto-fraco);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dashboard-card-validade{border-left:3px solid #dc2626;}
+.dashboard-card-proximos{border-left:3px solid #f59e0b;}
+.dashboard-card-pendencias{border-left:3px solid #ef4444;}
+.dashboard-card-entradas{border-left:3px solid #16a34a;}
+.dashboard-card-saidas{border-left:3px solid #2563eb;}
+@media(max-width:1100px){.dashboard-admin-cards{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:650px){
+  .dashboard-admin-cabecalho{align-items:flex-start;flex-direction:column;}
+  .dashboard-admin-cabecalho .btn-vis{width:100%;}
+  .dashboard-admin-cards{grid-template-columns:1fr 1fr;gap:7px;}
+  .dashboard-card{min-height:72px;padding-left:38px;}
+  .dashboard-card-icone{left:9px;font-size:18px;}
+  .dashboard-card-valor{font-size:18px;}
+  .dashboard-card-label{font-size:10px;}
+}
+@media(max-width:420px){.dashboard-admin-cards{grid-template-columns:1fr;}}
 </style>
 <script id="login-fixo-presenca-online">
 (function(){
