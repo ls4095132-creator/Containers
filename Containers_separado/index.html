@@ -157,12 +157,26 @@ Entrar
   var mostrarMenuOriginal = window.mostrarMenuPrincipal;
 
   function tipoAtual(){
+    /* Primeiro aproveita a identificação de administrador do sistema atual.
+       O sistema já valida o administrador pelo perfil Firebase/login. */
     try {
-      if (typeof usuarioLogadoAtual !== "undefined" && usuarioLogadoAtual && usuarioLogadoAtual.tipo) {
-        return String(usuarioLogadoAtual.tipo).toLowerCase();
+      if (typeof usuarioEhAdmin === "function" && usuarioEhAdmin()) return "admin";
+    } catch(e) {}
+
+    try {
+      if (typeof usuarioLogadoAtual !== "undefined" && usuarioLogadoAtual) {
+        if (usuarioLogadoAtual.tipo) return String(usuarioLogadoAtual.tipo).toLowerCase();
+        var email = String(usuarioLogadoAtual.email || usuarioLogadoAtual.usuario || "").trim().toLowerCase();
+        if (email === "leandro@gmail.com" || email === "admin@controlecontainers.com") return "admin";
       }
     } catch(e) {}
-    if (perfilMenu && perfilMenu.tipo) return String(perfilMenu.tipo).toLowerCase();
+
+    if (perfilMenu) {
+      if (String(perfilMenu.tipo || "").toLowerCase() === "admin") return "admin";
+      var emailPerfil = String(perfilMenu.email || perfilMenu.usuario || "").trim().toLowerCase();
+      if (emailPerfil === "leandro@gmail.com" || emailPerfil === "admin@controlecontainers.com") return "admin";
+      if (perfilMenu.tipo) return String(perfilMenu.tipo).toLowerCase();
+    }
     return "";
   }
 
