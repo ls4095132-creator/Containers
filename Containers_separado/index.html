@@ -147,131 +147,228 @@ Entrar
 /* ==========================================================
    CAMADA DE COMPATIBILIDADE — MENU / PERFIS
    Mantém a estrutura atual de Contêineres_separados.
-   Não substitui Firebase nem os arquivos de assets.
+   A permissão é carregada diretamente do Firebase antes
+   de bloquear qualquer opção do menu.
    ========================================================== */
 (function(){
   "use strict";
 
   var perfilMenu = null;
+  var carregandoPerfil = null;
   var navegacaoOriginal = window.abrirTelaDoMenu;
-  var mostrarMenuOriginal = window.mostrarMenuPrincipal;
+
+  function emailAdminConhecido(email){
+    email = String(email || "").trim().toLowerCase();
+    return email === "leandro@gmail.com" ||
+           email === "admin@controlecontainers.com";
+  }
 
   function tipoAtual(){
-    /* Primeiro aproveita a identificação de administrador do sistema atual.
-       O sistema já valida o administrador pelo perfil Firebase/login. */
     try {
       if (typeof usuarioEhAdmin === "function" && usuarioEhAdmin()) return "admin";
     } catch(e) {}
 
     try {
       if (typeof usuarioLogadoAtual !== "undefined" && usuarioLogadoAtual) {
-        if (usuarioLogadoAtual.tipo) return String(usuarioLogadoAtual.tipo).toLowerCase();
-        var email = String(usuarioLogadoAtual.email || usuarioLogadoAtual.usuario || "").trim().toLowerCase();
-        if (email === "leandro@gmail.com" || email === "admin@controlecontainers.com") return "admin";
+        if (String(usuarioLogadoAtual.tipo || "").toLowerCase()) {
+          return String(usuarioLogadoAtual.tipo).toLowerCase();
+        }
+        if (emailAdminConhecido(usuarioLogadoAtual.email || usuarioLogadoAtual.usuario)) {
+          return "admin";
+        }
       }
     } catch(e) {}
 
     if (perfilMenu) {
-      if (String(perfilMenu.tipo || "").toLowerCase() === "admin") return "admin";
-      var emailPerfil = String(perfilMenu.email || perfilMenu.usuario || "").trim().toLowerCase();
-      if (emailPerfil === "leandro@gmail.com" || emailPerfil === "admin@controlecontainers.com") return "admin";
-      if (perfilMenu.tipo) return String(perfilMenu.tipo).toLowerCase();
+      var tipo = String(perfilMenu.tipo || "").trim().toLowerCase();
+      if (tipo === "admin" || tipo === "externo" || tipo === "usuario" || tipo === "comum") {
+        return tipo;
+      }
+      if (emailAdminConhecido(perfilMenu.email || perfilMenu.usuario)) return "admin";
     }
+
     return "";
   }
 
   function nomeAtual(){
     try {
       if (typeof usuarioLogadoAtual !== "undefined" && usuarioLogadoAtual) {
-        return usuarioLogadoAtual.nome || usuarioLogadoAtual.usuario || usuarioLogadoAtual.email || "Usuário";
+        return usuarioLogadoAtual.nome ||
+               usuarioLogadoAtual.usuario ||
+               usuarioLogadoAtual.email ||
+               "Usuário";
       }
     } catch(e) {}
-    if (perfilMenu) return perfilMenu.nome || perfilMenu.usuario || perfilMenu.email || "Usuário";
+    if (perfilMenu) {
+      return perfilMenu.nome || perfilMenu.usuario || perfilMenu.email || "Usuário";
+    }
     return "Usuário";
   }
 
   window.usuarioPodeAcessarTelaMenu = function(nomeTela){
     var tipo = tipoAtual();
+
     if (tipo === "admin") return true;
+
     if (tipo === "usuario" || tipo === "comum") {
       return nomeTela === "containers" || nomeTela === "kardex";
     }
+
     if (tipo === "externo") {
       return nomeTela === "containers";
     }
+
     return false;
   };
 
   function aplicarMenu(){
-    var menu=document.getElementById("tela-menu");
+    var menu = document.getElementById("tela-menu");
     if(!menu || menu.style.display === "none") return;
 
-    var tipo=tipoAtual();
+    var tipo = tipoAtual();
+
     document.body.classList.toggle("usuario-admin", tipo === "admin");
     document.body.classList.toggle("usuario-comum", tipo === "usuario" || tipo === "comum");
     document.body.classList.toggle("usuario-externo", tipo === "externo");
 
-    var texto=document.getElementById("texto-usuario-menu");
+    var texto = document.getElementById("texto-usuario-menu");
     if(texto){
-      var prefixo=tipo === "admin" ? "👑 " : (tipo === "externo" ? "🌐 " : "👤 ");
-      texto.textContent=prefixo + nomeAtual() + (tipo === "admin" ? " (admin)" : "");
+      var prefixo = tipo === "admin" ? "👑 " :
+                    (tipo === "externo" ? "🌐 " : "👤 ");
+      texto.textContent = prefixo + nomeAtual() +
+                          (tipo === "admin" ? " (admin)" : "");
     }
 
-    document.querySelectorAll("#lista-menu-principal .item-menu-principal[data-tela]").forEach(function(btn){
-      var tela=btn.getAttribute("data-tela");
-      if(tela === "sair") return;
-      var permitido=window.usuarioPodeAcessarTelaMenu(tela);
-      btn.classList.toggle("item-menu-bloqueado", !permitido);
-      var seta=btn.querySelector(".item-menu-seta");
-      if(seta) seta.textContent=permitido ? "›" : "🔒";
-    });
+    document.querySelectorAll("#lista-menu-principal .item-menu-principal[data-tela]")
+      .forEach(function(btn){
+        var tela = btn.getAttribute("data-tela");
+        if(tela === "sair") return;
+
+        /* Enquanto o perfil Firebase ainda está carregando,
+           não exibe cadeado para evitar o falso bloqueio do admin. */
+        if(!tipo){
+          btn.classList.remove("item-menu-bloqueado");
+          var setaCarregando = btn.querySelector(".item-menu-seta");
+          if(setaCarregando) setaCarregando.textContent = "›";
+          return;
+        }
+
+        var permitido = window.usuarioPodeAcessarTelaMenu(tela);
+        btn.classList.toggle("item-menu-bloqueado", !permitido);
+
+        var seta = btn.querySelector(".item-menu-seta");
+        if(seta) seta.textContent = permitido ? "›" : "🔒";
+      });
   }
-
-  window.mostrarMenuPrincipal=function(){
-    if(typeof esconderTodasAsTelasDoApp === "function") esconderTodasAsTelasDoApp();
-    var menu=document.getElementById("tela-menu");
-    if(menu) menu.style.display="block";
-    aplicarMenu();
-  };
-
-  window.abrirTelaDoMenu=function(nomeTela){
-    if(!window.usuarioPodeAcessarTelaMenu(nomeTela)){
-      alert("🔒 Você não tem permissão para acessar esta tela.");
-      return;
-    }
-    /* A navegação original continua sendo usada para preservar as telas atuais. */
-    if(typeof navegacaoOriginal === "function") return navegacaoOriginal(nomeTela);
-  };
 
   async function carregarPerfilFirebaseParaMenu(){
-    try{
-      if(typeof firebase === "undefined" || !firebase.apps || !firebase.apps.length) return;
-      if(!firebase.auth) return;
-      var user=firebase.auth().currentUser;
-      if(!user) return;
-      var snap=await firebase.database().ref("perfisUsuarios/"+user.uid).once("value");
-      var p=snap.val() || {};
-      var tipo=String(p.tipo || "usuario").toLowerCase();
-      if(tipo !== "admin" && tipo !== "externo") tipo="usuario";
-      perfilMenu={
-        uid:user.uid,
-        email:p.email || user.email || "",
-        usuario:p.usuario || p.email || user.email || "",
-        nome:p.nome || p.nomeCompleto || p.usuario || user.email || "Usuário",
-        tipo:tipo
-      };
-      aplicarMenu();
-    }catch(e){
-      console.warn("Não foi possível sincronizar o perfil do menu:",e);
-    }
+    if(carregandoPerfil) return carregandoPerfil;
+
+    carregandoPerfil = (async function(){
+      try{
+        if(typeof firebase === "undefined" ||
+           !firebase.apps ||
+           !firebase.apps.length ||
+           !firebase.auth ||
+           !firebase.database) {
+          return false;
+        }
+
+        var auth = firebase.auth();
+        var user = auth.currentUser;
+
+        if(!user){
+          perfilMenu = null;
+          aplicarMenu();
+          return false;
+        }
+
+        /* Administradores já conhecidos pelo próprio sistema. */
+        if(emailAdminConhecido(user.email)){
+          perfilMenu = {
+            uid: user.uid,
+            email: user.email || "",
+            usuario: user.email || "",
+            nome: (typeof user.displayName === "string" && user.displayName) || user.email || "Administrador",
+            tipo: "admin"
+          };
+          aplicarMenu();
+          return true;
+        }
+
+        var snap = await firebase.database()
+          .ref("perfisUsuarios/" + user.uid)
+          .once("value");
+
+        var p = snap.exists() ? (snap.val() || {}) : {};
+        var tipo = String(p.tipo || "").trim().toLowerCase();
+
+        if(tipo !== "admin" && tipo !== "externo" &&
+           tipo !== "usuario" && tipo !== "comum"){
+          tipo = "usuario";
+        }
+
+        perfilMenu = {
+          uid: user.uid,
+          email: p.email || user.email || "",
+          usuario: p.usuario || p.email || user.email || "",
+          nome: p.nome || p.nomeCompleto || p.usuario || user.email || "Usuário",
+          tipo: tipo
+        };
+
+        aplicarMenu();
+        return true;
+      }catch(e){
+        console.error("Erro ao carregar perfil do menu:", e);
+        return false;
+      }finally{
+        carregandoPerfil = null;
+      }
+    })();
+
+    return carregandoPerfil;
   }
 
-  function sincronizarMenu(){
-    try{
-      var user=(typeof firebase !== "undefined" && firebase.auth) ? firebase.auth().currentUser : null;
-      if(user) carregarPerfilFirebaseParaMenu();
-    }catch(e){}
+  window.mostrarMenuPrincipal = function(){
+    if(typeof esconderTodasAsTelasDoApp === "function"){
+      esconderTodasAsTelasDoApp();
+    }
+
+    var menu = document.getElementById("tela-menu");
+    if(menu) menu.style.display = "block";
+
+    /* Mostra o menu imediatamente e sincroniza o perfil em seguida. */
     aplicarMenu();
+    carregarPerfilFirebaseParaMenu().then(function(){
+      aplicarMenu();
+    });
+  };
+
+  window.abrirTelaDoMenu = async function(nomeTela){
+    /* Antes de decidir a permissão, garante que o perfil do Firebase
+       já foi consultado. Esse era o ponto que causava o falso bloqueio. */
+    var tipo = tipoAtual();
+
+    if(!tipo){
+      await carregarPerfilFirebaseParaMenu();
+      tipo = tipoAtual();
+    }
+
+    if(!window.usuarioPodeAcessarTelaMenu(nomeTela)){
+      alert("🔒 Você não tem permissão para acessar esta tela.");
+      aplicarMenu();
+      return;
+    }
+
+    if(typeof navegacaoOriginal === "function"){
+      return navegacaoOriginal(nomeTela);
+    }
+  };
+
+  function sincronizarMenu(){
+    carregarPerfilFirebaseParaMenu().then(function(){
+      aplicarMenu();
+    });
   }
 
   if(typeof firebase !== "undefined" && firebase.auth){
@@ -280,14 +377,15 @@ Entrar
         if(user){
           carregarPerfilFirebaseParaMenu();
         }else{
-          perfilMenu=null;
+          perfilMenu = null;
+          aplicarMenu();
         }
       });
-    }catch(e){}
+    }catch(e){
+      console.warn("Não foi possível registrar o sincronismo do perfil:", e);
+    }
   }
 
-  /* Reaplica após a restauração da sessão do Firebase, sem alterar os dados. */
-  setInterval(sincronizarMenu, 1000);
   setTimeout(sincronizarMenu, 300);
   setTimeout(sincronizarMenu, 1200);
   setTimeout(sincronizarMenu, 2500);
