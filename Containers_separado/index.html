@@ -142,5 +142,142 @@ Entrar
 </div>
 <script src="./assets/sistema.js"></script>
 <script src="./assets/navegacao-separada.js"></script>
+
+<script>
+/* ==========================================================
+   CAMADA DE COMPATIBILIDADE — MENU / PERFIS
+   Mantém a estrutura atual de Contêineres_separados.
+   Não substitui Firebase nem os arquivos de assets.
+   ========================================================== */
+(function(){
+  "use strict";
+
+  var perfilMenu = null;
+  var navegacaoOriginal = window.abrirTelaDoMenu;
+  var mostrarMenuOriginal = window.mostrarMenuPrincipal;
+
+  function tipoAtual(){
+    try {
+      if (typeof usuarioLogadoAtual !== "undefined" && usuarioLogadoAtual && usuarioLogadoAtual.tipo) {
+        return String(usuarioLogadoAtual.tipo).toLowerCase();
+      }
+    } catch(e) {}
+    if (perfilMenu && perfilMenu.tipo) return String(perfilMenu.tipo).toLowerCase();
+    return "";
+  }
+
+  function nomeAtual(){
+    try {
+      if (typeof usuarioLogadoAtual !== "undefined" && usuarioLogadoAtual) {
+        return usuarioLogadoAtual.nome || usuarioLogadoAtual.usuario || usuarioLogadoAtual.email || "Usuário";
+      }
+    } catch(e) {}
+    if (perfilMenu) return perfilMenu.nome || perfilMenu.usuario || perfilMenu.email || "Usuário";
+    return "Usuário";
+  }
+
+  window.usuarioPodeAcessarTelaMenu = function(nomeTela){
+    var tipo = tipoAtual();
+    if (tipo === "admin") return true;
+    if (tipo === "usuario" || tipo === "comum") {
+      return nomeTela === "containers" || nomeTela === "kardex";
+    }
+    if (tipo === "externo") {
+      return nomeTela === "containers";
+    }
+    return false;
+  };
+
+  function aplicarMenu(){
+    var menu=document.getElementById("tela-menu");
+    if(!menu || menu.style.display === "none") return;
+
+    var tipo=tipoAtual();
+    document.body.classList.toggle("usuario-admin", tipo === "admin");
+    document.body.classList.toggle("usuario-comum", tipo === "usuario" || tipo === "comum");
+    document.body.classList.toggle("usuario-externo", tipo === "externo");
+
+    var texto=document.getElementById("texto-usuario-menu");
+    if(texto){
+      var prefixo=tipo === "admin" ? "👑 " : (tipo === "externo" ? "🌐 " : "👤 ");
+      texto.textContent=prefixo + nomeAtual() + (tipo === "admin" ? " (admin)" : "");
+    }
+
+    document.querySelectorAll("#lista-menu-principal .item-menu-principal[data-tela]").forEach(function(btn){
+      var tela=btn.getAttribute("data-tela");
+      if(tela === "sair") return;
+      var permitido=window.usuarioPodeAcessarTelaMenu(tela);
+      btn.classList.toggle("item-menu-bloqueado", !permitido);
+      var seta=btn.querySelector(".item-menu-seta");
+      if(seta) seta.textContent=permitido ? "›" : "🔒";
+    });
+  }
+
+  window.mostrarMenuPrincipal=function(){
+    if(typeof esconderTodasAsTelasDoApp === "function") esconderTodasAsTelasDoApp();
+    var menu=document.getElementById("tela-menu");
+    if(menu) menu.style.display="block";
+    aplicarMenu();
+  };
+
+  window.abrirTelaDoMenu=function(nomeTela){
+    if(!window.usuarioPodeAcessarTelaMenu(nomeTela)){
+      alert("🔒 Você não tem permissão para acessar esta tela.");
+      return;
+    }
+    /* A navegação original continua sendo usada para preservar as telas atuais. */
+    if(typeof navegacaoOriginal === "function") return navegacaoOriginal(nomeTela);
+  };
+
+  async function carregarPerfilFirebaseParaMenu(){
+    try{
+      if(typeof firebase === "undefined" || !firebase.apps || !firebase.apps.length) return;
+      if(!firebase.auth) return;
+      var user=firebase.auth().currentUser;
+      if(!user) return;
+      var snap=await firebase.database().ref("perfisUsuarios/"+user.uid).once("value");
+      var p=snap.val() || {};
+      var tipo=String(p.tipo || "usuario").toLowerCase();
+      if(tipo !== "admin" && tipo !== "externo") tipo="usuario";
+      perfilMenu={
+        uid:user.uid,
+        email:p.email || user.email || "",
+        usuario:p.usuario || p.email || user.email || "",
+        nome:p.nome || p.nomeCompleto || p.usuario || user.email || "Usuário",
+        tipo:tipo
+      };
+      aplicarMenu();
+    }catch(e){
+      console.warn("Não foi possível sincronizar o perfil do menu:",e);
+    }
+  }
+
+  function sincronizarMenu(){
+    try{
+      var user=(typeof firebase !== "undefined" && firebase.auth) ? firebase.auth().currentUser : null;
+      if(user) carregarPerfilFirebaseParaMenu();
+    }catch(e){}
+    aplicarMenu();
+  }
+
+  if(typeof firebase !== "undefined" && firebase.auth){
+    try{
+      firebase.auth().onAuthStateChanged(function(user){
+        if(user){
+          carregarPerfilFirebaseParaMenu();
+        }else{
+          perfilMenu=null;
+        }
+      });
+    }catch(e){}
+  }
+
+  /* Reaplica após a restauração da sessão do Firebase, sem alterar os dados. */
+  setInterval(sincronizarMenu, 1000);
+  setTimeout(sincronizarMenu, 300);
+  setTimeout(sincronizarMenu, 1200);
+  setTimeout(sincronizarMenu, 2500);
+})();
+</script>
 </body>
 </html>
