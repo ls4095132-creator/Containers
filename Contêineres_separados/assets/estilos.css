@@ -1,0 +1,4017 @@
+
+
+:root {
+    --bg: #0a0f1c;
+    --bg-painel: #111a2e;
+    --bg-painel-2: #16213a;
+    --bg-input: #0d1626;
+    --borda: #1e2b45;
+    --borda-forte: #2c3e63;
+    --texto: #dbe6f5;
+    --texto-fraco: #7f93b8;
+    --azul: #56d2ff;
+    --azul-forte: #2fb6ec;
+    --azul-fraco: rgba(86,210,255,.12);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    min-height: 100%;
+}
+
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    margin: 0;
+    background:
+        radial-gradient(circle at 15% 0%, rgba(86,210,255,.06), transparent 45%),
+        var(--bg);
+    background-attachment: fixed;
+    color: var(--texto);
+}
+
+h1 {
+    color: var(--texto);
+    letter-spacing: .5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--borda);
+    margin-bottom: 22px;
+}
+
+h1::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--azul), transparent);
+    opacity: .5;
+}
+
+h2 {
+    color: var(--azul);
+    font-size: 16px;
+    letter-spacing: .3px;
+}
+
+.painel {
+    background: var(--bg-painel);
+    padding: 25px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    border: 1px solid var(--borda);
+    box-shadow: 0 4px 14px rgba(0,0,0,.35);
+}
+
+.painel-busca {
+    background: var(--bg-painel);
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    border: 1px solid var(--azul-forte);
+    box-shadow: 0 0 0 3px var(--azul-fraco);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.painel-busca strong {
+    color: var(--azul);
+}
+
+.input-busca {
+    flex-grow: 1;
+    padding: 12px;
+    font-size: 15px;
+    border: 1px solid var(--borda-forte);
+    border-radius: 8px;
+    outline: none;
+    margin: 0;
+}
+
+input, textarea {
+    padding: 5px 8px;
+    margin: 3px 0 6px;
+    font-size: 12px;
+    border-radius: 5px;
+    border: 1px solid var(--borda-forte);
+    width: 100%;
+    outline: none;
+    background: var(--bg-input);
+    color: var(--texto);
+}
+
+input::placeholder, textarea::placeholder {
+    color: var(--texto-fraco);
+}
+
+.linha-form {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.linha-form .campo {
+    flex: 1;
+    min-width: 130px;
+}
+
+.linha-form .campo input {
+    margin-bottom: 0;
+}
+
+/* Formulário de containers — layout compacto e organizado */
+.painel-entrada {
+    padding: 14px 12px;
+}
+
+.painel-entrada h2 {
+    margin-top: 0;
+    margin-bottom: 9px;
+}
+
+.painel-entrada .linha-form {
+    display: grid;
+    gap: 8px;
+    width: 100%;
+    align-items: end;
+    margin-bottom: 2px;
+}
+
+.painel-entrada .linha-form .campo {
+    min-width: 0;
+}
+
+.painel-entrada label {
+    font-size: 11.5px;
+    margin-bottom: 1px;
+    display: block;
+}
+
+.painel-entrada input {
+    box-sizing: border-box;
+    padding: 3px 7px;
+    margin: 2px 0 4px;
+    min-height: 27px;
+    height: 27px;
+    font-size: 12px;
+}
+
+/* Linha 1: data + container + fornecedor + NF */
+.painel-entrada .linha-identificacao {
+    grid-template-columns: 125px 105px 260px 220px;
+}
+
+/* Linha 2: código + produto + lote */
+.painel-entrada .linha-produto {
+    grid-template-columns: 125px 430px 260px;
+}
+
+/* Linha 3: quantidade + peso */
+.painel-entrada .linha-quantidade {
+    grid-template-columns: 100px 115px 130px 160px;
+    max-width: 520px;
+}
+
+/* Validade compacta, mantendo Quantidade com mais espaço */
+.painel-entrada .campo-validade {
+    min-width: 0;
+}
+.painel-entrada .campo-validade input {
+    width: 100%;
+}
+
+.painel-entrada .campo-produto {
+    min-width: 0;
+}
+
+.painel-entrada .container-botoes {
+    margin-top: 5px;
+}
+
+@media(max-width: 1100px) {
+    .painel-entrada {
+        overflow-x: auto;
+    }
+
+    .painel-entrada .linha-identificacao {
+        grid-template-columns: 125px 135px 220px 200px;
+        min-width: 760px;
+    }
+
+    .painel-entrada .linha-produto {
+        grid-template-columns: 125px 360px 220px;
+        min-width: 760px;
+    }
+}
+
+@media(max-width:700px) {
+    .painel-entrada {
+        overflow-x: visible;
+    }
+
+    .painel-entrada .linha-form,
+    .painel-entrada .linha-identificacao,
+    .painel-entrada .linha-produto {
+        grid-template-columns: 1fr;
+        min-width: 0;
+    }
+
+    .painel-entrada .linha-quantidade {
+        grid-template-columns: 1fr 1fr 1fr;
+        max-width: none;
+    }
+}
+
+input:focus, textarea:focus {
+    border-color: var(--azul);
+    background: var(--bg-painel-2);
+    box-shadow: 0 0 0 3px var(--azul-fraco);
+}
+
+.btn-produto {
+    background: #7c5cff;
+    color: white;
+    margin-top: 4px;
+}
+
+.produto-cadastro {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.produto-cadastro input {
+    margin-bottom: 0;
+}
+
+@media(max-width:700px) {
+    .produto-cadastro {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+.sugestoes-produto {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg-painel-2);
+    border: 1px solid var(--borda-forte);
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    max-height: 180px;
+    overflow-y: auto;
+    z-index: 30;
+    display: none;
+    box-shadow: 0 8px 16px rgba(0,0,0,.4);
+}
+
+.sugestao-item {
+    padding: 6px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--borda);
+    color: var(--texto);
+}
+
+.sugestao-item:hover {
+    background: var(--azul-fraco);
+}
+
+.sugestao-item:last-child {
+    border-bottom: none;
+}
+
+label {
+    font-weight: 600;
+    font-size: 12.5px;
+    color: var(--texto-fraco);
+}
+
+.container-botoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+button {
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: .2s;
+}
+
+button:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.1);
+}
+
+button:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-salvar {
+    background: #10b981;
+    color: white;
+}
+
+.btn-limpar {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-excel {
+    background: #15803d;
+    color: white;
+}
+
+.btn-cancelar {
+    background: #3b4a68;
+    color: var(--texto);
+}
+
+.btn-historico {
+    background: var(--azul-forte);
+    color: #041521;
+}
+
+.btn-apagar-historico {
+    background: #b91c1c;
+    color: white;
+}
+
+.btn-apagar-solicitacao-individual{
+    background:transparent;
+    color:#fca5a5;
+    border:1px solid #7f1d1d;
+    padding:6px 10px;
+    font-size:11px;
+    border-radius:6px;
+}
+.btn-apagar-solicitacao-individual:hover{
+    background:rgba(185,28,28,.16);
+}
+.btn-apagar-movimentacao{
+    background:transparent;
+    color:#fca5a5;
+    border:1px solid #7f1d1d;
+    padding:6px 10px;
+    font-size:11px;
+    border-radius:6px;
+    margin-top:12px;
+}
+.btn-apagar-movimentacao:hover{
+    background:rgba(185,28,28,.16);
+}
+.painel-solicitacoes-comum .cabecalho-solicitacoes-comum{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:10px;
+}
+.painel-solicitacoes-comum .btn-toggle-solicitacoes-comum{
+    white-space:nowrap;
+}
+@media(max-width:700px){
+    .painel-solicitacoes-comum .cabecalho-solicitacoes-comum{
+        align-items:stretch;
+        flex-direction:column;
+    }
+    .painel-solicitacoes-comum .btn-toggle-solicitacoes-comum{
+        width:100%;
+    }
+}
+
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.box {
+    padding: 18px;
+    background: var(--bg-painel);
+    border: 1px solid var(--borda);
+    border-radius: 12px;
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+}
+
+.box.ocupado {
+    background: linear-gradient(180deg, var(--azul-fraco), var(--bg-painel) 40%);
+    border-color: var(--azul-forte);
+    box-shadow: 0 0 0 1px var(--azul-fraco);
+}
+
+.box.escondido {
+    display: none !important;
+}
+
+.titulo {
+    font-weight: 700;
+    border-bottom: 2px solid var(--borda);
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    color: var(--texto);
+}
+
+.lista-produtos {
+    font-size: 12px;
+}
+
+.produto-item {
+    padding: 10px 45px 10px 0;
+    border-bottom: 1px dashed var(--borda);
+    position: relative;
+}
+
+.acoes-item {
+    position: absolute;
+    right: 0;
+    top: 10px;
+    display: flex;
+    gap: 4px;
+}
+
+.btn-acao {
+    background: none;
+    border: none;
+    padding: 2px;
+    font-size: 15px;
+}
+
+.vazio {
+    color: var(--texto-fraco);
+    text-align: center;
+    margin-top: 20px;
+}
+
+.contador {
+    background: var(--bg-painel-2);
+    color: var(--azul);
+    border: 1px solid var(--borda-forte);
+    padding: 10px 15px;
+    border-radius: 8px;
+    display: inline-block;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.contador-produtos {
+    background: var(--bg-painel-2);
+    color: var(--azul);
+    border: 1px solid var(--borda-forte);
+    padding: 8px 14px;
+    border-radius: 8px;
+    display: inline-block;
+    margin-bottom: 12px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.aviso-armazenamento {
+    background: var(--azul-fraco);
+    border: 1px solid var(--azul-forte);
+    color: var(--azul);
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    margin-bottom: 15px;
+}
+
+.movimento {
+    background: var(--bg-painel-2);
+    border: 1px solid var(--borda);
+    border-left: 5px solid var(--azul-forte);
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 10px;
+    color: var(--texto);
+}
+
+.movimento.entrada {
+    border-left-color: #10b981;
+}
+
+.movimento.alteracao {
+    border-left-color: #f59e0b;
+}
+
+.movimento.exclusao {
+    border-left-color: #ef4444;
+}
+
+.movimento.zerado {
+    border-left-color: #a78bfa;
+}
+
+.tipo {
+    display: inline-block;
+    padding: 5px 9px;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 12px;
+    margin-bottom: 8px;
+}
+
+.tipo-entrada {
+    background: rgba(16,185,129,.15);
+    color: #34d399;
+}
+
+.tipo-alteracao {
+    background: rgba(245,158,11,.15);
+    color: #fbbf24;
+}
+
+.tipo-exclusao {
+    background: rgba(239,68,68,.15);
+    color: #f87171;
+}
+
+.tipo-zerado {
+    background: rgba(167,139,250,.15);
+    color: #c4b5fd;
+}
+
+.sem-historico {
+    text-align: center;
+    color: var(--texto-fraco);
+    padding: 20px;
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-painel);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--borda-forte);
+    border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--azul-forte);
+}
+
+@media(max-width:700px) {
+
+    body {
+        margin: 10px;
+    }
+
+    .painel-busca {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .grid {
+        grid-template-columns: 1fr;
+    }
+
+    button {
+        width: 100%;
+    }
+
+}
+
+.tela-login {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    background:
+        radial-gradient(circle at 20% 10%, rgba(86,210,255,.08), transparent 45%),
+        var(--bg);
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 100;
+    padding: 20px;
+}
+
+.tela-login.login-oculta {
+    display: none !important;
+}
+
+#app-principal.app-visivel {
+    display: block !important;
+}
+
+.cartao-login {
+    background: var(--bg-painel);
+    border: 1px solid var(--borda);
+    border-radius: 12px;
+    padding: 22px 24px;
+    width: 100%;
+    max-width: 300px;
+    box-shadow: 0 12px 30px rgba(0,0,0,.5);
+}
+
+.cartao-login h1 {
+    border: none;
+    margin: 0 0 4px 0;
+    padding: 0;
+    font-size: 17px;
+    justify-content: center;
+}
+
+.cartao-login h1::after {
+    display: none;
+}
+
+.subtitulo-login {
+    text-align: center;
+    color: var(--texto-fraco);
+    font-size: 11.5px;
+    margin-bottom: 16px;
+}
+
+.campo-login {
+    margin-bottom: 8px;
+}
+
+.campo-login label {
+    display: block;
+    margin-bottom: 3px;
+    font-size: 11.5px;
+}
+
+.campo-login input {
+    padding: 7px 8px;
+    font-size: 13px;
+}
+
+.erro-login {
+    background: rgba(239,68,68,.12);
+    border: 1px solid #ef4444;
+    color: #f87171;
+    padding: 6px 9px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    margin-bottom: 10px;
+    display: none;
+}
+
+.btn-login {
+    background: var(--azul-forte);
+    color: #041521;
+    width: 100%;
+    padding: 9px;
+    font-size: 13px;
+    margin-top: 4px;
+}
+
+.alternar-login {
+    text-align: center;
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--texto-fraco);
+}
+
+.alternar-login a {
+    color: var(--azul);
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+/* Tema disponível na própria tela de login, antes da autenticação. */
+.controle-tema-login{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    flex-wrap:wrap;
+    margin-top:10px;
+    padding-top:9px;
+    border-top:1px solid var(--borda);
+    color:var(--texto-fraco);
+    font-size:11px;
+}
+.controle-tema-login button{
+    width:auto;
+    margin:0;
+    padding:5px 8px;
+    font-size:10.5px;
+}
+.controle-tema-login button.ativo{
+    outline:2px solid var(--azul-forte);
+    outline-offset:1px;
+}
+
+.barra-usuario {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: -6px;
+}
+
+.barra-usuario span {
+    font-size: 12.5px;
+    color: var(--texto-fraco);
+}
+
+.barra-usuario-containers {
+    width: 100%;
+}
+
+.barra-usuario-grupo-esquerda,
+.barra-usuario-grupo-direita {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.barra-usuario-grupo-direita {
+    margin-left: auto;
+    justify-content: flex-end;
+}
+
+@media (max-width: 600px) {
+    .barra-usuario-containers {
+        flex-wrap: wrap;
+    }
+    .barra-usuario-grupo-direita {
+        margin-left: 0;
+    }
+}
+
+
+.btn-atualizar-sistema {
+    padding: 8px 12px;
+    border: 1px solid var(--borda-forte);
+    border-radius: 7px;
+    background: var(--bg-input);
+    color: var(--texto);
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.btn-atualizar-sistema:hover {
+    filter: brightness(1.08);
+}
+
+.btn-sair {
+    background: var(--bg-painel-2);
+    color: var(--texto);
+    border: 1px solid var(--borda-forte);
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+
+/* ======================================================
+   VISUALIZAÇÃO DOS CONTAINERS — QUADRO / LISTA / FILTROS
+   ====================================================== */
+.painel-visualizacao {
+    background: var(--bg-painel);
+    border: 1px solid var(--borda-forte);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin: 10px 0 16px;
+}
+.visualizacao-linha {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+}
+.visualizacao-linha strong { color:var(--azul); }
+.visualizacao-botoes { display:flex; gap:7px; flex-wrap:wrap; }
+.btn-vis {
+    background:var(--bg-painel-2);
+    color:var(--texto);
+    border:1px solid var(--borda-forte);
+    padding:7px 11px;
+}
+.btn-vis.ativo {
+    background:var(--azul-forte);
+    color:#041521;
+    border-color:var(--azul-forte);
+}
+.select-status {
+    width:auto; min-width:145px; padding:7px 9px; margin:0;
+}
+.seletor-containers {
+    display:flex; align-items:center; gap:8px; margin-top:9px;
+    flex-wrap:wrap;
+}
+.lista-checkbox-containers {
+    display:flex; gap:5px; overflow-x:auto; max-width:100%;
+    padding:3px 0 6px;
+}
+.chk-container {
+    display:inline-flex; align-items:center; gap:3px;
+    background:var(--bg-painel-2); border:1px solid var(--borda);
+    border-radius:6px; padding:4px 7px; white-space:nowrap;
+    font-size:11px; color:var(--texto); cursor:pointer;
+}
+.chk-container input { width:auto; margin:0; accent-color:#2fb6ec; }
+.btn-mini-vis {
+    padding:6px 9px; font-size:11px; background:var(--bg-painel-2);
+    color:var(--texto); border:1px solid var(--borda-forte);
+}
+.resumo-visualizacao { color:var(--texto-fraco); font-size:11px; margin-top:5px; }
+
+/* modo lista: cada container vira uma linha compacta */
+.grid.modo-lista {
+    display:flex; flex-direction:column; gap:7px;
+}
+.grid.modo-lista .box {
+    min-height:0; padding:9px 12px; border-radius:8px;
+    display:block; width:100%;
+}
+.grid.modo-lista .titulo {
+    display:inline-block; min-width:145px; margin:0 12px 0 0;
+    padding:0 10px 0 0; border-bottom:0; border-right:1px solid var(--borda);
+    vertical-align:top;
+}
+.grid.modo-lista .lista-produtos {
+    display:inline-block; vertical-align:top;
+    font-size:11px; width:calc(100% - 170px);
+}
+.grid.modo-lista .produto-item {
+    display:inline-block; vertical-align:top; width:auto; min-width:300px;
+    padding:2px 18px 2px 0; margin-right:12px; border-bottom:0;
+}
+.grid.modo-lista .vazio { display:inline; margin:0; font-size:11px; }
+
+@media(max-width:700px){
+    .grid.modo-lista .titulo, .grid.modo-lista .lista-produtos {
+        display:block; width:100%; border:0; margin:0 0 5px;
+    }
+    .grid.modo-lista .produto-item { min-width:0; width:100%; }
+}
+
+
+/* ======================================================
+   SOLICITAÇÃO EXTERNA EM MODAL COMPACTO
+   ====================================================== */
+.externo-acoes-solicitacao{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    padding:14px 18px;
+    margin:14px 0;
+    border:1px solid var(--borda-forte);
+    border-radius:12px;
+    background:var(--bg-painel);
+}
+.texto-apoio-solicitacao{
+    color:var(--texto-fraco);
+    font-size:13px;
+}
+.btn-abrir-solicitacao-externo{
+    white-space:nowrap;
+    min-width:190px;
+}
+.modal-solicitacao-externo{
+    position:fixed;
+    inset:0;
+    z-index:99999;
+    background:rgba(0,0,0,.62);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+}
+.modal-solicitacao-caixa{
+    width:min(820px,96vw);
+    max-height:90vh;
+    overflow:auto;
+    background:var(--bg-painel);
+    color:var(--texto);
+    border-radius:14px;
+    box-shadow:0 22px 70px rgba(0,0,0,.45);
+}
+.modal-solicitacao-cabecalho{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:15px;
+    padding:18px 22px 14px;
+    border-bottom:1px solid var(--borda);
+}
+.modal-solicitacao-cabecalho h2{
+    margin:0 0 4px;
+    color:var(--azul);
+}
+.modal-fechar{
+    border:0;
+    background:transparent;
+    color:var(--texto-fraco);
+    font-size:27px;
+    cursor:default;
+    line-height:1;
+    padding:2px 5px;
+}
+.modal-solicitacao-corpo{
+    padding:18px 22px;
+}
+.modal-grid-solicitacao{
+    display:grid;
+    grid-template-columns:1.2fr 1.8fr .8fr .9fr;
+    gap:12px;
+}
+.modal-solicitacao-caixa .campo label{
+    display:block;
+    margin-bottom:6px;
+    font-weight:600;
+    color:var(--texto-fraco);
+}
+.modal-solicitacao-caixa input,
+.modal-solicitacao-caixa select,
+.modal-solicitacao-caixa textarea{
+    width:100%;
+    border:1px solid var(--borda-forte);
+    border-radius:8px;
+    background:var(--bg-input);
+    color:var(--texto);
+    padding:10px 11px;
+    font:inherit;
+}
+.modal-solicitacao-caixa textarea{resize:vertical;min-height:78px;}
+.modal-solicitacao-caixa input::placeholder,
+.modal-solicitacao-caixa textarea::placeholder{color:var(--texto-fraco);}
+.modal-solicitacao-caixa select option{background:var(--bg-input);color:var(--texto);}
+.resumo-container-solicitacao{
+    margin:14px 0;
+    padding:12px 14px;
+    border:1px solid var(--borda);
+    border-radius:9px;
+    background:var(--bg-painel-2);
+    color:var(--texto);
+    font-size:13px;
+    line-height:1.55;
+}
+.modal-solicitacao-rodape{
+    display:flex;
+    justify-content:flex-end;
+    gap:12px;
+    padding:14px 22px 18px;
+    border-top:1px solid var(--borda);
+}
+.modal-solicitacao-rodape button{
+    min-width:150px;
+}
+.cabecalho-minhas-solicitacoes-externo{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:15px;
+}
+.painel-minhas-solicitacoes-externo{
+    margin-bottom:14px;
+}
+@media(max-width:850px){
+    .modal-grid-solicitacao{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:560px){
+    .externo-acoes-solicitacao,.cabecalho-minhas-solicitacoes-externo{align-items:stretch;flex-direction:column;}
+    .btn-abrir-solicitacao-externo{width:100%;}
+    .modal-grid-solicitacao{grid-template-columns:1fr;}
+    .modal-solicitacao-caixa{width:100%;max-height:94vh;}
+    .modal-solicitacao-cabecalho,.modal-solicitacao-corpo,.modal-solicitacao-rodape{padding-left:14px;padding-right:14px;}
+    .modal-solicitacao-rodape{flex-direction:column-reverse;}
+    .modal-solicitacao-rodape button{width:100%;}
+}
+
+
+/* ======================================================
+   LAYOUT ADMINISTRATIVO — ENTRADA AO LADO DAS SOLICITAÇÕES/ALTERAÇÕES
+   ====================================================== */
+#painel-admin-usuarios {
+    width:calc(50% - 8px);
+    float:left;
+    margin-right:8px;
+}
+#painel-admin-usuarios + .painel-entrada {
+    width:calc(50% - 8px);
+    float:right;
+}
+.limpar-flutuacao-admin { clear:both; }
+#painel-admin-usuarios .painel-entrada {
+    width:auto;
+    float:none;
+    margin:0;
+}
+@media(max-width:1100px){
+    #painel-admin-usuarios,
+    #painel-admin-usuarios + .painel-entrada {
+        width:100%;
+        float:none;
+        margin-right:0;
+    }
+}
+
+
+
+/* Cards de aprovações/solicitações no painel administrativo */
+#painel-aprovacoes-alteracoes, #painel-solicitacoes-mercadoria-admin {
+    width:100%;
+}
+#painel-solicitacoes-mercadoria-admin {
+    margin-bottom:18px;
+}
+
+
+/* ======================================================
+   NOTIFICAÇÕES PUSH — PADRÃO DO SISTEMA
+   ====================================================== */
+.btn-notificacao-web{
+    background:var(--bg-painel-2);
+    color:var(--texto);
+    border:1px solid var(--borda-forte);
+    padding:6px 11px;
+    font-size:12px;
+    white-space:nowrap;
+}
+.btn-notificacao-web.ativo{
+    border-color:#10b981;
+    color:#34d399;
+}
+.toast-notificacao-web{
+    position:fixed;
+    right:18px;
+    bottom:18px;
+    z-index:100000;
+    width:min(390px,calc(100vw - 36px));
+    background:#111a2e;
+    border:1px solid #2c3e63;
+    border-left:4px solid #10b981;
+    color:#dbe6f5;
+    border-radius:12px;
+    box-shadow:0 14px 40px rgba(0,0,0,.45);
+    padding:13px 15px;
+    animation:entradaNotificacaoWeb .2s ease-out;
+}
+.toast-notificacao-web strong{display:block;color:#56d2ff;margin-bottom:4px;font-size:13px;}
+.toast-notificacao-web div{font-size:12px;line-height:1.45;color:#dbe6f5;}
+
+/* ======================================================
+   AVISOS VERDES DE OPERAÇÃO EM TEMPO REAL
+   ====================================================== */
+.toast-operacao-verde{
+    position:fixed;
+    right:18px;
+    bottom:18px;
+    z-index:99999;
+    width:min(380px,calc(100vw - 36px));
+    background:#0b3d2e;
+    border:1px solid #16c784;
+    border-left:5px solid #16c784;
+    color:#ecfff7;
+    padding:14px 16px;
+    border-radius:10px;
+    box-shadow:0 10px 30px rgba(0,0,0,.35);
+    font-size:14px;
+    animation:entradaAvisoVerde .22s ease-out;
+}
+.toast-operacao-verde strong{display:block;color:#42e69a;margin-bottom:4px;font-size:14px;}
+.toast-operacao-verde div{font-size:12px;line-height:1.45;color:#d8fff0;}
+@keyframes entradaAvisoVerde{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* ======================================================
+   AVISO VERMELHO — MERCADORIA RECUSADA
+   ====================================================== */
+.toast-operacao-vermelho{
+    position:fixed;
+    right:18px;
+    bottom:18px;
+    z-index:99999;
+    width:min(380px,calc(100vw - 36px));
+    background:#45121b;
+    border:1px solid #ff4d67;
+    border-left:5px solid #ff4d67;
+    color:#ffe8ec;
+    padding:14px 16px;
+    border-radius:10px;
+    box-shadow:0 10px 30px rgba(0,0,0,.35);
+    font-size:14px;
+    animation:entradaAvisoVermelho .22s ease-out;
+}
+.toast-operacao-vermelho strong{display:block;color:#ff6b81;margin-bottom:4px;font-size:14px;}
+.toast-operacao-vermelho div{font-size:12px;line-height:1.45;color:#ffe0e5;}
+@keyframes entradaAvisoVermelho{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:600px){
+    .toast-operacao-verde,
+    .toast-operacao-vermelho{right:10px;bottom:10px;width:calc(100vw - 20px);}
+}
+
+@keyframes entradaNotificacaoWeb{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:700px){
+    .btn-notificacao-web{padding:6px 9px;font-size:11px;}
+    .toast-notificacao-web{right:10px;bottom:10px;width:calc(100vw - 20px);}
+}
+
+/* ======================================================
+   ADMIN — BOTÕES PARA ACEITAR / RECUSAR NOVOS ACESSOS
+   ====================================================== */
+.solicitacao-acesso-admin-card{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:12px;
+    margin-bottom:8px;
+    background:var(--bg-painel-2);
+    border:1px solid var(--borda);
+    border-radius:8px;
+}
+.solicitacao-acesso-admin-dados{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    min-width:0;
+    line-height:1.35;
+}
+.solicitacao-acesso-admin-dados strong{
+    color:var(--texto);
+    font-size:13px;
+}
+.solicitacao-acesso-admin-dados span{
+    color:var(--texto-fraco);
+    font-size:11px;
+    overflow-wrap:anywhere;
+}
+.solicitacao-acesso-admin-dados .solicitacao-acesso-admin-mensagem{
+    color:var(--texto-fraco);
+}
+.solicitacao-acesso-admin-acoes{
+    display:flex;
+    gap:7px;
+    flex-shrink:0;
+}
+.btn-acao-acesso-admin{
+    width:auto !important;
+    min-width:88px;
+    padding:7px 10px;
+    font-size:11.5px;
+}
+@media(max-width:700px){
+    .solicitacao-acesso-admin-card{
+        align-items:stretch;
+        flex-direction:column;
+    }
+    .solicitacao-acesso-admin-acoes{
+        width:100%;
+    }
+    .btn-acao-acesso-admin{
+        flex:1;
+    }
+}
+
+
+
+
+/* AJUSTE FINAL — painel administrativo + entrada de mercadoria */
+.layout-admin-operacional{
+    display:grid;
+    grid-template-columns:minmax(360px,.72fr) minmax(0,1.28fr);
+    gap:14px;
+    align-items:stretch;
+    margin-bottom:18px;
+}
+.layout-admin-operacional > #painel-admin-usuarios{
+    grid-column:1;
+    margin-bottom:0;
+}
+.layout-admin-operacional > .painel-entrada{
+    grid-column:2;
+    margin-bottom:0;
+}
+#painel-admin-usuarios .painel-entrada{
+    margin-bottom:0;
+}
+#painel-admin-usuarios .cabecalho-usuarios-admin{
+    margin-top:14px;
+}
+#lista-usuarios-cadastrados{
+    transition:opacity .15s ease;
+}
+#btn-toggle-usuarios-existentes{
+    white-space:nowrap;
+}
+/* Garante que Quadro / Lista / Status permaneçam compactos e visíveis. */
+.painel-visualizacao .visualizacao-botoes{display:flex!important;}
+.painel-visualizacao .select-status{display:inline-block!important;}
+/* Layout: Visualização na primeira linha e Status abaixo, nos três perfis. */
+.painel-visualizacao .visualizacao-linha{
+    display:grid;
+    grid-template-columns:auto 1fr;
+    grid-template-areas:
+        "visual visualbotoes"
+        "status statusselect";
+    align-items:center;
+    gap:8px 10px;
+}
+.painel-visualizacao .visualizacao-linha > strong:first-child{grid-area:visual;}
+.painel-visualizacao .visualizacao-linha .visualizacao-botoes{grid-area:visualbotoes;}
+.painel-visualizacao .visualizacao-linha > strong:nth-of-type(2){grid-area:status;margin-left:0!important;}
+.painel-visualizacao .visualizacao-linha .select-status{grid-area:statusselect;justify-self:start;}
+@media(max-width:700px){
+    .painel-visualizacao .visualizacao-linha{grid-template-columns:auto 1fr;}
+}
+@media(max-width:1100px){
+    .layout-admin-operacional{grid-template-columns:1fr;}
+    .layout-admin-operacional > #painel-admin-usuarios,
+    .layout-admin-operacional > .painel-entrada{grid-column:1;}
+}
+
+
+
+/* Registro com a mesma dimensão visual do painel de Usuários/Solicitações */
+.layout-admin-operacional > #painel-admin-usuarios,
+.layout-admin-operacional > .painel-entrada{
+    width:100%;
+    min-width:0;
+    height:100%;
+    min-height:100%;
+    box-sizing:border-box;
+}
+.layout-admin-operacional > .painel-entrada{
+    background:var(--bg-painel);
+    border:1px solid var(--borda);
+    border-radius:12px;
+    padding:25px;
+    margin-bottom:0;
+    box-shadow:0 4px 14px rgba(0,0,0,.35);
+}
+.layout-admin-operacional > .painel-entrada h2{
+    margin-top:0;
+    margin-bottom:14px;
+    padding:0 0 8px;
+    border:none;
+    border-bottom:1px solid var(--borda);
+    border-radius:0;
+    background:transparent;
+}
+.layout-admin-operacional > .painel-entrada .linha-form{
+    gap:10px;
+    margin-bottom:7px;
+}
+.layout-admin-operacional > .painel-entrada .linha-identificacao{
+    grid-template-columns:1fr 1fr;
+}
+.layout-admin-operacional > .painel-entrada .linha-produto{
+    grid-template-columns:1fr 1.8fr 1fr;
+}
+.layout-admin-operacional > .painel-entrada .linha-quantidade{
+    grid-template-columns:150px minmax(220px,1fr);
+    max-width:100%;
+}
+.layout-admin-operacional > .painel-entrada label{
+    font-size:12.5px;
+}
+.layout-admin-operacional > .painel-entrada input{
+    height:34px;
+    min-height:34px;
+    margin:3px 0 6px;
+}
+.layout-admin-operacional > .painel-entrada .container-botoes{
+    margin-top:10px;
+    padding-top:12px;
+    border-top:1px solid var(--borda);
+    gap:10px;
+}
+.layout-admin-operacional > .painel-entrada .container-botoes button{
+    padding:9px 16px;
+    font-size:13px;
+}
+@media(max-width:1100px){
+    .layout-admin-operacional > .painel-entrada .linha-identificacao,
+    .layout-admin-operacional > .painel-entrada .linha-produto,
+    .layout-admin-operacional > .painel-entrada .linha-quantidade{
+        grid-template-columns:1fr 1fr;
+    }
+}
+@media(max-width:700px){
+    .layout-admin-operacional > .painel-entrada .linha-identificacao,
+    .layout-admin-operacional > .painel-entrada .linha-produto,
+    .layout-admin-operacional > .painel-entrada .linha-quantidade{
+        grid-template-columns:1fr;
+    }
+}
+
+
+
+/* ENTRADA ADMIN — mesmos tamanhos compactos do formulário do usuário comum. */
+body.usuario-admin .layout-admin-operacional > .painel-entrada{
+    padding:14px 12px;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada h2{
+    margin-top:0;
+    margin-bottom:9px;
+    padding:0 0 8px;
+    font-size:inherit;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-form{
+    gap:8px;
+    margin-bottom:2px;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada label{
+    font-size:11.5px;
+    margin-bottom:1px;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada input{
+    height:27px;
+    min-height:27px;
+    padding:3px 7px;
+    margin:2px 0 4px;
+    font-size:12px;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-identificacao{
+    grid-template-columns:1fr 1fr;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-produto{
+    grid-template-columns:1fr 1.8fr 1fr;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-quantidade{
+    grid-template-columns:100px 115px 130px minmax(150px,1fr);
+    max-width:100%;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada .container-botoes{
+    margin-top:5px;
+    padding-top:10px;
+    gap:10px;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada .container-botoes button{
+    padding:8px 12px;
+    font-size:12.5px;
+}
+@media(max-width:1100px){
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-identificacao,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-produto{
+        grid-template-columns:1fr 1fr;
+    }
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-quantidade{
+        grid-template-columns:100px 1fr 130px 1fr;
+    }
+}
+@media(max-width:700px){
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-identificacao,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-produto,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-quantidade{
+        grid-template-columns:1fr;
+    }
+}
+
+
+
+/* USUÁRIO COMUM — mantém a tela completa/original; somente o layout administrativo recebe a alteração de duas colunas. */
+body:not(.usuario-admin) .layout-admin-operacional{
+    display:block;
+    margin-bottom:18px;
+}
+body:not(.usuario-admin) .layout-admin-operacional > #painel-admin-usuarios{
+    display:none;
+}
+body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada{
+    width:100%;
+    float:none;
+    margin:0 0 20px 0;
+    min-width:0;
+    min-height:0;
+    height:auto;
+    background:var(--bg-painel);
+    border:1px solid var(--borda);
+    border-radius:12px;
+    padding:25px;
+    box-shadow:0 4px 14px rgba(0,0,0,.35);
+}
+body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-identificacao{
+    grid-template-columns:125px 105px 260px 220px;
+}
+body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-produto{
+    grid-template-columns:125px 430px 260px;
+}
+body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-quantidade{
+    grid-template-columns:100px 115px 130px 160px;
+    max-width:100%;
+}
+body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada input{
+    height:27px;
+    min-height:27px;
+    padding:3px 7px;
+    margin:2px 0 4px;
+    font-size:12px;
+}
+@media(max-width:1100px){
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada{
+        overflow-x:auto;
+    }
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-identificacao,
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-produto{
+        min-width:760px;
+    }
+}
+@media(max-width:700px){
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada{
+        overflow-x:visible;
+        padding:14px 12px;
+    }
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-form,
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-identificacao,
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-produto{
+        grid-template-columns:1fr;
+        min-width:0;
+    }
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-quantidade{
+        grid-template-columns:1fr 1fr;
+        max-width:none;
+    }
+}
+
+
+
+body:not(.usuario-admin) .layout-admin-operacional{display:grid;grid-template-columns:minmax(320px,.9fr) minmax(520px,1.1fr);gap:14px;align-items:stretch;margin-bottom:18px;}
+body:not(.usuario-admin) .layout-admin-operacional > #painel-admin-usuarios{display:none!important;}
+body:not(.usuario-admin) .layout-admin-operacional > .painel-solicitacoes-comum{display:block;grid-column:1;margin:0;min-height:680px;height:100%;box-sizing:border-box;}
+body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada{grid-column:2;margin:0;min-height:680px;height:100%;width:100%;box-sizing:border-box;}
+body.usuario-admin .painel-solicitacoes-comum{display:none!important;}
+.painel-solicitacoes-comum #lista-solicitacoes-comum{max-height:620px;overflow:auto;padding-right:2px;}
+.painel-solicitacoes-comum .produto-item{padding:10px 12px;border:1px solid var(--borda);border-radius:8px;margin-bottom:8px;background:var(--bg-painel-2);}
+@media(max-width:1100px){body:not(.usuario-admin) .layout-admin-operacional{grid-template-columns:1fr;}body:not(.usuario-admin) .layout-admin-operacional > .painel-solicitacoes-comum,body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada{grid-column:1;}}
+
+
+
+/* ======================================================
+   LAYOUT ADMIN — ESQUERDA (USUÁRIOS/SOLICITAÇÕES) +
+   DIREITA (ENTRADA DE MERCADORIA)
+   Mantém os campos e todas as alterações existentes.
+   ====================================================== */
+.layout-admin-operacional{
+    display:grid !important;
+    grid-template-columns:minmax(0, 0.78fr) minmax(760px, 1.22fr) !important;
+    gap:14px !important;
+    align-items:start !important;
+    width:100% !important;
+    margin-bottom:18px !important;
+}
+
+.layout-admin-operacional > #painel-admin-usuarios{
+    grid-column:1 !important;
+    grid-row:1 !important;
+    width:auto !important;
+    max-width:none !important;
+    float:none !important;
+    margin:0 !important;
+}
+
+.layout-admin-operacional > .painel-entrada{
+    grid-column:2 !important;
+    grid-row:1 !important;
+    width:auto !important;
+    max-width:none !important;
+    float:none !important;
+    margin:0 !important;
+    align-self:start !important;
+}
+
+/* O formulário do Admin usa exatamente as mesmas dimensões
+   compactas já definidas para o formulário do usuário comum. */
+.layout-admin-operacional > .painel-entrada .linha-identificacao{
+    grid-template-columns:125px 105px 260px 220px !important;
+}
+.layout-admin-operacional > .painel-entrada .linha-produto{
+    grid-template-columns:125px 430px 260px !important;
+}
+.layout-admin-operacional > .painel-entrada .linha-quantidade{
+    grid-template-columns:100px 115px 130px 160px !important;
+    max-width:520px !important;
+}
+
+@media(max-width:1100px){
+    .layout-admin-operacional{
+        grid-template-columns:1fr !important;
+    }
+    .layout-admin-operacional > #painel-admin-usuarios,
+    .layout-admin-operacional > .painel-entrada{
+        grid-column:1 !important;
+        grid-row:auto !important;
+        width:100% !important;
+    }
+}
+
+
+
+/* ======================================================
+   ADMIN — MESMO PADRÃO VISUAL DO USUÁRIO COMUM
+   Esquerda: solicitações/usuários | Direita: entrada
+   ====================================================== */
+.layout-admin-operacional{
+    grid-template-columns:minmax(0,39fr) minmax(0,61fr) !important;
+    gap:14px !important;
+    align-items:stretch !important;
+}
+.layout-admin-operacional > #painel-admin-usuarios,
+.layout-admin-operacional > .painel-entrada{
+    box-sizing:border-box;
+    min-width:0;
+    margin-bottom:0 !important;
+}
+.layout-admin-operacional > #painel-admin-usuarios{
+    min-height:680px;
+}
+.layout-admin-operacional > .painel-entrada{
+    min-height:680px;
+}
+/* O formulário do Admin mantém exatamente o padrão compacto
+   já usado no usuário comum. */
+body.usuario-admin .layout-admin-operacional > .painel-entrada{
+    padding:14px 12px !important;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-form{
+    width:100%;
+}
+@media(max-width:1100px){
+    .layout-admin-operacional{
+        grid-template-columns:1fr !important;
+    }
+    .layout-admin-operacional > #painel-admin-usuarios,
+    .layout-admin-operacional > .painel-entrada{
+        min-height:0;
+    }
+}
+
+
+
+/* ======================================================
+   RESPONSIVIDADE FINAL — PC / NOTEBOOK / CELULAR
+   Mantém o layout atual no PC e notebook e cria uma versão
+   compacta e confortável para telas de celular.
+   ====================================================== */
+
+/* Notebook: mantém duas colunas quando houver espaço suficiente. */
+@media (min-width: 901px){
+    .layout-admin-operacional{
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+        gap: 14px !important;
+        align-items: stretch !important;
+    }
+
+    .layout-admin-operacional > #painel-admin-usuarios,
+    .layout-admin-operacional > .painel-entrada{
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        float: none !important;
+        margin: 0 !important;
+    }
+
+    .layout-admin-operacional > .painel-entrada{
+        min-height: 100% !important;
+    }
+}
+
+/* Tablet / notebook pequeno: evita campos apertados sem gerar rolagem horizontal. */
+@media (min-width: 701px) and (max-width: 900px){
+    .layout-admin-operacional{
+        grid-template-columns: 1fr !important;
+        gap: 14px !important;
+    }
+
+    .layout-admin-operacional > #painel-admin-usuarios,
+    .layout-admin-operacional > .painel-entrada{
+        width: 100% !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+    }
+
+    .painel-entrada .linha-identificacao,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-identificacao{
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    .painel-entrada .linha-produto,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-produto{
+        grid-template-columns: minmax(90px,.8fr) minmax(180px,1.8fr) minmax(110px,1fr) !important;
+    }
+
+    .painel-entrada .linha-quantidade,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-quantidade{
+        grid-template-columns: repeat(4, minmax(0,1fr)) !important;
+        max-width: 100% !important;
+    }
+}
+
+/* CELULAR — layout compacto, sem cortes e sem rolagem horizontal. */
+@media (max-width: 700px){
+    html, body{
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    body{
+        margin: 0 !important;
+        padding: 8px !important;
+        font-size: 13px;
+    }
+
+    #app-principal{
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* Barra superior compacta e organizada. */
+    .barra-usuario{
+        width: 100% !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
+        padding: 6px 0 !important;
+    }
+
+    .barra-usuario > span{
+        width: 100%;
+        text-align: center;
+        font-size: 11px;
+        white-space: normal;
+    }
+
+    .barra-usuario button{
+        width: auto !important;
+        min-width: 0 !important;
+        padding: 7px 9px !important;
+        font-size: 11px !important;
+    }
+
+    h1{
+        font-size: 22px !important;
+        margin: 8px 0 14px !important;
+        padding-bottom: 9px !important;
+        gap: 6px !important;
+    }
+
+    /* Painéis ocupam toda a largura do celular. */
+    .layout-admin-operacional{
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        gap: 10px !important;
+        margin-bottom: 12px !important;
+    }
+
+    .layout-admin-operacional > #painel-admin-usuarios,
+    .layout-admin-operacional > .painel-entrada,
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada{
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        float: none !important;
+        margin: 0 0 10px 0 !important;
+        padding: 12px 10px !important;
+        height: auto !important;
+        min-height: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Formulário de entrada: uma coluna no celular, com campos confortáveis. */
+    .painel-entrada .linha-form,
+    .painel-entrada .linha-identificacao,
+    .painel-entrada .linha-produto,
+    .painel-entrada .linha-quantidade,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-identificacao,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-produto,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-quantidade{
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        gap: 5px !important;
+        width: 100% !important;
+    }
+
+    .painel-entrada .campo,
+    .painel-entrada .campo-produto,
+    .painel-entrada .campo-validade{
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+    }
+
+    .painel-entrada label{
+        font-size: 11px !important;
+        margin-bottom: 1px !important;
+    }
+
+    .painel-entrada input,
+    .painel-entrada select,
+    .painel-entrada textarea{
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        height: 34px !important;
+        min-height: 34px !important;
+        padding: 6px 8px !important;
+        font-size: 13px !important;
+        margin: 2px 0 5px !important;
+    }
+
+    .painel-entrada h2{
+        font-size: 15px !important;
+        margin-bottom: 8px !important;
+    }
+
+    .painel-entrada .container-botoes{
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        width: 100% !important;
+        gap: 7px !important;
+        padding-top: 9px !important;
+        margin-top: 5px !important;
+    }
+
+    .painel-entrada .container-botoes button{
+        width: 100% !important;
+        padding: 9px 10px !important;
+        font-size: 12px !important;
+    }
+
+    /* Solicitações, usuários e notificações sem ultrapassar a tela. */
+    .painel{
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .container-botoes{
+        flex-wrap: wrap !important;
+        max-width: 100% !important;
+    }
+
+    .container-botoes button{
+        max-width: 100%;
+    }
+
+    #painel-admin-usuarios .cabecalho-usuarios-admin{
+        flex-wrap: wrap !important;
+    }
+
+    #lista-usuarios-cadastrados,
+    #lista-solicitacoes-admin,
+    #lista-solicitacoes-comum,
+    #lista-minhas-solicitacoes,
+    .grid{
+        max-width: 100% !important;
+        overflow-x: hidden !important;
+    }
+
+    /* Cards de containers: uma coluna no celular. */
+    .grid{
+        grid-template-columns: 1fr !important;
+        gap: 8px !important;
+    }
+
+    .box,
+    .produto-item{
+        min-width: 0 !important;
+        width: 100% !important;
+        padding: 11px !important;
+    }
+
+    /* Campo de pesquisa ocupa a tela inteira. */
+    .painel-busca{
+        width: 100% !important;
+        padding: 10px !important;
+        margin-bottom: 10px !important;
+    }
+
+    .painel-busca input{
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    /* Visualização / filtros ficam empilhados. */
+    .painel-visualizacao{
+        width: 100% !important;
+        padding: 10px !important;
+    }
+
+    .painel-visualizacao .visualizacao-linha{
+        grid-template-columns: 1fr !important;
+        grid-template-areas:
+            "visual"
+            "visualbotoes"
+            "status"
+            "statusselect" !important;
+        gap: 6px !important;
+    }
+
+    .painel-visualizacao .visualizacao-botoes{
+        flex-wrap: wrap !important;
+    }
+
+    .painel-visualizacao .select-status{
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* Modal de solicitação sempre cabe na tela. */
+    .modal-solicitacao-caixa{
+        width: calc(100vw - 20px) !important;
+        max-width: calc(100vw - 20px) !important;
+        max-height: 94vh !important;
+    }
+
+    /* Login compacto para telas pequenas. */
+    .tela-login{
+        padding: 12px !important;
+    }
+
+    .cartao-login{
+        width: 100% !important;
+        max-width: 330px !important;
+        padding: 18px !important;
+    }
+}
+
+/* Telefones muito estreitos. */
+@media (max-width: 380px){
+    body{padding: 5px !important;}
+    h1{font-size: 19px !important;}
+    .barra-usuario button{font-size: 10px !important;padding: 6px 7px !important;}
+    .painel-entrada input,
+    .painel-entrada select{font-size: 12px !important;}
+}
+
+
+
+/* ======================================================
+   CELULAR — REGISTRO DE MERCADORIA SUPER COMPACTO
+   Nenhum campo ultrapassa a largura da tela.
+   PC/NOTEBOOK permanecem exatamente como estão.
+   ====================================================== */
+@media (max-width: 700px){
+    .painel-entrada,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada{
+        width:100% !important;
+        max-width:100% !important;
+        min-width:0 !important;
+        box-sizing:border-box !important;
+        overflow:visible !important;
+        padding:10px 8px !important;
+    }
+
+    .painel-entrada .linha-form,
+    .painel-entrada .linha-identificacao,
+    .painel-entrada .linha-produto,
+    .painel-entrada .linha-quantidade,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-form,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-identificacao,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-produto,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-quantidade{
+        width:100% !important;
+        min-width:0 !important;
+        max-width:100% !important;
+        box-sizing:border-box !important;
+        gap:5px !important;
+    }
+
+    /* Data / Container */
+    .painel-entrada .linha-identificacao{
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    }
+    /* Fornecedor / NF */
+    .painel-entrada .linha-identificacao .campo:nth-child(3),
+    .painel-entrada .linha-identificacao .campo:nth-child(4){
+        min-width:0 !important;
+    }
+
+    /* Código + Produto + Lote: código e produto juntos; lote abaixo. */
+    .painel-entrada .linha-produto{
+        grid-template-columns:minmax(0,0.72fr) minmax(0,1.28fr) !important;
+    }
+    .painel-entrada .linha-produto .campo-lote{
+        grid-column:1 / -1 !important;
+    }
+
+    /* Validade + Quantidade + KG + Peso: duas colunas. */
+    .painel-entrada .linha-quantidade{
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    }
+
+    .painel-entrada .campo,
+    .painel-entrada .campo input,
+    .painel-entrada .campo select,
+    .painel-entrada input,
+    .painel-entrada select{
+        width:100% !important;
+        max-width:100% !important;
+        min-width:0 !important;
+        box-sizing:border-box !important;
+    }
+
+    .painel-entrada label{
+        font-size:10.5px !important;
+        line-height:1.15 !important;
+        white-space:normal !important;
+        overflow-wrap:anywhere !important;
+        margin-bottom:1px !important;
+    }
+
+    .painel-entrada input,
+    .painel-entrada select{
+        height:26px !important;
+        min-height:26px !important;
+        padding:3px 5px !important;
+        margin:1px 0 3px !important;
+        font-size:11px !important;
+    }
+
+    .painel-entrada .container-botoes{
+        width:100% !important;
+        gap:5px !important;
+        margin-top:6px !important;
+        padding-top:8px !important;
+    }
+
+    .painel-entrada .container-botoes button{
+        width:auto !important;
+        flex:1 1 auto !important;
+        min-width:0 !important;
+        padding:7px 6px !important;
+        font-size:10.5px !important;
+        white-space:nowrap !important;
+    }
+}
+
+@media (max-width:380px){
+    .painel-entrada{padding:8px 6px !important;}
+    .painel-entrada label{font-size:9.8px !important;}
+    .painel-entrada input,
+    .painel-entrada select{font-size:10.5px !important; padding-left:4px !important; padding-right:4px !important;}
+    .painel-entrada .container-botoes button{font-size:9.5px !important; padding:7px 4px !important;}
+}
+
+
+
+/* ======================================================
+   AJUSTE FINAL — LOGO + FORMULÁRIO COMPACTO EM TODOS OS LOCAIS
+   Mantém as funções e os layouts anteriores.
+   ====================================================== */
+.logo-login-container{
+    display:flex !important;
+    justify-content:center !important;
+    align-items:center !important;
+    margin:0 0 8px !important;
+    min-height:54px !important;
+}
+.logo-login{
+    display:block !important;
+    width:58px !important;
+    height:58px !important;
+    max-width:58px !important;
+    max-height:58px !important;
+    object-fit:contain !important;
+    border-radius:12px !important;
+}
+
+/* PC e notebook: campos compactos, sem largura fixa que provoque corte. */
+.painel-entrada{
+    width:100% !important;
+    max-width:100% !important;
+    box-sizing:border-box !important;
+    overflow:hidden !important;
+}
+.painel-entrada .linha-form{
+    width:100% !important;
+    max-width:100% !important;
+    box-sizing:border-box !important;
+    gap:6px !important;
+    margin-bottom:4px !important;
+}
+.painel-entrada .linha-form .campo{
+    min-width:0 !important;
+    width:100% !important;
+    max-width:100% !important;
+    box-sizing:border-box !important;
+}
+.painel-entrada label{
+    font-size:10.5px !important;
+    line-height:1.1 !important;
+    margin-bottom:1px !important;
+}
+.painel-entrada input,
+.painel-entrada select{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    height:26px !important;
+    min-height:26px !important;
+    box-sizing:border-box !important;
+    padding:3px 5px !important;
+    margin:1px 0 3px !important;
+    font-size:11px !important;
+}
+
+/* Desktop/notebook: quatro campos na 1ª linha, três na 2ª e quatro na 3ª. */
+@media(min-width:701px){
+    .painel-entrada .linha-identificacao{
+        grid-template-columns:minmax(80px,.8fr) minmax(80px,.8fr) minmax(130px,1.5fr) minmax(110px,1.1fr) !important;
+    }
+    .painel-entrada .linha-produto{
+        grid-template-columns:minmax(85px,.75fr) minmax(180px,1.8fr) minmax(100px,1fr) !important;
+    }
+    .painel-entrada .linha-quantidade{
+        grid-template-columns:minmax(75px,.8fr) minmax(90px,1fr) minmax(70px,.8fr) minmax(105px,1.15fr) !important;
+    }
+}
+
+/* Celular: mesmo desenho do formulário, apenas reduzido para caber na tela. */
+@media(max-width:700px){
+    .tela-login{padding:10px !important;}
+    .cartao-login{max-width:300px !important; padding:16px 14px !important;}
+    .logo-login{width:52px !important;height:52px !important;max-width:52px !important;max-height:52px !important;}
+    .logo-login-container{min-height:48px !important;margin-bottom:6px !important;}
+
+    .painel-entrada{
+        padding:9px 7px !important;
+        overflow:hidden !important;
+    }
+    .painel-entrada h2{
+        font-size:14px !important;
+        margin-bottom:6px !important;
+        padding-bottom:5px !important;
+    }
+    .painel-entrada .linha-form{
+        display:grid !important;
+        width:100% !important;
+        min-width:0 !important;
+        gap:4px !important;
+        margin-bottom:3px !important;
+    }
+    .painel-entrada .linha-identificacao{
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    }
+    .painel-entrada .linha-produto{
+        grid-template-columns:minmax(0,.72fr) minmax(0,1.28fr) !important;
+    }
+    .painel-entrada .linha-produto .campo:nth-child(3){
+        grid-column:1 / -1 !important;
+    }
+    .painel-entrada .linha-quantidade{
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    }
+    .painel-entrada .campo,
+    .painel-entrada .campo input,
+    .painel-entrada input,
+    .painel-entrada select{
+        min-width:0 !important;
+        max-width:100% !important;
+        width:100% !important;
+    }
+    .painel-entrada label{
+        font-size:9.5px !important;
+        white-space:normal !important;
+        overflow-wrap:anywhere !important;
+    }
+    .painel-entrada input,
+    .painel-entrada select{
+        height:24px !important;
+        min-height:24px !important;
+        padding:2px 4px !important;
+        font-size:10.5px !important;
+        margin:1px 0 2px !important;
+    }
+    .painel-entrada .container-botoes{
+        display:flex !important;
+        width:100% !important;
+        gap:4px !important;
+        margin-top:5px !important;
+        padding-top:6px !important;
+        box-sizing:border-box !important;
+    }
+    .painel-entrada .container-botoes button{
+        flex:1 1 0 !important;
+        width:0 !important;
+        min-width:0 !important;
+        max-width:100% !important;
+        padding:6px 3px !important;
+        font-size:9.5px !important;
+        white-space:normal !important;
+        line-height:1.1 !important;
+    }
+}
+
+@media(max-width:380px){
+    .painel-entrada{padding:8px 5px !important;}
+    .painel-entrada .linha-form{gap:3px !important;}
+    .painel-entrada label{font-size:9px !important;}
+    .painel-entrada input,.painel-entrada select{font-size:10px !important;height:23px !important;min-height:23px !important;}
+    .painel-entrada .container-botoes button{font-size:8.8px !important;padding:5px 2px !important;}
+}
+
+
+
+/* PADRÃO FINAL DO REGISTRO — IGUAL PARA COMUM, ADMIN E EXTERNO */
+.painel-entrada {
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+    overflow:hidden !important;
+}
+.painel-entrada .linha-form {
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+    gap:7px !important;
+}
+.painel-entrada .campo {
+    min-width:0 !important;
+    width:auto !important;
+    max-width:100% !important;
+    box-sizing:border-box !important;
+}
+.painel-entrada input,
+.painel-entrada select {
+    width:100% !important;
+    min-width:0 !important;
+    max-width:100% !important;
+    height:27px !important;
+    min-height:27px !important;
+    box-sizing:border-box !important;
+    padding:3px 6px !important;
+    margin:2px 0 3px !important;
+    font-size:12px !important;
+}
+.painel-entrada label {
+    font-size:11px !important;
+    line-height:1.1 !important;
+    margin-bottom:1px !important;
+}
+/* Desktop: medidas fixas e compactas, iguais ao padrão aprovado do admin. */
+.painel-entrada .linha-identificacao {
+    grid-template-columns:125px 105px 260px 220px !important;
+    width:max-content !important;
+    max-width:100% !important;
+}
+.painel-entrada .linha-produto {
+    grid-template-columns:125px 430px 260px !important;
+    width:max-content !important;
+    max-width:100% !important;
+}
+.painel-entrada .linha-quantidade {
+    grid-template-columns:100px 115px 130px 160px !important;
+    width:max-content !important;
+    max-width:100% !important;
+}
+.painel-entrada .container-botoes {
+    display:flex !important;
+    flex-wrap:wrap !important;
+    gap:7px !important;
+    margin-top:7px !important;
+    padding-top:8px !important;
+}
+.painel-entrada .container-botoes button {
+    padding:7px 11px !important;
+    min-height:31px !important;
+    font-size:12px !important;
+}
+/* Notebook/janela menor: mesma estrutura, duas colunas, sem rolagem horizontal. */
+@media (max-width:1100px) {
+    .painel-entrada .linha-identificacao,
+    .painel-entrada .linha-produto,
+    .painel-entrada .linha-quantidade {
+        width:100% !important;
+        max-width:100% !important;
+    }
+    .painel-entrada .linha-identificacao {
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    }
+    .painel-entrada .linha-produto {
+        grid-template-columns:minmax(0,1fr) minmax(0,1.45fr) !important;
+    }
+    .painel-entrada .linha-produto .campo:nth-child(3) {
+        grid-column:1 / -1 !important;
+    }
+    .painel-entrada .linha-quantidade {
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    }
+}
+/* Celular: exatamente o mesmo desenho do admin, só reduzido para caber na tela. */
+@media (max-width:700px) {
+    .painel-entrada {
+        padding:10px !important;
+        width:100% !important;
+        max-width:100% !important;
+        overflow:hidden !important;
+    }
+    .painel-entrada .linha-form {
+        width:100% !important;
+        gap:5px !important;
+        margin-bottom:4px !important;
+    }
+    .painel-entrada .linha-identificacao,
+    .painel-entrada .linha-produto,
+    .painel-entrada .linha-quantidade {
+        width:100% !important;
+        max-width:100% !important;
+        min-width:0 !important;
+    }
+    .painel-entrada .linha-identificacao {
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    }
+    .painel-entrada .linha-produto {
+        grid-template-columns:minmax(0,1fr) minmax(0,1.35fr) !important;
+    }
+    .painel-entrada .linha-produto .campo:nth-child(3) {
+        grid-column:1 / -1 !important;
+    }
+    .painel-entrada .linha-quantidade {
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    }
+    .painel-entrada .campo,
+    .painel-entrada input,
+    .painel-entrada select {
+        min-width:0 !important;
+        max-width:100% !important;
+    }
+    .painel-entrada label {
+        font-size:9.5px !important;
+    }
+    .painel-entrada input,
+    .painel-entrada select {
+        height:25px !important;
+        min-height:25px !important;
+        font-size:11px !important;
+        padding:2px 5px !important;
+        margin:1px 0 2px !important;
+    }
+    .painel-entrada .container-botoes {
+        gap:4px !important;
+        padding-top:6px !important;
+        margin-top:4px !important;
+    }
+    .painel-entrada .container-botoes button {
+        flex:1 1 0 !important;
+        min-width:0 !important;
+        padding:6px 5px !important;
+        min-height:28px !important;
+        font-size:10px !important;
+    }
+}
+@media (max-width:380px) {
+    .painel-entrada { padding:8px !important; }
+    .painel-entrada .linha-form { gap:4px !important; }
+    .painel-entrada label { font-size:9px !important; }
+    .painel-entrada input, .painel-entrada select {
+        height:24px !important; min-height:24px !important; font-size:10.5px !important;
+    }
+    .painel-entrada .container-botoes button { font-size:9.5px !important; padding:5px 4px !important; }
+}
+
+
+
+/* Evita que a tela de login apareça durante a restauração da sessão Firebase. */
+body.auth-carregando #tela-login{
+    opacity:0 !important;
+    visibility:hidden !important;
+    pointer-events:none !important;
+}
+body.auth-carregando #app-principal,
+body.auth-carregando #app-externo{
+    visibility:hidden !important;
+}
+#tela-login{transition:opacity .08s ease;}
+
+
+
+/* =========================================================
+   CORREÇÃO FINAL — REGISTRO DO USUÁRIO COMUM NO CELULAR
+   Remove qualquer largura mínima antiga que fazia o formulário
+   ultrapassar a tela. Mantém exatamente o padrão compacto.
+   ========================================================= */
+@media(max-width:700px){
+    html, body{
+        width:100% !important;
+        max-width:100% !important;
+        overflow-x:hidden !important;
+    }
+
+    body:not(.usuario-admin) .layout-admin-operacional{
+        display:grid !important;
+        grid-template-columns:minmax(0,1fr) !important;
+        width:100% !important;
+        max-width:100% !important;
+        min-width:0 !important;
+        gap:8px !important;
+        margin:0 0 12px !important;
+        padding:0 !important;
+        box-sizing:border-box !important;
+        overflow-x:hidden !important;
+    }
+
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada{
+        grid-column:1 !important;
+        width:100% !important;
+        max-width:100% !important;
+        min-width:0 !important;
+        box-sizing:border-box !important;
+        overflow:hidden !important;
+        padding:8px 6px !important;
+        margin:0 !important;
+    }
+
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-form,
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-identificacao,
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-produto,
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-quantidade{
+        width:100% !important;
+        max-width:100% !important;
+        min-width:0 !important;
+        box-sizing:border-box !important;
+        gap:4px !important;
+    }
+
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-identificacao{
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    }
+
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-identificacao .campo:nth-child(3),
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-identificacao .campo:nth-child(4){
+        min-width:0 !important;
+    }
+
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-produto{
+        grid-template-columns:minmax(0,1fr) minmax(0,1.45fr) !important;
+    }
+
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-produto .campo:nth-child(3){
+        grid-column:1 / -1 !important;
+    }
+
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-quantidade{
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    }
+
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .campo,
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .campo-produto,
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .campo-validade,
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada input,
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada select{
+        width:100% !important;
+        max-width:100% !important;
+        min-width:0 !important;
+        box-sizing:border-box !important;
+    }
+
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada input,
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada select{
+        height:24px !important;
+        min-height:24px !important;
+        font-size:10.5px !important;
+        padding:2px 4px !important;
+        margin:1px 0 2px !important;
+    }
+
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada label{
+        font-size:9px !important;
+        line-height:1.05 !important;
+        white-space:normal !important;
+    }
+
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .container-botoes{
+        width:100% !important;
+        max-width:100% !important;
+        min-width:0 !important;
+        display:flex !important;
+        flex-wrap:wrap !important;
+        gap:4px !important;
+        box-sizing:border-box !important;
+    }
+
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .container-botoes button{
+        flex:1 1 0 !important;
+        min-width:0 !important;
+        max-width:100% !important;
+        font-size:9.5px !important;
+        padding:5px 3px !important;
+        box-sizing:border-box !important;
+    }
+}
+
+@media(max-width:380px){
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada{
+        padding:7px 5px !important;
+    }
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada .linha-form{
+        gap:3px !important;
+    }
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada input,
+    body:not(.usuario-admin) .layout-admin-operacional > .painel-entrada select{
+        height:23px !important;
+        min-height:23px !important;
+        font-size:10px !important;
+    }
+}
+
+
+
+.painel-solicitacoes-admin-inicial{grid-column:1;min-width:0;box-sizing:border-box;max-height:760px;overflow:hidden;}
+.cabecalho-solicitacoes-admin-inicial{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--borda);}
+.subpainel-admin-inicial{background:var(--bg-painel-2);border:1px solid var(--borda);border-radius:9px;padding:10px;margin-bottom:10px;}
+.subcabecalho-admin-inicial{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;font-size:12px;}
+.subcabecalho-admin-inicial span{font-size:10.5px;color:var(--texto-fraco);}
+#conteudo-painel-solicitacoes-admin-inicial{max-height:660px;overflow-y:auto;padding-right:3px;}
+#lista-solicitacoes-acesso-admin,#lista-alteracoes-admin,#lista-solicitacoes{max-height:250px;overflow-y:auto;}
+@media(max-width:1100px){.painel-solicitacoes-admin-inicial{grid-column:1!important;max-height:none;}#conteudo-painel-solicitacoes-admin-inicial{max-height:none;} }
+@media(max-width:700px){.cabecalho-solicitacoes-admin-inicial{align-items:flex-start;flex-direction:column;}#lista-solicitacoes-acesso-admin,#lista-alteracoes-admin,#lista-solicitacoes{max-height:320px;}}
+
+
+
+.btn-configuracao-admin{
+    background:var(--bg-painel-2);
+    color:var(--texto);
+    border:1px solid var(--borda-forte);
+}
+.btn-configuracao-admin:hover{
+    border-color:var(--azul-forte);
+    color:var(--azul);
+}
+@media(max-width:700px){
+    .btn-configuracao-admin{padding:6px 9px;font-size:11px;}
+}
+
+
+
+body.usuario-admin .layout-admin-operacional{display:grid!important;grid-template-columns:minmax(320px,0.9fr) minmax(520px,1.1fr)!important;gap:14px!important;align-items:stretch!important;}
+body.usuario-admin .layout-admin-operacional > .painel-solicitacoes-admin-inicial{grid-column:1!important;}
+body.usuario-admin .layout-admin-operacional > .painel-entrada{grid-column:2!important;}
+@media(max-width:1100px){body.usuario-admin .layout-admin-operacional{grid-template-columns:1fr!important;}body.usuario-admin .layout-admin-operacional > .painel-solicitacoes-admin-inicial,body.usuario-admin .layout-admin-operacional > .painel-entrada{grid-column:1!important;}}
+
+
+
+/* NOVO MAPA — substitui apenas a grade antiga; formulários, solicitações,
+   filtros, histórico e demais funções existentes permanecem preservados. */
+#grade,
+#grade-externa{
+    display:none !important;
+}
+#painel-mapa-containers-principal{
+    display:block !important;
+}
+#painel-mapa-containers-externo{
+    display:block !important;
+}
+@media(max-width:700px){
+    #painel-mapa-containers-principal,
+    #painel-mapa-containers-externo{
+        margin-top:10px;
+        padding:10px;
+    }
+}
+
+
+
+/* ======================================================
+   TELA INICIAL — LOGO + PROGRESSO 0% A 100%
+   Exibida ao abrir o aplicativo em computador e celular.
+   ====================================================== */
+#tela-carregamento-app{
+    position:fixed;
+    inset:0;
+    width:100vw;
+    height:100vh;
+    min-height:100dvh;
+    box-sizing:border-box;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:16px;
+    padding:24px;
+    background:var(--bg,#0b1220);
+    color:var(--texto,#dbe6f5);
+    z-index:9999999;
+    opacity:1;
+    visibility:visible;
+    transition:opacity .35s ease,visibility .35s ease;
+}
+#tela-carregamento-app.oculta{
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+}
+#tela-carregamento-logo{
+    width:120px;
+    height:120px;
+    max-width:32vw;
+    max-height:32vw;
+    object-fit:contain;
+    display:block;
+    filter:drop-shadow(0 8px 24px rgba(0,0,0,.35));
+}
+.carregamento-titulo{
+    font-size:18px;
+    font-weight:700;
+    text-align:center;
+    margin:0;
+}
+.carregamento-percentual{
+    font-size:17px;
+    font-weight:700;
+    min-width:52px;
+    text-align:center;
+}
+.carregamento-barra{
+    width:min(360px,78vw);
+    height:8px;
+    border-radius:999px;
+    overflow:hidden;
+    background:var(--bg-painel-2,#26344f);
+    border:1px solid var(--borda,#2c3e63);
+}
+#carregamento-progresso{
+    width:0%;
+    height:100%;
+    border-radius:inherit;
+    background:var(--azul-forte,#0b8fb8);
+    transition:width .08s linear;
+}
+@media(max-width:700px){
+    #tela-carregamento-app{gap:13px;padding:20px;}
+    #tela-carregamento-logo{width:92px;height:92px;}
+    .carregamento-titulo{font-size:15px;}
+    .carregamento-percentual{font-size:15px;}
+    .carregamento-barra{width:min(300px,82vw);height:7px;}
+}
+
+
+
+/* ======================================================
+   SINO ADMINISTRATIVO — JANELA COMPACTA E RESPONSIVA
+   ====================================================== */
+body.usuario-admin #painel-solicitacoes-admin-inicial{
+    display:none !important;
+    position:fixed !important;
+    top:72px !important;
+    right:12px !important;
+    left:auto !important;
+    width:min(760px, calc(100vw - 24px)) !important;
+    max-width:760px !important;
+    max-height:calc(100vh - 88px) !important;
+    margin:0 !important;
+    padding:12px !important;
+    box-sizing:border-box !important;
+    z-index:10000 !important;
+    background:var(--bg-painel) !important;
+    border:1px solid var(--borda-forte) !important;
+    border-radius:12px !important;
+    box-shadow:0 18px 50px rgba(0,0,0,.48) !important;
+    overflow:hidden !important;
+    flex-direction:column !important;
+}
+body.usuario-admin #painel-solicitacoes-admin-inicial.sino-admin-aberto{
+    display:flex !important;
+}
+body.usuario-admin #painel-solicitacoes-admin-inicial .cabecalho-solicitacoes-admin-inicial{
+    flex:0 0 auto !important;
+    padding-bottom:8px !important;
+    margin-bottom:8px !important;
+}
+body.usuario-admin #painel-solicitacoes-admin-inicial .cabecalho-solicitacoes-admin-inicial h2{
+    font-size:16px !important;
+}
+body.usuario-admin #conteudo-painel-solicitacoes-admin-inicial{
+    flex:1 1 auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+    overflow-y:auto !important;
+    padding-right:3px !important;
+}
+body.usuario-admin #painel-solicitacoes-admin-inicial .subpainel-admin-inicial{
+    padding:9px !important;
+    margin-bottom:7px !important;
+}
+body.usuario-admin #painel-solicitacoes-admin-inicial .subcabecalho-admin-inicial{
+    margin-bottom:5px !important;
+    font-size:11px !important;
+}
+body.usuario-admin #painel-solicitacoes-admin-inicial .subcabecalho-admin-inicial span{
+    font-size:9px !important;
+}
+body.usuario-admin #painel-solicitacoes-admin-inicial #lista-solicitacoes-acesso-admin,
+body.usuario-admin #painel-solicitacoes-admin-inicial #lista-alteracoes-admin,
+body.usuario-admin #painel-solicitacoes-admin-inicial #lista-solicitacoes,
+body.usuario-admin #painel-solicitacoes-admin-inicial #lista-transferencias-admin{
+    max-height:180px !important;
+    overflow-y:auto !important;
+}
+@media (max-width:900px){
+    body.usuario-admin #painel-solicitacoes-admin-inicial{
+        top:64px !important;
+        right:8px !important;
+        width:min(680px, calc(100vw - 16px)) !important;
+        max-height:calc(100vh - 76px) !important;
+    }
+}
+@media (max-width:600px){
+    body.usuario-admin #painel-solicitacoes-admin-inicial{
+        top:58px !important;
+        right:6px !important;
+        width:calc(100vw - 12px) !important;
+        max-height:calc(100vh - 68px) !important;
+        padding:8px !important;
+        border-radius:10px !important;
+    }
+    body.usuario-admin #painel-solicitacoes-admin-inicial .cabecalho-solicitacoes-admin-inicial{
+        flex-direction:row !important;
+        align-items:center !important;
+        gap:6px !important;
+    }
+    body.usuario-admin #painel-solicitacoes-admin-inicial .cabecalho-solicitacoes-admin-inicial h2{
+        font-size:14px !important;
+    }
+    body.usuario-admin #painel-solicitacoes-admin-inicial .cabecalho-solicitacoes-admin-inicial .btn-vis{
+        padding:5px 7px !important;
+        font-size:10px !important;
+    }
+    body.usuario-admin #painel-solicitacoes-admin-inicial .subpainel-admin-inicial{
+        padding:7px !important;
+        margin-bottom:5px !important;
+    }
+    body.usuario-admin #painel-solicitacoes-admin-inicial #lista-solicitacoes-acesso-admin,
+    body.usuario-admin #painel-solicitacoes-admin-inicial #lista-alteracoes-admin,
+    body.usuario-admin #painel-solicitacoes-admin-inicial #lista-solicitacoes,
+    body.usuario-admin #painel-solicitacoes-admin-inicial #lista-transferencias-admin{
+        max-height:140px !important;
+    }
+}
+@media (max-width:380px){
+    body.usuario-admin #painel-solicitacoes-admin-inicial{
+        top:54px !important;
+        right:4px !important;
+        width:calc(100vw - 8px) !important;
+        padding:6px !important;
+    }
+    body.usuario-admin #painel-solicitacoes-admin-inicial .cabecalho-solicitacoes-admin-inicial h2{
+        font-size:13px !important;
+    }
+}
+
+
+
+.campo-container-registro{position:relative;}
+.campo-container-com-lista{display:flex;align-items:stretch;gap:4px;}
+.campo-container-com-lista input{flex:1 1 auto;min-width:0;}
+.btn-lista-container-registro{
+    flex:0 0 34px;
+    min-width:34px;
+    border:1px solid var(--borda-forte);
+    border-radius:7px;
+    background:var(--bg-painel-2);
+    color:var(--texto);
+    cursor:pointer;
+    font-size:15px;
+    font-weight:700;
+}
+.btn-lista-container-registro:hover{border-color:var(--azul);color:var(--azul);}
+.lista-container-registro{
+    display:none;
+    position:absolute;
+    left:0;
+    right:0;
+    top:100%;
+    z-index:10020;
+    margin-top:4px;
+    max-height:260px;
+    overflow-y:auto;
+    background:var(--bg-painel);
+    border:1px solid var(--borda-forte);
+    border-radius:8px;
+    box-shadow:0 12px 30px rgba(0,0,0,.45);
+    padding:4px;
+}
+.item-produto-container-registro{
+    display:block;
+    width:100%;
+    text-align:left;
+    border:0;
+    border-bottom:1px solid var(--borda);
+    background:transparent;
+    color:var(--texto);
+    padding:8px;
+    cursor:pointer;
+    font-size:11px;
+    line-height:1.3;
+}
+.item-produto-container-registro:last-child{border-bottom:0;}
+.item-produto-container-registro:hover{background:var(--bg-painel-2);}
+.item-produto-container-registro strong{color:var(--azul);}
+.lista-container-registro .vazio{padding:9px;font-size:11px;}
+@media(max-width:700px){
+    .btn-lista-container-registro{flex-basis:30px;min-width:30px;font-size:13px;}
+    .lista-container-registro{max-height:220px;}
+}
+
+
+
+/* ===== Integração das configurações Firebase ===== */
+body.tema-claro{
+    --bg:#f4f7fb;
+    --bg-painel:#ffffff;
+    --bg-painel-2:#eef3f9;
+    --bg-input:#ffffff;
+    --borda:#d7e0ec;
+    --borda-forte:#aebed2;
+    --texto:#1f2937;
+    --texto-fraco:#64748b;
+    --azul:#087ea4;
+    --azul-forte:#0b8fb8;
+    --azul-fraco:rgba(11,143,184,.10);
+}
+body.tema-claro .tela-login{
+    background:radial-gradient(circle at 20% 10%,rgba(11,143,184,.08),transparent 45%),var(--bg);
+}
+body.tema-claro .cartao-login{box-shadow:0 12px 30px rgba(15,23,42,.15);}
+body.tema-claro .toast-notificacao-web{background:#fff;color:#1f2937;}
+body.tema-claro .toast-notificacao-web div{color:#334155;}
+
+/* Sem painel de usuários na tela inicial: o formulário ocupa a largura toda. */
+#layout-admin-operacional{
+    display:block !important;
+}
+#layout-admin-operacional > .painel-entrada{
+    width:100% !important;
+    float:none !important;
+    grid-column:1 !important;
+}
+/* O cadastro/entrada passa a ser aberto pelo botão ao lado dos filtros. */
+#layout-admin-operacional > .painel-entrada{
+    display:none !important;
+}
+.btn-registrar-mercadoria{
+    display:none;
+    white-space:nowrap;
+    background:#10b981 !important;
+    color:#fff !important;
+    border-color:#10b981 !important;
+}
+''.btn-exportar-containers{
+    display:none;
+    white-space:nowrap;
+}
+.exportar-containers-menu{position:relative;display:none;flex:0 0 auto;}
+#app-principal .exportar-containers-menu{display:block;}
+.exportar-containers-dropdown{
+    display:none;
+    position:absolute;
+    top:calc(100% + 5px);
+    left:0;
+    min-width:205px;
+    background:var(--bg-painel);
+    border:1px solid var(--borda-forte);
+    border-radius:8px;
+    box-shadow:0 12px 28px rgba(0,0,0,.35);
+    padding:5px;
+    z-index:10050;
+}
+.exportar-containers-menu.aberto .exportar-containers-dropdown{display:block;}
+.exportar-containers-dropdown button{
+    display:block;
+    width:100%;
+    text-align:left;
+    background:transparent;
+    color:var(--texto);
+    border:0;
+    border-radius:6px;
+    padding:9px 10px;
+    font-size:12px;
+    font-weight:600;
+    white-space:nowrap;
+}
+.exportar-containers-dropdown button:hover{background:var(--azul-fraco);color:var(--azul);transform:none;filter:none;}
+body:not(.usuario-admin) .exportar-containers-menu{display:block!important;}
+.texto-exportar-comum{display:none;}
+body:not(.usuario-admin) .texto-exportar-admin{display:none;}
+body:not(.usuario-admin) .texto-exportar-comum{display:inline;}
+body:not(.usuario-admin) #app-principal .btn-exportar-containers{display:inline-block;}
+body.usuario-admin #app-principal .btn-exportar-containers{display:inline-block;}
+
+.btn-backup-onedrive{
+    display:inline-block;
+    white-space:nowrap;
+    padding:7px 11px !important;
+    font-size:inherit !important;
+    min-height:0 !important;
+    line-height:normal !important;
+    box-sizing:border-box !important;
+    background:#1f2937 !important;
+    color:#fff !important;
+    border-color:#1f2937 !important;
+}
+#app-principal .btn-registrar-mercadoria{display:inline-block;}
+#app-principal .btn-exportar-containers{display:inline-block;}
+/* Exportar Excel fica compacto, lado a lado com Registrar Mercadoria. */
+#app-principal .painel-visualizacao .visualizacao-linha{
+    display:flex !important;
+    align-items:center !important;
+    gap:8px !important;
+    flex-wrap:wrap !important;
+}
+#app-principal .btn-registrar-mercadoria,
+#app-principal .btn-exportar-containers,
+#app-principal .btn-backup-onedrive{
+    width:auto !important;
+    max-width:max-content !important;
+    flex:0 0 auto !important;
+    padding:7px 11px !important;
+    font-size:12px !important;
+    min-height:0 !important;
+    line-height:normal !important;
+    box-sizing:border-box !important;
+}
+#app-principal .indicador-usuarios-online{
+    margin:0 !important;
+    padding:7px 10px !important;
+    flex:0 0 auto !important;
+}
+@media(max-width:700px){
+    #app-principal .painel-visualizacao .visualizacao-linha{
+        display:flex !important;
+        flex-direction:column !important;
+        align-items:stretch !important;
+    }
+    #app-principal .btn-registrar-mercadoria,
+    #app-principal .btn-exportar-containers,
+    #app-principal .btn-backup-onedrive,
+    #app-principal .indicador-usuarios-online{
+        width:100% !important;
+        max-width:none !important;
+    }
+}
+@media(max-width:700px){
+    #app-principal .btn-registrar-mercadoria,
+    #app-principal .btn-exportar-containers,
+    #app-principal .btn-backup-onedrive{width:100%;}
+}
+/* A área de visualização acompanha o número configurado. */
+.contador-max-inline{font-weight:700;}
+
+
+
+.mapa-containers-painel{margin:14px 0;padding:16px;}
+.mapa-cabecalho{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.mapa-cabecalho h2{margin:0 0 5px 0}
+.mapa-legenda{font-size:12px;color:var(--texto-fraco)}
+.mapa-resumo{margin:12px 0;font-size:12px;color:var(--texto-fraco)}
+.mapa-grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(125px,1fr));gap:9px}
+.mapa-container-card{position:relative;border:1px solid var(--borda);background:var(--bg-painel-2);border-radius:10px;padding:11px;cursor:pointer;min-height:82px;transition:transform .12s,border-color .12s}
+.mapa-container-card:hover{transform:translateY(-1px);border-color:var(--azul)}
+.mapa-container-card.ocupado{border-left:4px solid #22c55e}.mapa-container-card.vazio{border-left:4px solid #94a3b8}.mapa-container-card.atencao{border-left:4px solid #ef4444}
+.mapa-container-numero{font-weight:700;font-size:14px}.mapa-container-status{font-size:11px;margin-top:5px}.mapa-container-qtd{font-size:11px;color:var(--texto-fraco);margin-top:5px}
+.mapa-container-mercadorias{margin-top:8px;display:flex;flex-direction:column;gap:5px}
+.mapa-mercadoria-linha{padding:5px 7px;border:1px solid var(--borda);border-radius:7px;background:var(--bg-input);font-size:10.5px;line-height:1.35;cursor:default}
+.mapa-mercadoria-linha.validade-alerta-30{
+  border:2px solid #ef4444 !important;
+  border-left:4px solid #ef4444 !important;
+  background:rgba(239,68,68,.10) !important;
+}
+.mapa-mercadoria-linha.validade-alerta-30 .mapa-mercadoria-nome{
+  color:#ef4444 !important;
+}
+.mapa-mercadoria-validade{
+  margin-top:4px;
+  color:#ef4444;
+  font-weight:700;
+  font-size:10px;
+}
+
+.mapa-mercadoria-topo{display:flex;align-items:center;justify-content:space-between;gap:5px}
+.mapa-mercadoria-nome{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mapa-mercadoria-info{color:var(--texto-fraco);margin-top:2px}
+.mapa-mercadoria-acoes{display:flex;gap:3px;flex-shrink:0}
+.mapa-mercadoria-acoes button{border:1px solid var(--borda-forte);background:var(--bg-painel-2);border-radius:5px;padding:2px 5px;cursor:pointer;font-size:12px;color:var(--texto)}
+.mapa-mercadoria-acoes button:hover{border-color:var(--azul)}
+.mapa-sem-mercadoria{font-size:11px;color:var(--texto-fraco);margin-top:7px}
+.mapa-container-card.oculto-filtro{display:none !important}
+.btn-central-notificacoes{border:1px solid var(--borda);background:var(--bg-painel-2);color:var(--texto);border-radius:8px;padding:6px 9px;cursor:pointer;font-weight:600}
+.central-notificacoes{margin:10px 0}.central-notificacoes .notificacao-individual{border:1px solid var(--borda);border-radius:9px;padding:11px;margin:7px 0;background:var(--bg-painel-2)}
+.central-notificacoes .notificacao-individual.nao-lida{border-left:4px solid var(--azul)}
+.notificacao-individual small{color:var(--texto-fraco)}
+.btn-confirmar-execucao{margin-top:9px}
+@media(max-width:700px){.mapa-grade{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.mapa-container-card{padding:8px;min-height:70px}.mapa-cabecalho{align-items:flex-start}.mapa-cabecalho .btn-vis{width:auto}}
+
+.historico-produto-modal{max-height:92vh;overflow:hidden;max-width:900px;width:100%;background:var(--bg-painel);border:1px solid var(--borda);border-radius:14px;color:var(--texto);box-shadow:0 14px 50px rgba(0,0,0,.5);display:flex;flex-direction:column}
+.historico-produto-cabecalho{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px;border-bottom:1px solid var(--borda)}
+.historico-produto-cabecalho h2{margin:0;font-size:20px}.historico-produto-subtitulo{font-size:13px;color:var(--texto-fraco);margin-top:4px}
+.historico-produto-conteudo{overflow:auto;padding:16px 18px;flex:1}.historico-produto-topo{padding:12px;border:1px solid var(--borda);border-radius:10px;background:var(--bg-painel-2)}
+.historico-produto-resumo{font-size:12px;color:var(--texto-fraco);margin-top:6px;line-height:1.7}.historico-produto-lista{margin-top:12px;display:flex;flex-direction:column;gap:9px}
+.historico-produto-item{border:1px solid var(--borda);border-radius:10px;padding:11px;background:var(--bg-input)}
+.historico-produto-item.tipo-saida{border-left:4px solid #ef4444}.historico-produto-item.tipo-transferencia{border-left:4px solid #2fb6ec}.historico-produto-item.tipo-entrada{border-left:4px solid #10b981}.historico-produto-item.tipo-alteracao{border-left:4px solid #f59e0b}.historico-produto-item.tipo-exclusao{border-left:4px solid #ef4444}
+.historico-produto-item-cab{display:flex;justify-content:space-between;gap:10px;align-items:center}.historico-produto-item-cab span{font-size:11px;color:var(--texto-fraco)}
+.historico-produto-detalhes{font-size:12px;line-height:1.65;margin-top:7px}.historico-produto-acoes{display:flex;justify-content:flex-end;margin-top:8px}
+.btn-perigo-historico{border:1px solid #ef4444!important;color:#ef4444!important}.historico-produto-rodape{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding:13px 18px;border-top:1px solid var(--borda)}
+@media(max-width:650px){.historico-produto-modal{max-height:96vh}.historico-produto-cabecalho{padding:14px}.historico-produto-conteudo{padding:12px}.historico-produto-item-cab{align-items:flex-start;flex-direction:column;gap:3px}.historico-produto-rodape button{flex:1;min-width:130px}}
+
+
+
+.cabecalho-alertas-validade{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+}
+.resumo-alertas-validade{font-size:11.5px;color:var(--texto-fraco);text-align:right;}
+.alerta-validade-item{
+    background:var(--bg-painel-2);border:1px solid var(--borda);border-radius:8px;
+    padding:10px 12px;margin-top:8px;
+}
+#lista-transferencias-admin .produto-item{box-sizing:border-box;}
+#lista-transferencias-admin .container-botoes button{width:auto;}
+@media(max-width:700px){
+    .cabecalho-alertas-validade{align-items:stretch;flex-direction:column;}
+    .resumo-alertas-validade{text-align:left;}
+    #modal-transferencia-container .linha-form{grid-template-columns:1fr !important;}
+    #modal-transferencia-container .modal-solicitacao-rodape{flex-direction:column-reverse;}
+    #modal-transferencia-container .modal-solicitacao-rodape button{width:100%;}
+}
+
+
+
+/* ======================================================
+   ADMIN — FORMULÁRIO DE ENTRADA COM O MESMO LAYOUT DO USUÁRIO COMUM
+   Mantém os painéis administrativos, mas o formulário de entrada
+   ocupa a largura completa e usa exatamente as mesmas proporções.
+   ====================================================== */
+body.usuario-admin .layout-admin-operacional{
+    display:block;
+    margin-bottom:18px;
+}
+body.usuario-admin .layout-admin-operacional > #painel-admin-usuarios{
+    width:100%;
+    float:none;
+    margin:0 0 20px 0;
+    box-sizing:border-box;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada{
+    width:100%;
+    float:none;
+    margin:0;
+    min-width:0;
+    min-height:0;
+    height:auto;
+    box-sizing:border-box;
+    background:var(--bg-painel);
+    border:1px solid var(--borda);
+    border-radius:12px;
+    padding:25px;
+    box-shadow:0 4px 14px rgba(0,0,0,.35);
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada h2{
+    margin-top:0;
+    margin-bottom:14px;
+    padding:0 0 8px;
+    border:none;
+    border-bottom:1px solid var(--borda);
+    border-radius:0;
+    background:transparent;
+    font-size:inherit;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-form{
+    gap:10px;
+    margin-bottom:7px;
+}
+/* Mesmas proporções do painel do usuário comum */
+body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-identificacao{
+    grid-template-columns:125px 105px 260px 220px;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-produto{
+    grid-template-columns:125px 430px 260px;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-quantidade{
+    grid-template-columns:100px 115px 130px 160px;
+    max-width:100%;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada label{
+    font-size:11.5px;
+    margin-bottom:1px;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada input{
+    height:27px;
+    min-height:27px;
+    padding:3px 7px;
+    margin:2px 0 4px;
+    font-size:12px;
+    box-sizing:border-box;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada .container-botoes{
+    margin-top:10px;
+    padding-top:12px;
+    border-top:1px solid var(--borda);
+    gap:10px;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada .container-botoes button{
+    padding:9px 16px;
+    font-size:13px;
+}
+@media(max-width:1100px){
+    body.usuario-admin .layout-admin-operacional > .painel-entrada{
+        overflow-x:auto;
+    }
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-identificacao,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-produto{
+        min-width:760px;
+    }
+}
+@media(max-width:700px){
+    body.usuario-admin .layout-admin-operacional > #painel-admin-usuarios,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada{
+        width:100%;
+    }
+    body.usuario-admin .layout-admin-operacional > .painel-entrada{
+        overflow-x:visible;
+        padding:14px 12px;
+    }
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-form,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-identificacao,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-produto{
+        grid-template-columns:1fr;
+        min-width:0;
+    }
+    body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-quantidade{
+        grid-template-columns:1fr 1fr;
+        max-width:none;
+    }
+}
+
+
+
+/* ======================================================
+   ADMIN — PAINÉIS COM O MESMO TAMANHO
+   Solicitações/Notificações à esquerda e Entrada à direita.
+   Mantém todas as funções e alterações anteriores.
+   ====================================================== */
+body.usuario-admin .layout-admin-operacional{
+    display:grid !important;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    gap:14px !important;
+    align-items:stretch !important;
+    margin-bottom:18px !important;
+}
+body.usuario-admin .layout-admin-operacional > #painel-admin-usuarios,
+body.usuario-admin .layout-admin-operacional > .painel-entrada{
+    width:100% !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+    float:none !important;
+    margin:0 !important;
+}
+body.usuario-admin .layout-admin-operacional > #painel-admin-usuarios{
+    grid-column:1 !important;
+    height:100% !important;
+}
+body.usuario-admin .layout-admin-operacional > .painel-entrada{
+    grid-column:2 !important;
+    height:100% !important;
+    min-height:100% !important;
+    align-self:stretch !important;
+}
+/* O formulário ocupa toda a largura interna disponível, sem alterar seus campos. */
+body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-identificacao,
+body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-produto,
+body.usuario-admin .layout-admin-operacional > .painel-entrada .linha-quantidade{
+    width:100% !important;
+    max-width:none !important;
+    box-sizing:border-box !important;
+}
+@media(max-width:1100px){
+    body.usuario-admin .layout-admin-operacional{
+        grid-template-columns:1fr !important;
+    }
+    body.usuario-admin .layout-admin-operacional > #painel-admin-usuarios,
+    body.usuario-admin .layout-admin-operacional > .painel-entrada{
+        grid-column:1 !important;
+        height:auto !important;
+        min-height:0 !important;
+    }
+}
+
+
+
+/* =========================================================
+   PADRÃO ÚNICO — ENTRADA DE MERCADORIA PARA TODOS OS USUÁRIOS
+   Admin / Comum / Externo
+   Mesmo desenho do formulário, compacto e sem ultrapassar a tela.
+   ========================================================= */
+.painel-entrada{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+    overflow:hidden !important;
+}
+
+.painel-entrada .linha-form{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+    gap:8px !important;
+    margin-bottom:6px !important;
+}
+
+.painel-entrada .campo{
+    min-width:0 !important;
+    width:100% !important;
+    box-sizing:border-box !important;
+}
+
+.painel-entrada label{
+    display:block !important;
+    font-size:11px !important;
+    line-height:1.15 !important;
+    margin-bottom:1px !important;
+    white-space:normal !important;
+}
+
+.painel-entrada input,
+.painel-entrada select{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    height:27px !important;
+    min-height:27px !important;
+    box-sizing:border-box !important;
+    padding:3px 6px !important;
+    margin:2px 0 3px !important;
+    font-size:12px !important;
+}
+
+/* PC e notebook: mesma organização do formulário, com medidas compactas. */
+.painel-entrada .linha-identificacao{
+    grid-template-columns:minmax(90px,1fr) minmax(85px,.85fr) minmax(140px,1.4fr) minmax(120px,1.2fr) !important;
+}
+
+.painel-entrada .linha-produto{
+    grid-template-columns:minmax(100px,.9fr) minmax(180px,2fr) minmax(120px,1.2fr) !important;
+}
+
+.painel-entrada .linha-quantidade{
+    grid-template-columns:minmax(90px,.9fr) minmax(95px,1fr) minmax(80px,.8fr) minmax(110px,1.1fr) !important;
+    max-width:100% !important;
+}
+
+.painel-entrada .container-botoes{
+    display:flex !important;
+    flex-wrap:wrap !important;
+    gap:7px !important;
+    margin-top:7px !important;
+    padding-top:8px !important;
+    box-sizing:border-box !important;
+}
+
+.painel-entrada .container-botoes button{
+    padding:7px 11px !important;
+    min-height:31px !important;
+    font-size:12px !important;
+    line-height:1.1 !important;
+    white-space:nowrap !important;
+}
+
+/* Notebook menor / janela reduzida: mantém o mesmo desenho, apenas quebra em 2 colunas. */
+@media(max-width:1100px){
+    .painel-entrada{
+        overflow:hidden !important;
+    }
+    .painel-entrada .linha-identificacao{
+        grid-template-columns:1fr 1fr !important;
+    }
+    .painel-entrada .linha-produto{
+        grid-template-columns:1fr 1.6fr !important;
+    }
+    .painel-entrada .linha-produto .campo:nth-child(3){
+        grid-column:1 / -1 !important;
+    }
+    .painel-entrada .linha-quantidade{
+        grid-template-columns:1fr 1fr !important;
+    }
+}
+
+/* Celular: mesmo layout do formulário, somente menor e totalmente dentro da tela. */
+@media(max-width:700px){
+    .painel-entrada{
+        width:100% !important;
+        max-width:100vw !important;
+        padding:10px !important;
+        margin-left:0 !important;
+        margin-right:0 !important;
+        overflow:hidden !important;
+    }
+
+    .painel-entrada h2{
+        font-size:15px !important;
+        margin:0 0 8px !important;
+        padding-bottom:6px !important;
+    }
+
+    .painel-entrada .linha-form{
+        display:grid !important;
+        width:100% !important;
+        gap:5px !important;
+        margin-bottom:5px !important;
+    }
+
+    .painel-entrada .linha-identificacao{
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    }
+
+    .painel-entrada .linha-produto{
+        grid-template-columns:minmax(0,1fr) minmax(0,1.45fr) !important;
+    }
+
+    .painel-entrada .linha-produto .campo:nth-child(3){
+        grid-column:1 / -1 !important;
+    }
+
+    .painel-entrada .linha-quantidade{
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    }
+
+    .painel-entrada .campo,
+    .painel-entrada input,
+    .painel-entrada select{
+        min-width:0 !important;
+        max-width:100% !important;
+    }
+
+    .painel-entrada label{
+        font-size:9.5px !important;
+        line-height:1.05 !important;
+    }
+
+    .painel-entrada input,
+    .painel-entrada select{
+        height:25px !important;
+        min-height:25px !important;
+        padding:2px 5px !important;
+        margin:1px 0 2px !important;
+        font-size:11px !important;
+    }
+
+    .painel-entrada .container-botoes{
+        gap:5px !important;
+        padding-top:6px !important;
+        margin-top:5px !important;
+    }
+
+    .painel-entrada .container-botoes button{
+        flex:1 1 auto !important;
+        min-width:0 !important;
+        padding:6px 7px !important;
+        min-height:28px !important;
+        font-size:10.5px !important;
+    }
+}
+
+/* Celulares muito estreitos: reduz somente o tamanho, sem mudar a estrutura. */
+@media(max-width:380px){
+    .painel-entrada{
+        padding:8px !important;
+    }
+    .painel-entrada .linha-form{
+        gap:4px !important;
+    }
+    .painel-entrada label{
+        font-size:9px !important;
+    }
+    .painel-entrada input,
+    .painel-entrada select{
+        height:24px !important;
+        min-height:24px !important;
+        font-size:10.5px !important;
+    }
+    .painel-entrada .container-botoes button{
+        font-size:10px !important;
+        padding:5px 5px !important;
+    }
+}
+
+
+
+/* =========================================================
+   ADMIN — EXATAMENTE O MESMO PADRÃO COMPACTO DO USUÁRIO COMUM
+   Última regra para vencer estilos antigos específicos do admin.
+   ========================================================= */
+body.usuario-admin .painel-entrada{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+    overflow:hidden !important;
+}
+
+body.usuario-admin .painel-entrada .linha-form{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+    gap:8px !important;
+    margin-bottom:6px !important;
+}
+
+body.usuario-admin .painel-entrada .campo{
+    min-width:0 !important;
+    width:100% !important;
+    box-sizing:border-box !important;
+}
+
+body.usuario-admin .painel-entrada input,
+body.usuario-admin .painel-entrada select{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    height:27px !important;
+    min-height:27px !important;
+    box-sizing:border-box !important;
+    padding:3px 6px !important;
+    margin:2px 0 3px !important;
+    font-size:12px !important;
+}
+
+/* PC / notebook */
+body.usuario-admin .painel-entrada .linha-identificacao{
+    grid-template-columns:minmax(90px,1fr) minmax(85px,.85fr) minmax(140px,1.4fr) minmax(120px,1.2fr) !important;
+}
+body.usuario-admin .painel-entrada .linha-produto{
+    grid-template-columns:minmax(100px,.9fr) minmax(180px,2fr) minmax(120px,1.2fr) !important;
+}
+body.usuario-admin .painel-entrada .linha-quantidade{
+    grid-template-columns:minmax(90px,.9fr) minmax(95px,1fr) minmax(80px,.8fr) minmax(110px,1.1fr) !important;
+    max-width:100% !important;
+}
+
+/* Notebook / janela menor */
+@media(max-width:1100px){
+    body.usuario-admin .layout-admin-operacional > .painel-entrada{
+        overflow:hidden !important;
+    }
+    body.usuario-admin .painel-entrada .linha-form{
+        min-width:0 !important;
+    }
+    body.usuario-admin .painel-entrada .linha-identificacao{
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+        min-width:0 !important;
+    }
+    body.usuario-admin .painel-entrada .linha-produto{
+        grid-template-columns:minmax(0,1fr) minmax(0,1.45fr) !important;
+        min-width:0 !important;
+    }
+    body.usuario-admin .painel-entrada .linha-produto .campo:nth-child(3){
+        grid-column:1 / -1 !important;
+    }
+    body.usuario-admin .painel-entrada .linha-quantidade{
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+        min-width:0 !important;
+    }
+}
+
+/* Celular — mesma organização do usuário comum */
+@media(max-width:700px){
+    body.usuario-admin .layout-admin-operacional > .painel-entrada{
+        width:100% !important;
+        max-width:100vw !important;
+        min-width:0 !important;
+        padding:10px !important;
+        margin:0 !important;
+        overflow:hidden !important;
+        box-sizing:border-box !important;
+    }
+    body.usuario-admin .painel-entrada h2{
+        font-size:15px !important;
+        margin:0 0 8px !important;
+        padding-bottom:6px !important;
+    }
+    body.usuario-admin .painel-entrada .linha-form{
+        display:grid !important;
+        width:100% !important;
+        min-width:0 !important;
+        gap:5px !important;
+        margin-bottom:5px !important;
+    }
+    body.usuario-admin .painel-entrada .linha-identificacao{
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    }
+    body.usuario-admin .painel-entrada .linha-produto{
+        grid-template-columns:minmax(0,1fr) minmax(0,1.45fr) !important;
+    }
+    body.usuario-admin .painel-entrada .linha-produto .campo:nth-child(3){
+        grid-column:1 / -1 !important;
+    }
+    body.usuario-admin .painel-entrada .linha-quantidade{
+        grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    }
+    body.usuario-admin .painel-entrada .campo,
+    body.usuario-admin .painel-entrada input,
+    body.usuario-admin .painel-entrada select{
+        min-width:0 !important;
+        max-width:100% !important;
+        width:100% !important;
+    }
+    body.usuario-admin .painel-entrada label{
+        font-size:9.5px !important;
+        line-height:1.05 !important;
+        white-space:normal !important;
+    }
+    body.usuario-admin .painel-entrada input,
+    body.usuario-admin .painel-entrada select{
+        height:26px !important;
+        min-height:26px !important;
+        padding:2px 5px !important;
+        font-size:11px !important;
+        margin:1px 0 2px !important;
+    }
+    body.usuario-admin .painel-entrada .container-botoes{
+        display:flex !important;
+        flex-wrap:wrap !important;
+        gap:5px !important;
+        margin-top:6px !important;
+        padding-top:6px !important;
+    }
+    body.usuario-admin .painel-entrada .container-botoes button{
+        flex:1 1 auto !important;
+        min-width:0 !important;
+        padding:6px 8px !important;
+        min-height:29px !important;
+        font-size:11px !important;
+    }
+}
+
+@media(max-width:380px){
+    body.usuario-admin .layout-admin-operacional > .painel-entrada{
+        padding:8px !important;
+    }
+    body.usuario-admin .painel-entrada .linha-form{
+        gap:4px !important;
+    }
+    body.usuario-admin .painel-entrada input,
+    body.usuario-admin .painel-entrada select{
+        font-size:10.5px !important;
+        padding:2px 4px !important;
+    }
+    body.usuario-admin .painel-entrada label{
+        font-size:9px !important;
+    }
+}
+
+
+
+/* ===== Integração das configurações Firebase ===== */
+body.tema-claro{
+    --bg:#f4f7fb;
+    --bg-painel:#ffffff;
+    --bg-painel-2:#eef3f9;
+    --bg-input:#ffffff;
+    --borda:#d7e0ec;
+    --borda-forte:#aebed2;
+    --texto:#1f2937;
+    --texto-fraco:#64748b;
+    --azul:#087ea4;
+    --azul-forte:#0b8fb8;
+    --azul-fraco:rgba(11,143,184,.10);
+}
+body.tema-claro .tela-login{
+    background:radial-gradient(circle at 20% 10%,rgba(11,143,184,.08),transparent 45%),var(--bg);
+}
+body.tema-claro .cartao-login{box-shadow:0 12px 30px rgba(15,23,42,.15);}
+body.tema-claro .toast-notificacao-web{background:#fff;color:#1f2937;}
+body.tema-claro .toast-notificacao-web div{color:#334155;}
+
+/* Sem painel de usuários na tela inicial: o formulário ocupa a largura toda. */
+#layout-admin-operacional{
+    display:block !important;
+}
+#layout-admin-operacional > .painel-entrada{
+    width:100% !important;
+    float:none !important;
+    grid-column:1 !important;
+}
+/* O cadastro/entrada passa a ser aberto pelo botão ao lado dos filtros. */
+#layout-admin-operacional > .painel-entrada{
+    display:none !important;
+}
+.btn-registrar-mercadoria{
+    display:none;
+    white-space:nowrap;
+    background:#10b981 !important;
+    color:#fff !important;
+    border-color:#10b981 !important;
+}
+#app-principal .btn-registrar-mercadoria{display:inline-block;}
+@media(max-width:700px){
+    #app-principal .btn-registrar-mercadoria{width:100%;}
+}
+/* A área de visualização acompanha o número configurado. */
+.contador-max-inline{font-weight:700;}
+
+
+
+/* ======================================================
+   LOGIN — USUÁRIO FIXO POR DISPOSITIVO + PRESENÇA ONLINE
+   Não usa localStorage. O e-mail fica em cookie do navegador.
+   ====================================================== */
+.campo-login-usuario-persistente label{
+    display:flex !important;
+    align-items:center;
+    justify-content:space-between;
+    gap:6px;
+}
+.cadeado-usuario-login{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:22px;
+    height:22px;
+    font-size:13px;
+    opacity:.9;
+}
+#login-usuario.usuario-fixado{
+    padding-right:34px !important;
+    cursor:not-allowed;
+    opacity:.92;
+}
+.link-outro-usuario{
+    display:inline-block;
+    margin-top:7px;
+    font-size:11px !important;
+}
+.indicador-usuarios-online{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    margin:8px 0 10px;
+    padding:7px 10px;
+    border:1px solid var(--borda-forte);
+    border-radius:8px;
+    background:var(--bg-painel-2);
+    color:var(--texto);
+    font-size:11.5px;
+    font-weight:600;
+}
+.indicador-usuarios-online .online-ponto{
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:#10b981;
+    box-shadow:0 0 0 3px rgba(16,185,129,.12);
+}
+
+
+
+#tela-menu{max-width:720px;margin:0 auto;padding:20px;box-sizing:border-box;}
+.menu-principal-caixa{margin-top:18px;padding:18px;border:1px solid var(--borda);border-radius:14px;background:var(--bg-painel-2,var(--bg));}
+.lista-menu-principal{display:flex;flex-direction:column;gap:10px;}
+.item-menu-principal{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:14px 16px;border:1px solid var(--borda);border-radius:12px;background:var(--bg);color:var(--texto);cursor:pointer;font:inherit;transition:background .15s,border-color .15s,transform .1s;}
+.item-menu-principal:hover{background:rgba(86,210,255,.08);border-color:#3b82f6;transform:translateY(-1px);}
+.item-menu-icone{font-size:22px;width:32px;text-align:center;flex-shrink:0;}
+.item-menu-texto{display:flex;flex-direction:column;gap:2px;flex:1;}
+.item-menu-texto strong{font-size:15px;}
+.item-menu-texto small{font-size:11.5px;color:var(--texto-fraco);}
+.item-menu-seta{font-size:20px;color:var(--texto-fraco);flex-shrink:0;}
+.item-menu-principal.item-menu-bloqueado{opacity:.5;cursor:not-allowed;}
+.item-menu-principal.item-menu-bloqueado:hover{background:var(--bg);border-color:var(--borda);transform:none;}
+.item-menu-principal.item-menu-sair{border-color:#ef4444;}
+.btn-voltar-menu{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid var(--borda);border-radius:8px;background:var(--bg);color:var(--texto);cursor:pointer;font:inherit;font-weight:600;margin-bottom:12px;}
+.btn-voltar-menu:hover{background:rgba(86,210,255,.08);border-color:#3b82f6;}
+body.pagina-separada .tela-login{position:fixed!important;inset:0!important;z-index:100;}
+body.usuario-externo .somente-admin,.body-externo .somente-admin{display:none!important;}
+body.modo-externo-leitura #app-externo .btn-abrir-solicitacao-externo,
+body.modo-externo-leitura #app-externo .painel-minhas-solicitacoes-externo,
+body.modo-externo-leitura #app-externo .externo-acoes-solicitacao{display:none!important;}
+body.modo-externo-leitura #app-externo .acoes-item{display:none!important;}
+body.modo-externo-leitura #app-externo .btn-apagar-historico,
+body.modo-externo-leitura #app-externo .btn-produto{display:none!important;}
+body.modo-externo-leitura #app-externo .btn-vis{display:inline-flex;}
+.pagina-conteudo-separada{padding:20px;max-width:1200px;margin:0 auto;box-sizing:border-box;}
+
+
+/* ==========================================================
+   PÁGINAS SEPARADAS — RELATÓRIOS / KARDEX / CADASTROS
+   ========================================================== */
+.painel-relatorio{
+  background:var(--bg-painel);
+  border:1px solid var(--borda);
+  border-radius:12px;
+  padding:14px;
+  box-shadow:0 4px 14px rgba(0,0,0,.25);
+}
+.cabecalho-relatorio{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:12px;
+}
+.cabecalho-relatorio h2{margin:0;}
+.cabecalho-relatorio span{font-size:11px;color:var(--texto-fraco);}
+.tabela-relatorio-wrap{overflow:auto;max-height:70vh;border:1px solid var(--borda);border-radius:8px;}
+.tabela-relatorio{width:100%;border-collapse:collapse;font-size:11.5px;white-space:nowrap;}
+.tabela-relatorio th,.tabela-relatorio td{padding:7px 9px;border-bottom:1px solid var(--borda);text-align:left;}
+.tabela-relatorio th{position:sticky;top:0;background:var(--bg-painel-2);color:var(--azul);z-index:2;}
+.produto-cadastro-linha{
+  min-height:44px;
+  background:var(--bg-painel-2);
+  border:1px solid var(--borda);
+  border-radius:8px;
+  padding:10px 55px 10px 12px;
+}
+.produto-cadastro-linha .acoes-item{top:8px;}
+@media(max-width:700px){
+  .cabecalho-relatorio{align-items:flex-start;flex-direction:column;}
+  .tabela-relatorio{font-size:10.5px;}
+}
+
+
+/* ==========================================================
+   AJUSTES — BARRA SUPERIOR / BUSCA INTELIGENTE / MAPA
+   ========================================================== */
+.barra-usuario{
+    width:100%;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:-6px;
+}
+.barra-usuario .btn-central-notificacoes{order:1;margin-right:0;}
+.barra-usuario .btn-voltar-menu{order:2;}
+.barra-usuario > span{order:3;margin-left:auto;white-space:nowrap;}
+.barra-usuario .btn-notificacao-web{order:0;}
+.usuario-externo .barra-usuario > span{order:2;margin-left:auto;}
+.usuario-externo .barra-usuario .btn-central-notificacoes{order:1;}
+
+.busca-inteligente-wrap{position:relative;width:100%;}
+.busca-inteligente-resultados{
+    position:absolute;z-index:1200;left:0;right:0;top:calc(100% + 3px);
+    max-height:360px;overflow:auto;display:none;
+    background:var(--bg-painel);border:1px solid var(--borda-forte);border-radius:10px;
+    box-shadow:0 14px 32px rgba(0,0,0,.35);
+}
+.busca-inteligente-item{padding:10px 12px;border-bottom:1px solid var(--borda);cursor:pointer;}
+.busca-inteligente-item:last-child{border-bottom:0;}
+.busca-inteligente-item:hover{background:var(--bg-painel-2);}
+.busca-inteligente-item strong{display:block;color:var(--texto);}
+.busca-inteligente-item small{display:block;color:var(--texto-fraco);margin-top:3px;line-height:1.45;}
+.busca-inteligente-vazio{padding:12px;color:var(--texto-fraco);}
+
+.mapa-container-card{position:relative;}
+.mapa-container-resumo{margin-top:7px;padding-top:7px;border-top:1px solid var(--borda);font-size:10.5px;line-height:1.45;color:var(--texto-fraco);}
+.mapa-container-resumo strong{color:var(--texto);}
+.mapa-container-identificacao{display:flex;align-items:center;justify-content:center;gap:5px;margin-bottom:7px;}
+.mapa-caixa-icone{font-size:19px;line-height:1;filter:grayscale(1);opacity:.85;}
+.mapa-caixa-icone.ocupada{filter:none;}
+.mapa-caixa-icone.vazia{opacity:.5;}
+.mapa-container-numero{font-weight:800;font-size:15px;letter-spacing:.5px;}
+.mapa-status-ponto{width:7px;height:7px;border-radius:50%;display:inline-block;}
+.mapa-status-ponto.ocupado{background:#22c55e;box-shadow:0 0 6px rgba(34,197,94,.55);}
+.mapa-status-ponto.vazio{background:#94a3b8;}
+
+
+@media(max-width:700px){
+    .barra-usuario{justify-content:flex-start!important;}
+    .barra-usuario > span{order:3;width:auto!important;margin-left:auto!important;text-align:right!important;}
+    .usuario-externo .barra-usuario > span{order:2;margin-left:auto!important;}
+    .mapa-container-tooltip{display:none!important;}
+}
+
+/* ==========================================================
+   RELATÓRIOS — FILTROS E AÇÕES
+   ========================================================== */
+.painel-relatorio{overflow:hidden;}
+.cabecalho-relatorio{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.cabecalho-relatorio h2{margin:0 0 4px;}
+.cabecalho-relatorio span{font-size:11px;color:var(--texto-fraco);}
+.relatorio-botoes{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
+.relatorio-subacoes{display:flex;justify-content:flex-end;margin:8px 0;}
+.tabela-relatorio th{position:sticky;top:0;z-index:2;}
+.tabela-relatorio .relatorio-filtros th{position:sticky;top:36px;z-index:3;background:var(--bg-painel-2);}
+.filtro-coluna-relatorio{width:100%;min-width:90px;box-sizing:border-box;padding:6px 7px;border:1px solid var(--borda);border-radius:6px;background:var(--bg-input);color:var(--texto);font-size:10px;}
+.relatorio-acoes{white-space:nowrap;text-align:center;}
+@media(max-width:900px){.relatorio-botoes{width:100%;justify-content:flex-start}.tabela-relatorio{font-size:10.5px}.filtro-coluna-relatorio{min-width:105px;}}
+
+
+/* ==========================================================
+   BUSCA INTELIGENTE — CONTAINERS
+   ========================================================== */
+.painel-busca-inteligente{position:relative;z-index:1200;}
+.busca-inteligente-titulo{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:7px;}
+.busca-inteligente-titulo span{font-size:11px;color:var(--texto-fraco);}
+.busca-inteligente-item{position:relative;cursor:pointer;padding:9px 10px 32px;}
+.busca-inteligente-item small{display:block;margin-top:5px;line-height:1.45;}
+.btn-abrir-resultado-busca{position:absolute;right:8px;bottom:6px;border:1px solid var(--borda-forte);background:var(--bg-painel-2);color:var(--texto);border-radius:6px;padding:3px 7px;font-size:10px;font-weight:700;cursor:pointer;}
+.btn-abrir-resultado-busca:hover{border-color:var(--azul);}
+
+/* Rastreabilidade visível no mapa */
+.mapa-container-card{min-height:130px;}
+.mapa-container-mercadorias{margin-top:8px;display:flex;flex-direction:column;gap:5px;}
+.mapa-mercadoria-linha{padding:5px 7px;border:1px solid var(--borda);border-radius:7px;background:var(--bg-input);font-size:10.5px;line-height:1.35;cursor:default;}
+.mapa-mercadoria-nome{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.mapa-mercadoria-info{color:var(--texto-fraco);margin-top:2px;}
+.mapa-sem-mercadoria{font-size:11px;color:var(--texto-fraco);margin-top:7px;}
+@media(max-width:700px){
+  .mapa-container-card{min-height:120px;}
+  .busca-inteligente-titulo span{width:100%;}
+}
+
+
+
+
+
+
+
+
+
+@media(max-width:760px){}
+@media(max-width:480px){}
+.mapa-container-produto{font-weight:800;font-size:12px;line-height:1.25}
+.mapa-container-peso-unitario{font-size:11px;color:var(--texto-fraco);margin-top:3px}
+
+/* Ajustes finais do Dashboard Admin e cartões de rastreabilidade */
+
+
+
+
+
+
+
+
+.mapa-mercadoria-linha{padding:2px 0}
+.mapa-mercadoria-nome{font-weight:800;font-size:11px;line-height:1.2}
+.mapa-mercadoria-peso{font-size:10px;line-height:1.2;color:var(--texto-fraco)}
+@media(max-width:760px){}
+@media(max-width:480px){}
+
+/* Tooltip flutuante do mapa: não é cortado pelo grid nem pelos containers das bordas. */
+.tooltip-mapa-container-flutuante{
+    position:fixed;
+    z-index:2147483000;
+    box-sizing:border-box;
+    width:max-content;
+    min-width:250px;
+    max-width:360px;
+    max-height:360px;
+    overflow:auto;
+    padding:12px;
+    border:1px solid var(--azul);
+    border-radius:12px;
+    background:var(--bg-painel);
+    color:var(--texto);
+    box-shadow:0 14px 34px rgba(0,0,0,.48);
+    font-size:10.5px;
+    line-height:1.35;
+    pointer-events:auto;
+}
+.tooltip-mapa-container-flutuante .mapa-tooltip-titulo{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    font-weight:800;
+    font-size:12px;
+    padding-bottom:8px;
+    margin-bottom:7px;
+    border-bottom:1px solid var(--borda);
+}
+.tooltip-mapa-container-flutuante .mapa-tooltip-cabecalho,
+.tooltip-mapa-container-flutuante .mapa-tooltip-item{
+    display:grid;
+    grid-template-columns:minmax(0,1.6fr) .65fr .8fr;
+    gap:7px;
+    align-items:center;
+}
+.tooltip-mapa-container-flutuante .mapa-tooltip-cabecalho{
+    color:var(--texto-fraco);
+    font-size:9px;
+    text-transform:uppercase;
+    letter-spacing:.3px;
+    padding:0 3px 4px;
+}
+.tooltip-mapa-container-flutuante .mapa-tooltip-lista{
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+}
+.tooltip-mapa-container-flutuante .mapa-tooltip-item{
+    padding:7px 5px;
+    border:1px solid var(--borda);
+    border-radius:7px;
+    background:var(--bg-painel-2);
+}
+.tooltip-mapa-container-flutuante .mapa-tooltip-col{
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+}
+.tooltip-mapa-container-flutuante .mapa-tooltip-col span{
+    font-size:8.5px;
+    color:var(--texto-fraco);
+}
+.tooltip-mapa-container-flutuante .mapa-tooltip-col strong{
+    font-size:10px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+.tooltip-mapa-container-flutuante .mapa-tooltip-vazio{
+    text-align:center;
+    padding:9px;
+    color:var(--texto-fraco);
+}
+@media(max-width:700px){
+    .tooltip-mapa-container-flutuante{
+        max-width:calc(100vw - 16px);
+        min-width:220px;
+    }
+}
+
+/* Dashboard Admin — usa as mesmas variáveis do tema geral do sistema. */
+.dashboard-admin-inicial{
+    width:min(1100px, calc(100% - 28px));
+    margin:18px auto 22px;
+    padding:16px;
+    box-sizing:border-box;
+    background:var(--bg-painel);
+    color:var(--texto);
+    border:1px solid var(--borda);
+    border-radius:14px;
+    box-shadow:0 8px 24px rgba(0,0,0,.16);
+}
+.dashboard-admin-titulo{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:14px;
+    color:var(--texto);
+    font-weight:800;
+    font-size:20px;
+    text-align:center;
+}
+.dashboard-admin-titulo small{
+    font-size:12px;
+    color:var(--texto-fraco);
+    font-weight:500;
+}
+.dashboard-admin-cards{
+    width:100%;
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:12px;
+    justify-items:stretch;
+}
+.dashboard-card{
+    min-height:82px;
+    border:1px solid var(--borda);
+    border-radius:12px;
+    background:var(--bg-painel-2);
+    color:var(--texto);
+    padding:12px 14px;
+    text-align:center;
+    cursor:pointer;
+    display:grid;
+    grid-template-columns:auto 1fr;
+    column-gap:10px;
+    align-items:center;
+    box-shadow:0 3px 10px rgba(0,0,0,.10);
+}
+
+.dashboard-card>span{
+    grid-row:span 2;
+    font-size:24px;
+}
+.dashboard-card strong{
+    color:var(--texto);
+    font-size:22px;
+    line-height:1.05;
+}
+.dashboard-card small{
+    color:var(--texto-fraco);
+    font-size:11px;
+    margin-top:4px;
+}
+.tema-claro .dashboard-admin-inicial{
+    box-shadow:0 8px 24px rgba(15,23,42,.10);
+}
+.tema-claro .dashboard-card{
+    box-shadow:0 3px 10px rgba(15,23,42,.07);
+}
+@media(max-width:760px){
+    .dashboard-admin-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:480px){
+    .dashboard-admin-inicial{width:calc(100% - 16px);padding:12px}
+    .dashboard-admin-cards{grid-template-columns:1fr}
+}
+
+/* Permissões individuais de telas no Cadastro de Usuários */
+.usuario-admin-card{padding:12px!important}
+.usuario-admin-cabecalho{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    align-items:flex-start;
+    flex-wrap:wrap;
+}
+.usuario-admin-identificacao{min-width:240px;flex:1}
+.usuario-admin-status{font-size:11px;color:var(--texto-fraco)}
+.painel-permissoes-usuario{
+    margin-top:12px;
+    padding:11px;
+    border:1px solid var(--borda);
+    background:var(--bg-painel-2);
+    border-radius:10px;
+}
+.painel-permissoes-titulo{
+    font-weight:800;
+    font-size:12px;
+    margin-bottom:8px;
+    color:var(--texto);
+}
+.painel-permissoes-lista{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+}
+.permissao-usuario-linha{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:7px 8px;
+    border:1px solid var(--borda);
+    border-radius:8px;
+    background:var(--bg-painel);
+}
+.permissao-usuario-info{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    min-width:0;
+}
+.permissao-usuario-info strong{
+    font-size:11px;
+    color:var(--texto);
+}
+.btn-permissao-usuario{
+    flex:none;
+    min-width:100px;
+    border:1px solid var(--borda);
+    border-radius:7px;
+    padding:6px 9px;
+    background:var(--bg-painel-2);
+    color:var(--texto);
+    cursor:pointer;
+    font-size:10px;
+    font-weight:700;
+}
+.btn-permissao-usuario.liberado{border-color:#16a34a;color:#15803d}
+.btn-permissao-usuario.bloqueado{border-color:#dc2626;color:#b91c1c}
+.btn-permissao-usuario:disabled{opacity:.6;cursor:not-allowed}
+.painel-permissoes-aviso{
+    margin-top:8px;
+    padding-top:7px;
+    border-top:1px solid var(--borda);
+    color:var(--texto-fraco);
+    font-size:10px;
+}
+@media(max-width:600px){
+    .usuario-admin-cabecalho{flex-direction:column}
+    .acoes-item{width:100%}
+    .acoes-item .btn-acao{margin-bottom:4px}
+    .permissao-usuario-linha{align-items:flex-start}
+}
+
+/* Mercadoria vencida ou com vencimento em até 30 dias no mapa. */
+.mapa-mercadoria-linha.produto-validade-alerta{
+    border-color:#ef4444;
+    background:rgba(239,68,68,.10);
+}
+.mapa-mercadoria-linha.produto-validade-alerta .mapa-mercadoria-nome{
+    color:#ef4444;
+}
