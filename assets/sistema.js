@@ -7209,7 +7209,7 @@ function atualizarDashboardAdminInicial(){
     })+" KG"
   );
 
-  set("dash-pendencias",pendencias);
+  set("dash-pendencias",containersComPendencia.size);
   set("dash-validade",validade30);
   set("dash-solicitacoes",solicitacoes);
   set("dash-movimentacoes",movimentacoes);
