@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /Containers/
+
+Sitemap: https://ls4095132-creator.github.io/Containers/sitemap.xml
