@@ -33,12 +33,12 @@ messaging.onBackgroundMessage(function(payload) {
             notification.body ||
             data.body ||
             "Você recebeu uma nova notificação.",
-        icon: "/icon-192.png",
-        badge: "/icon-192.png",
+        icon: new URL("icon-192.png", self.registration.scope).toString(),
+        badge: new URL("icon-192.png", self.registration.scope).toString(),
         tag: data.tipo || "controle-containers",
         renotify: true,
         data: {
-            url: data.url || "/"
+            url: data.url || new URL("index.html", self.registration.scope).toString()
         }
     };
 
